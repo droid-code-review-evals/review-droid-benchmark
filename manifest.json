@@ -1,0 +1,397 @@
+{
+  "created_at": "2026-01-12",
+  "source_org": "ai-code-review-evaluations",
+  "destination_org": "droid-code-review-evals",
+  "projects": {
+    "sentry": {
+      "source_repo": "https://github.com/ai-code-review-evaluations/augment-sentry.git",
+      "default_branch": "add-eventstore-group-parameter",
+      "head_sha": "dda0b8f98a5a59fa07956b21d6226b4baf2632b1",
+      "destination_repo": "droid-sentry",
+      "prs": [
+        {
+          "number": 15,
+          "title": "Enhanced Pagination Performance for High-Volume Audit Logs",
+          "headRefName": "performance-enhancement-complete",
+          "headRefOid": "8ab88145113dd23a930e23b9cbbcf8b30e4c0b17",
+          "baseRefName": "master"
+        },
+        {
+          "number": 14,
+          "title": "Optimize spans buffer insertion with eviction during insert",
+          "headRefName": "performance-enhancement-complete",
+          "headRefOid": "8ab88145113dd23a930e23b9cbbcf8b30e4c0b17",
+          "baseRefName": "performance-optimization-baseline"
+        },
+        {
+          "number": 13,
+          "title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+          "headRefName": "error-upsampling-race-condition",
+          "headRefOid": "6ad6fe3899f630ccf922ce7ac681147dc7987435",
+          "baseRefName": "master"
+        },
+        {
+          "number": 12,
+          "title": "GitHub OAuth Security Enhancement",
+          "headRefName": "oauth-state-secure",
+          "headRefOid": "843d7c71926b03f0c5847a0740ac3f7fb3c5fbad",
+          "baseRefName": "oauth-state-vulnerable"
+        },
+        {
+          "number": 11,
+          "title": "Replays Self-Serve Bulk Delete System",
+          "headRefName": "replays-delete-stable",
+          "headRefOid": "ea188e2d736fd6ed27c1dba8aae63b7268e2a7a9",
+          "baseRefName": "replays-delete-vulnerable"
+        },
+        {
+          "number": 10,
+          "title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+          "headRefName": "span-flusher-multiprocess",
+          "headRefOid": "9bf83b05423beff6dcc542f93e903c562e97469b",
+          "baseRefName": "span-flusher-stable"
+        },
+        {
+          "number": 9,
+          "title": "feat(ecosystem): Implement cross-system issue synchronization",
+          "headRefName": "ecosystem-sync-integration-after",
+          "headRefOid": "f9919d789416dd32549d7bb9e238d5df55d5265a",
+          "baseRefName": "ecosystem-sync-integration-before"
+        },
+        {
+          "number": 8,
+          "title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+          "headRefName": "monitor-incident-refactor-after",
+          "headRefOid": "c3b32a7babfcf62b91553388bcd9e9fbfd30a690",
+          "baseRefName": "monitor-incident-refactor-before"
+        },
+        {
+          "number": 7,
+          "title": "feat(uptime): Add ability to use queues to manage parallelism",
+          "headRefName": "kafka-consumer-parallel-after",
+          "headRefOid": "33f4fddf64465f75308957c4431e56fd0443eca3",
+          "baseRefName": "kafka-consumer-parallel-before"
+        },
+        {
+          "number": 6,
+          "title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+          "headRefName": "workflow-engine-stateful-detector-after",
+          "headRefOid": "de60b7fb01a1df4ecca82cc842a8b5fb16d92794",
+          "baseRefName": "workflow-engine-stateful-detector-before"
+        }
+      ]
+    },
+    "grafana": {
+      "source_repo": "https://github.com/ai-code-review-evaluations/augment-grafana.git",
+      "default_branch": "main",
+      "head_sha": "5dac6731cbb99f3374898cf6a1558edb222d323b",
+      "destination_repo": "droid-grafana",
+      "prs": [
+        {
+          "number": 10,
+          "title": "Anonymous: Add configurable device limit",
+          "headRefName": "implement-device-limits",
+          "headRefOid": "3647ba7360b8d157e4a294a650a365b6aca070d8",
+          "baseRefName": "enhance-anonymous-access"
+        },
+        {
+          "number": 9,
+          "title": "AuthZService: improve authz caching",
+          "headRefName": "authz-service-improve-caching-pr",
+          "headRefOid": "d9dc93c4a6c88ef850dbe526cb3226ae99cafa20",
+          "baseRefName": "cache-optimization-baseline"
+        },
+        {
+          "number": 8,
+          "title": "Plugins: Chore: Renamed instrumentation middleware to metrics middleware",
+          "headRefName": "plugins/rename-instrumentation-middleware-to-metrics-middleware",
+          "headRefOid": "00393c2ac9103072bc2194118e455f9248a37816",
+          "baseRefName": "main"
+        },
+        {
+          "number": 7,
+          "title": "Advanced Query Processing Architecture",
+          "headRefName": "query-splitting-enhancements",
+          "headRefOid": "3ba2457a7090b2b76f4b368c8a9db835d0bec66c",
+          "baseRefName": "query-splitting-baseline"
+        },
+        {
+          "number": 6,
+          "title": "Notification Rule Processing Engine",
+          "headRefName": "notification-rule-enhancements",
+          "headRefOid": "3e6d620d2c1d1f6c10611fba8b0ee062d6fb2a68",
+          "baseRefName": "notification-rule-baseline"
+        },
+        {
+          "number": 5,
+          "title": "Dual Storage Architecture",
+          "headRefName": "dual-storage-enhanced",
+          "headRefOid": "67b74e1e8a7d26d24617b7313b90fa4649138318",
+          "baseRefName": "dual-storage-baseline"
+        },
+        {
+          "number": 4,
+          "title": "Database Performance Optimizations",
+          "headRefName": "db-cleanup-optimized",
+          "headRefOid": "81c45bfe449584dc7ff50e4fabd5d0c6568999b5",
+          "baseRefName": "db-cleanup-baseline"
+        },
+        {
+          "number": 3,
+          "title": "Frontend Asset Optimization",
+          "headRefName": "asset-loading-optimized",
+          "headRefOid": "95000f9fc8049d47f837b6e8603c230c2a073ae5",
+          "baseRefName": "asset-loading-baseline"
+        },
+        {
+          "number": 2,
+          "title": "Advanced SQL Analytics Framework",
+          "headRefName": "advanced-sql-analytics",
+          "headRefOid": "ea71201ddc66f06a3f16387e85a09c53514aaadd",
+          "baseRefName": "data-analysis-features"
+        },
+        {
+          "number": 1,
+          "title": "Unified Storage Performance Optimizations",
+          "headRefName": "unified-storage-enhancements",
+          "headRefOid": "d762a9643618a6ba7c43da27374bd9ffc80889ce",
+          "baseRefName": "performance-optimization-baseline"
+        }
+      ]
+    },
+    "keycloak": {
+      "source_repo": "https://github.com/ai-code-review-evaluations/augment-keycloak.git",
+      "default_branch": "main",
+      "head_sha": "53cc5f793077c7e5522cc907d67fd115219c4b13",
+      "destination_repo": "droid-keycloak",
+      "prs": [
+        {
+          "number": 10,
+          "title": "Fixing Re-authentication with passkeys",
+          "headRefName": "enhance-passkey-authentication-flow",
+          "headRefOid": "3214b188de808fdb0fff335556b686f1b0a63218",
+          "baseRefName": "improve-auth-user-experience"
+        },
+        {
+          "number": 9,
+          "title": "Add caching support for IdentityProviderStorageProvider.getForLogin operations",
+          "headRefName": "feature-idp-cache-implementation",
+          "headRefOid": "3e597722a9164d145bc46aa1de5bd714fb6ba357",
+          "baseRefName": "feature-idp-cache-baseline"
+        },
+        {
+          "number": 8,
+          "title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+          "headRefName": "feature-authz-crypto-implementation",
+          "headRefOid": "b95d12a968e8374a93ddcd56f47ab12eb4136ff4",
+          "baseRefName": "feature-authz-crypto-baseline"
+        },
+        {
+          "number": 7,
+          "title": "Add rolling-updates feature flag and compatibility framework",
+          "headRefName": "feature-rolling-updates-implementation",
+          "headRefOid": "0f91e67b9025d978059b21b5c41283e5000a509c",
+          "baseRefName": "feature-rolling-updates-baseline"
+        },
+        {
+          "number": 6,
+          "title": "Add Client resource type and scopes to authorization schema",
+          "headRefName": "feature-clients-authz-implementation",
+          "headRefOid": "7e5540896bbbafc02234b6ea2b15215dc24cb972",
+          "baseRefName": "feature-clients-authz-baseline"
+        },
+        {
+          "number": 5,
+          "title": "Add Groups resource type and scopes to authorization schema",
+          "headRefName": "feature-groups-authz-implementation",
+          "headRefOid": "679f44692dbc288bedc8f1535071c8467dbaf70c",
+          "baseRefName": "feature-groups-authz-baseline"
+        },
+        {
+          "number": 4,
+          "title": "Add HTML sanitizer for translated message resources",
+          "headRefName": "feature-html-sanitizer-implementation",
+          "headRefOid": "5d77e7ea7d431aa0a6b65904457b7471bd050e81",
+          "baseRefName": "feature-html-sanitizer-baseline"
+        },
+        {
+          "number": 3,
+          "title": "Implement access token context encoding framework",
+          "headRefName": "feature-token-context-implementation",
+          "headRefOid": "c8738721df2cd2d16fe16adec571b4192354a771",
+          "baseRefName": "feature-token-context-baseline"
+        },
+        {
+          "number": 2,
+          "title": "Implement recovery key support for user storage providers",
+          "headRefName": "feature-recovery-keys-implementation",
+          "headRefOid": "134437a5a7e31472763ffa2ac3cc91030e7ee389",
+          "baseRefName": "feature-recovery-keys-foundation"
+        },
+        {
+          "number": 1,
+          "title": "Fix concurrent group access to prevent NullPointerException",
+          "headRefName": "feature-group-concurrency-implementation",
+          "headRefOid": "332c9b6e4a1288705f173a9b797742859384d1e0",
+          "baseRefName": "feature-group-concurrency-update"
+        }
+      ]
+    },
+    "discourse": {
+      "source_repo": "https://github.com/ai-code-review-evaluations/augment-discourse.git",
+      "default_branch": "main",
+      "head_sha": "48a9c55f4504c5bffd31a5e20eda1449f24a09d3",
+      "destination_repo": "droid-discourse",
+      "prs": [
+        {
+          "number": 10,
+          "title": "FEATURE: automatically downsize large images",
+          "headRefName": "large-image-processing",
+          "headRefOid": "ffbaf8c54269df2ce510de91245760fddce09896",
+          "baseRefName": "image-processing-optimization"
+        },
+        {
+          "number": 9,
+          "title": "FEATURE: per-topic unsubscribe option in emails",
+          "headRefName": "topic-email-management",
+          "headRefOid": "6669a2d94d76eea3b99b8c476d12b1eb66726b07",
+          "baseRefName": "email-notifications-enhancement"
+        },
+        {
+          "number": 8,
+          "title": "Add comprehensive email validation for blocked users",
+          "headRefName": "blocked-email-validation-post",
+          "headRefOid": "5f8a130277dbddc95d133cd2832be639baf89213",
+          "baseRefName": "blocked-email-validation-pre"
+        },
+        {
+          "number": 7,
+          "title": "Enhance embed URL handling and validation system",
+          "headRefName": "embed-url-handling-post",
+          "headRefOid": "4f8aed295a29954023b2849c060ef4fb299d1b5d",
+          "baseRefName": "embed-url-handling-pre"
+        },
+        {
+          "number": 6,
+          "title": "Optimize header layout performance with flexbox mixins",
+          "headRefName": "header-layout-optimization-post",
+          "headRefOid": "5b229316ee4c661836ed1161139692a3e8527444",
+          "baseRefName": "header-layout-optimization-pre"
+        },
+        {
+          "number": 5,
+          "title": "UX: show complete URL path if website domain is same as instance domain",
+          "headRefName": "url-handling-post",
+          "headRefOid": "267d8be1f556ed59639ced396c885bb44586da19",
+          "baseRefName": "url-handling-pre"
+        },
+        {
+          "number": 4,
+          "title": "scale-color $lightness must use $secondary for dark themes",
+          "headRefName": "theme-color-scheme-post",
+          "headRefOid": "d38c4d5f7443223c81529c22470293771baf9f38",
+          "baseRefName": "theme-color-scheme-pre"
+        },
+        {
+          "number": 3,
+          "title": "FIX: proper handling of group memberships",
+          "headRefName": "group-dm-user-addition-post",
+          "headRefOid": "060cda77729cb1c4a827560e09e89a7b22078ba9",
+          "baseRefName": "group-dm-user-addition-pre"
+        },
+        {
+          "number": 2,
+          "title": "FEATURE: Localization fallbacks (server-side)",
+          "headRefName": "localization-system-post",
+          "headRefOid": "ecfa17b5a79dfdc91e7a4d50b42ae78a35d0a293",
+          "baseRefName": "localization-system-pre"
+        },
+        {
+          "number": 1,
+          "title": "FEATURE: Can edit category/host relationships for embedding",
+          "headRefName": "rest-serializer-enhancement-post",
+          "headRefOid": "d1c69189f3c90ecf56013a8da904da9bff9a8e19",
+          "baseRefName": "rest-serializer-enhancement-pre"
+        }
+      ]
+    },
+    "cal_dot_com": {
+      "source_repo": "https://github.com/ai-code-review-evaluations/augment-cal_dot_com.git",
+      "default_branch": "main",
+      "head_sha": "7269aca1c02cb34a6f6526d81fc7662d8bf214ba",
+      "destination_repo": "droid-cal_dot_com",
+      "prs": [
+        {
+          "number": 10,
+          "title": "Async import of the appStore packages",
+          "headRefName": "appstore-async-improvements",
+          "headRefOid": "e043a5efd872362a3fc146ed0d9ce4393e316c1e",
+          "baseRefName": "appstore-sync-refactor-base"
+        },
+        {
+          "number": 9,
+          "title": "feat: 2fa backup codes",
+          "headRefName": "improve-two-factor-authentication-features",
+          "headRefOid": "a308075bc39b77ed7059b0cae9d443d669a7bf98",
+          "baseRefName": "enhance-two-factor-security-foundation"
+        },
+        {
+          "number": 8,
+          "title": "fix: handle collective multiple host on destinationCalendar",
+          "headRefName": "fix/handle-collective-multiple-host-destinations",
+          "headRefOid": "bd797c1ea00a61425735f2b9fd7ce212ebf8c8ab",
+          "baseRefName": "enhance-collective-scheduling-foundation"
+        },
+        {
+          "number": 7,
+          "title": "feat: convert InsightsBookingService to use Prisma.sql raw queries",
+          "headRefName": "insights-performance-optimization",
+          "headRefOid": "56ff75f07b92ba8ef499ff28a2f98c25f339fdae",
+          "baseRefName": "insights-query-foundation"
+        },
+        {
+          "number": 6,
+          "title": "Comprehensive workflow reminder management for booking lifecycle events",
+          "headRefName": "workflow-queue-enhanced",
+          "headRefOid": "2ebfcf448c7e4136ac1b8b9ef9b526a4424fd155",
+          "baseRefName": "workflow-queue-base"
+        },
+        {
+          "number": 5,
+          "title": "Advanced date override handling and timezone compatibility improvements",
+          "headRefName": "date-algorithm-enhanced",
+          "headRefOid": "3ef328421f60cd096b7676ef7ee7c32b71593049",
+          "baseRefName": "date-algorithm-base"
+        },
+        {
+          "number": 4,
+          "title": "OAuth credential sync and app integration enhancements",
+          "headRefName": "oauth-security-enhanced",
+          "headRefOid": "824145b0e245661875240ed5c8745decd2293d1a",
+          "baseRefName": "oauth-security-base"
+        },
+        {
+          "number": 3,
+          "title": "SMS workflow reminder retry count tracking",
+          "headRefName": "sms-retry-enhanced",
+          "headRefOid": "2dae0bfb8c72b51aa49260dc1f7f215a6290f3a6",
+          "baseRefName": "sms-retry-base"
+        },
+        {
+          "number": 2,
+          "title": "Add guest management functionality to existing bookings",
+          "headRefName": "guest-management-enhanced",
+          "headRefOid": "baa9045af7711ea0b86390cb0bf0fdce5430228c",
+          "baseRefName": "guest-management-base"
+        },
+        {
+          "number": 1,
+          "title": "feat: add calendar cache status and actions (#22532)",
+          "headRefName": "introduce-cache-key-overflow",
+          "headRefOid": "cb7869234729f908648af6796ab4082b569daf39",
+          "baseRefName": "calendar-cache-foundation"
+        }
+      ]
+    }
+  }
+}
