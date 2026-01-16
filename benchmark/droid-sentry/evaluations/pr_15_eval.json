@@ -1,0 +1,69 @@
+{
+  "pr_number": 15,
+  "pr_title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+  "branch_before": "workflow-engine-stateful-detector-before",
+  "branch_after": "workflow-engine-stateful-detector-after",
+  "droid_evaluation": {
+    "total_comments": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "comments": [
+      {
+        "comment_id": 2696001806,
+        "classification": "TP",
+        "severity": "P0",
+        "summary": "Don't treat `None` result as a status-change message",
+        "issue_description": "The droid correctly identifies that `create_issue_occurrence_from_result` will emit a `STATUS_CHANGE` payload when `result.result` is `None`, because it falls into the else branch (lines 78-80) where `status_change = result.result` (which would be None). While process_detectors guards this with `if result.result is not None:` (line 61), the droid notes that other callers may not have this guard, making the function unsafe to use without that precondition.",
+        "verification": "Confirmed by examining src/sentry/workflow_engine/processors/detector.py lines 73-87. The function create_issue_occurrence_from_result does not guard against None values. If result.result is None, it will set status_change = None and call produce_occurrence_to_kafka with both occurrence and status_change as None, which could produce malformed Kafka messages.",
+        "file": "src/sentry/workflow_engine/processors/detector.py",
+        "line": 62,
+        "is_valid": true,
+        "notes": "This is a defensive programming issue. While the current caller (process_detectors) guards against None, the function itself doesn't enforce this precondition, making it fragile if called from other locations."
+      }
+    ]
+  },
+  "golden_evaluation": {
+    "total_issues": 2,
+    "valid_issues": 2,
+    "specific_issues": 2,
+    "issues": [
+      {
+        "issue_id": 1,
+        "classification": "Valid & Specific",
+        "severity": "High",
+        "summary": "MetricAlertDetectorHandler inherits from StatefulDetectorHandler but only contains pass, failing to implement required abstract methods",
+        "issue_description": "The class MetricAlertDetectorHandler inherits from StatefulDetectorHandler but is defined with only 'pass', without implementing any of the required abstract methods. This will cause a TypeError at runtime when attempting to instantiate the class.",
+        "verification": "Confirmed by examining:\n1. src/sentry/incidents/grouptype.py lines 10-12 - MetricAlertDetectorHandler inherits from StatefulDetectorHandler[QuerySubscriptionUpdate] with only 'pass'\n2. src/sentry/workflow_engine/processors/detector.py lines 142-169 - StatefulDetectorHandler declares 4 abstract methods:\n   - counter_names (property)\n   - get_dedupe_value()\n   - get_group_key_values()\n   - build_occurrence_and_event_data()\nNone of these are implemented in MetricAlertDetectorHandler.",
+        "file": "src/sentry/incidents/grouptype.py",
+        "line": 11,
+        "is_valid": true,
+        "is_specific": true,
+        "notes": "This is a critical issue that will cause runtime errors. Python will not allow instantiation of a class with unimplemented abstract methods."
+      },
+      {
+        "issue_id": 2,
+        "classification": "Valid & Specific",
+        "severity": "Low",
+        "summary": "Docstring says returns list of DetectorEvaluationResult but method now returns dict keyed by DetectorGroupKey",
+        "issue_description": "The docstring for the evaluate() method in StatefulDetectorHandler (lines 227-231) states it 'returns a list of `DetectorEvaluationResult`', but the actual return type is dict[DetectorGroupKey, DetectorEvaluationResult] and the implementation returns a dictionary.",
+        "verification": "Confirmed by examining src/sentry/workflow_engine/processors/detector.py:\n1. Line 227: Method signature shows return type as dict[DetectorGroupKey, DetectorEvaluationResult]\n2. Lines 229-231: Docstring states 'Evaluates a given data packet and returns a list of `DetectorEvaluationResult`.'\n3. Lines 235-243: Implementation builds and returns a dictionary called 'results'\nThe docstring is outdated and contradicts the actual implementation.",
+        "file": "src/sentry/workflow_engine/processors/detector.py",
+        "line": 229,
+        "is_valid": true,
+        "is_specific": true,
+        "notes": "Documentation bug. The method signature and implementation are consistent (both use dict), but the docstring is incorrect."
+      }
+    ]
+  },
+  "summary": {
+    "droid_metrics": {
+      "precision": "100% (1 TP / 1 total)",
+      "recall_calculation": "1 TP out of 2 golden issues = 50%"
+    },
+    "golden_metrics": {
+      "validity_rate": "100% (2 valid / 2 total)",
+      "specificity_rate": "100% (2 specific / 2 total)"
+    },
+    "analysis": "The droid found 1 valid issue (defensive programming concern about None handling). The golden set includes 2 issues: one critical issue about missing abstract method implementations (High severity) and one documentation issue (Low severity). The droid missed both golden issues but found a different valid issue related to API safety. The droid's issue is subtle and forward-thinking (preventing future bugs), while the golden issues are more immediate (runtime error) and less critical (documentation)."
+  }
+}

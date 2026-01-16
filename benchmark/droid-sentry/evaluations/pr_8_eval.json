@@ -1,0 +1,114 @@
+{
+  "pr_number": 8,
+  "pr_title": "feat(upsampling)",
+  "branch_name": "error-upsampling-race-condition",
+  "evaluation_date": "2026-01-15",
+  "droid_review_table": {
+    "total_comments": 0,
+    "comments": []
+  },
+  "golden_review_table": {
+    "total_comments": 3,
+    "comments": [
+      {
+        "id": 1,
+        "severity": "Low",
+        "description": "sample_rate = 0.0 is falsy and skipped",
+        "file": "src/sentry/testutils/factories.py",
+        "line": 353,
+        "code_snippet": "    if client_sample_rate:\n        try:\n            normalized_data[\"sample_rate\"] = float(client_sample_rate)\n        except Exception:\n            pass"
+      },
+      {
+        "id": 2,
+        "severity": "Low",
+        "description": "hash() non-deterministic, cache keys won't match across processes",
+        "file": "src/sentry/api/helpers/error_upsampling.py",
+        "line": 27,
+        "code_snippet": "    cache_key = f\"error_upsampling_eligible:{organization.id}:{hash(tuple(sorted(snuba_params.project_ids)))}\""
+      },
+      {
+        "id": 3,
+        "severity": "Medium",
+        "description": "upsampling eligibility passes wrong dataset",
+        "file": "src/sentry/api/endpoints/organization_events_stats.py",
+        "line": 220,
+        "code_snippet": "            should_upsample = is_errors_query_for_error_upsampled_projects(\n                snuba_params, organization, dataset, request\n            )"
+      }
+    ]
+  },
+  "evaluations": [
+    {
+      "golden_comment_id": 1,
+      "severity": "Low",
+      "description": "sample_rate = 0.0 is falsy and skipped",
+      "found_by_droid": false,
+      "classification": "false_negative",
+      "file": "src/sentry/testutils/factories.py",
+      "line_number": 353,
+      "code_snippet": "    if client_sample_rate:\n        try:\n            normalized_data[\"sample_rate\"] = float(client_sample_rate)\n        except Exception:\n            pass",
+      "evidence": "In the new function _set_sample_rate_from_error_sampling() added in this PR, line 353 uses 'if client_sample_rate:' which is a falsy check. This means if client_sample_rate is 0.0 (a valid sample rate), it will be skipped and not set. The check should be 'if client_sample_rate is not None:' instead.",
+      "impact": "When client_sample_rate is exactly 0.0, the sample_rate won't be set on normalized_data, leading to incorrect behavior. This could cause events with 0% sampling to be treated as if they have no sampling information."
+    },
+    {
+      "golden_comment_id": 2,
+      "severity": "Low",
+      "description": "hash() non-deterministic, cache keys won't match across processes",
+      "found_by_droid": false,
+      "classification": "false_negative",
+      "file": "src/sentry/api/helpers/error_upsampling.py",
+      "line_number": 27,
+      "code_snippet": "    cache_key = f\"error_upsampling_eligible:{organization.id}:{hash(tuple(sorted(snuba_params.project_ids)))}\"",
+      "evidence": "The cache key uses Python's built-in hash() function which is non-deterministic across different Python processes (it uses a random seed for security). This same pattern appears twice in the file (lines 27 and 73). This means cache keys generated in different processes will be different even for the same organization and project IDs, breaking cache consistency.",
+      "impact": "The cache will not work correctly across multiple processes or application restarts. Each process will have its own set of cache keys, making the caching ineffective and potentially causing inconsistent behavior. This defeats the purpose of the 60-second cache optimization mentioned in the comments."
+    },
+    {
+      "golden_comment_id": 3,
+      "severity": "Medium",
+      "description": "upsampling eligibility passes wrong dataset",
+      "found_by_droid": false,
+      "classification": "false_negative",
+      "file": "src/sentry/api/endpoints/organization_events_stats.py",
+      "line_number": 220,
+      "code_snippet": "            should_upsample = is_errors_query_for_error_upsampled_projects(\n                snuba_params, organization, dataset, request\n            )",
+      "evidence": "The _get_event_stats() function receives 'scoped_dataset' as a parameter (line 210), but when calling is_errors_query_for_error_upsampled_projects() on line 220, it passes 'dataset' instead. The 'dataset' variable comes from the outer scope and may not match the actual scoped_dataset being used for the query. This is a scope confusion bug where the wrong dataset reference is being checked for upsampling eligibility.",
+      "impact": "The upsampling eligibility check may evaluate against the wrong dataset. For example, if scoped_dataset is 'errors' but dataset is 'discover', the wrong dataset will be checked, potentially causing upsampling to be incorrectly applied or not applied when it should be. This could lead to incorrect query transformations and wrong results."
+    }
+  ],
+  "metrics": {
+    "total_golden_comments": 3,
+    "total_droid_comments": 0,
+    "true_positives": 0,
+    "false_positives": 0,
+    "false_negatives": 3,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1_score": 0.0,
+    "false_negative_rate": 1.0,
+    "severity_breakdown": {
+      "Low": {
+        "total": 2,
+        "found": 0,
+        "missed": 2
+      },
+      "Medium": {
+        "total": 1,
+        "found": 0,
+        "missed": 1
+      },
+      "High": {
+        "total": 0,
+        "found": 0,
+        "missed": 0
+      }
+    }
+  },
+  "summary": {
+    "pr_evaluation": "PR #8 introduces error upsampling functionality but contains 3 bugs that were not detected by Droid's review",
+    "key_findings": [
+      "Falsy check on client_sample_rate will skip valid 0.0 values",
+      "Non-deterministic hash() in cache keys breaks cross-process caching",
+      "Wrong dataset variable passed to upsampling eligibility check"
+    ],
+    "droid_performance": "Droid failed to identify any of the 3 golden comments, resulting in 100% false negative rate. All issues involve subtle logic bugs that require understanding of Python semantics (falsy values, hash determinism) and control flow (variable scoping)."
+  }
+}

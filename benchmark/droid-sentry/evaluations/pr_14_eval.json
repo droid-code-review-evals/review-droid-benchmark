@@ -1,0 +1,108 @@
+{
+  "pr_number": 14,
+  "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+  "branch_before": "kafka-consumer-parallel-before",
+  "branch_after": "kafka-consumer-parallel-after",
+  "evaluation_date": "2026-01-15",
+  
+  "droid_comments": {
+    "total": 1,
+    "comments": [
+      {
+        "id": 1,
+        "severity": "P0",
+        "summary": "Don't assume contiguous offsets; current commit logic can stall forever",
+        "file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+        "line": 86,
+        "full_comment": "OffsetTracker.get_committable_offsets() iterates range(start, max_offset + 1) and breaks on the first missing offset, so if Kafka delivers 100 then 102 (or compaction/retention skips 101), you will never commit 102+ even after processing everything; you need to advance based on \"next expected\" (last committed + 1) only when that exact offset is present/complete, rather than treating gaps as permanent blockers.",
+        "classification": "TP",
+        "reasoning": "This is a TRUE POSITIVE. The code at lines 89-93 does 'for offset in range(start, max_offset + 1)' and breaks if 'offset in all_offsets' is False. If Kafka skips offset 101 due to compaction or retention, the code will never commit offset 102+ even after processing them. This is a real bug that could cause offset commits to stall indefinitely. The droid correctly identified a critical issue with the offset tracking logic.",
+        "verification": {
+          "method": "code_inspection",
+          "evidence": "Lines 89-93 in queue_consumer.py show: 'for offset in range(start, max_offset + 1): if offset in all_offsets and offset not in outstanding: highest_committable = offset else: break'. This confirms the bug - any gap in offsets will prevent committing later offsets."
+        }
+      }
+    ],
+    "summary": {
+      "true_positives": 1,
+      "false_positives": 0,
+      "tp_rate": "100%"
+    }
+  },
+  
+  "golden_comments": {
+    "total": 3,
+    "comments": [
+      {
+        "id": 1,
+        "severity": "High",
+        "summary": "queue.shutdown() with immediate=False may not exist in standard Python queue module - could cause AttributeError",
+        "file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+        "line": 238,
+        "full_comment": "queue.shutdown() with immediate=False may not exist in standard Python queue module - could cause AttributeError",
+        "validity": "Invalid",
+        "specificity": "N/A",
+        "reasoning": "This comment is INVALID. The queue.shutdown(immediate=False) method DOES exist in Python's standard queue module. Verification via 'python3 -c \"import queue; help(queue.Queue.shutdown)\"' confirms the method exists with the exact signature 'shutdown(self, immediate=False)'. This method was added to Python's queue module (appears to be available in Python 3.13+, and the codebase is running Python 3.14.2). The comment is factually incorrect.",
+        "verification": {
+          "method": "runtime_check",
+          "evidence": "Running help(queue.Queue.shutdown) shows: 'shutdown(self, immediate=False) - Shut-down the queue, making queue gets and puts raise ShutDown. By default, gets will only raise once the queue is empty. Set immediate to True to make gets raise immediately instead.'"
+        }
+      },
+      {
+        "id": 2,
+        "severity": "Low",
+        "summary": "Magic number 50 for max_wait used repeatedly - extract as named constant",
+        "file": "tests/sentry/uptime/consumers/test_results_consumer.py",
+        "lines": [1718, 1765, 1812],
+        "full_comment": "Magic number 50 for max_wait used repeatedly - extract as named constant",
+        "validity": "Valid",
+        "specificity": "Specific",
+        "reasoning": "This is a VALID and SPECIFIC comment. The value 50 for max_wait appears at lines 1718, 1765, and 1812 in test_results_consumer.py. Extracting this repeated value to a named constant (e.g., MAX_WAIT_ITERATIONS or QUEUE_DRAIN_TIMEOUT_ITERATIONS) would improve code maintainability and make the intent clearer. This is a reasonable code quality suggestion with precise line numbers.",
+        "verification": {
+          "method": "grep",
+          "evidence": "grep for 'max_wait.*50' found 3 occurrences at lines 1718, 1765, 1812 in test_results_consumer.py, all using 'max_wait = 50'"
+        }
+      },
+      {
+        "id": 3,
+        "severity": "Low",
+        "summary": "test_thread_queue_parallel_error_handling docstring doesn't match test implementation",
+        "file": "tests/sentry/uptime/consumers/test_results_consumer.py",
+        "line": 1874,
+        "full_comment": "test_thread_queue_parallel_error_handling docstring doesn't match test implementation",
+        "validity": "Valid",
+        "specificity": "Specific",
+        "reasoning": "This is a VALID and SPECIFIC comment. The docstring at line 1876 says 'Test that errors in processing don't block offset commits for other messages', which implies commits should still happen. However, the actual test assertion at line 1921 is 'assert len(committed_offsets) == 0 or test_partition not in committed_offsets', which verifies that NO commits occurred. The test is actually verifying that when errors occur, offsets are NOT committed (likely for safety), which is opposite to what the docstring suggests. The docstring is misleading and should be updated to reflect the actual test behavior.",
+        "verification": {
+          "method": "code_inspection",
+          "evidence": "Line 1876 docstring says commits shouldn't be blocked, but line 1921 asserts no commits happened: 'assert len(committed_offsets) == 0 or test_partition not in committed_offsets'. The test also uses 'mock_processor_call.side_effect = [Exception(\"Processing failed\"), None]' to simulate an error on the first message."
+        }
+      }
+    ],
+    "summary": {
+      "valid": 2,
+      "invalid": 1,
+      "specific": 2,
+      "vague": 0,
+      "validity_rate": "66.67%",
+      "specificity_rate": "100%"
+    }
+  },
+  
+  "comparison": {
+    "droid_caught_critical_issue": true,
+    "golden_missed_critical_issue": true,
+    "notes": [
+      "Droid identified a critical P0 bug in offset commit logic that could cause indefinite stalling",
+      "Golden comment #1 is factually incorrect - queue.shutdown() does exist in Python 3.13+",
+      "Golden comments #2 and #3 are valid code quality improvements but lower severity than the droid's finding",
+      "The critical offset tracking bug found by droid is more impactful than any of the golden comments"
+    ]
+  },
+  
+  "overall_assessment": {
+    "droid_performance": "Excellent - identified a critical correctness bug that golden comments missed",
+    "golden_quality": "Mixed - 1 invalid comment (factual error), 2 valid but lower-priority code quality suggestions",
+    "key_finding": "Droid's P0 comment about offset commit stalling is the most important issue in this PR"
+  }
+}

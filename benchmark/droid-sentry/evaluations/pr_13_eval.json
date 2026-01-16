@@ -1,0 +1,64 @@
+{
+  "pr_number": 13,
+  "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+  "evaluation_date": "2026-01-16",
+  "evaluator": "droid",
+  
+  "droid_comments": {
+    "total": 0,
+    "true_positives": 0,
+    "false_positives": 0,
+    "comments": []
+  },
+  
+  "golden_comments": {
+    "total": 2,
+    "comments": [
+      {
+        "id": 1,
+        "file": "src/sentry/monitors/logic/incident_occurrence.py",
+        "line": 166,
+        "severity": "High",
+        "comment": "Function modifies config variable to include display values but returns original monitor.config instead of modified version",
+        "description": "In get_monitor_environment_context(), line 158 creates a copy of monitor.config and line 160 modifies it to add schedule_type display value. However, line 166 returns the original unmodified monitor_environment.monitor.config instead of the modified config variable. This means the schedule_type display value modification is lost.",
+        "is_valid": true,
+        "is_specific": true,
+        "reasoning": "Verified by examining the code. The function creates `config = monitor_environment.monitor.config.copy()` on line 158, then conditionally adds a human-readable schedule_type on line 160 with `config['schedule_type'] = monitor_environment.monitor.get_schedule_type_display()`. However, the return statement on line 166 uses `'config': monitor_environment.monitor.config` (the original) instead of `'config': config` (the modified copy). This is clearly a bug where the modification is discarded.",
+        "verified_with_grep": true,
+        "actual_code": "def get_monitor_environment_context(monitor_environment: MonitorEnvironment):\n    config = monitor_environment.monitor.config.copy()\n    if \"schedule_type\" in config:\n        config[\"schedule_type\"] = monitor_environment.monitor.get_schedule_type_display()\n\n    return {\n        \"id\": str(monitor_environment.monitor.guid),\n        \"slug\": str(monitor_environment.monitor.slug),\n        \"name\": monitor_environment.monitor.name,\n        \"config\": monitor_environment.monitor.config,\n        \"status\": monitor_environment.get_status_display(),\n        \"type\": monitor_environment.monitor.get_type_display(),\n    }",
+        "expected_fix": "Change line 166 from 'config': monitor_environment.monitor.config to 'config': config"
+      },
+      {
+        "id": 2,
+        "file": "src/sentry/monitors/logic/incidents.py",
+        "line": 91,
+        "severity": "Low",
+        "comment": "Code fetches MonitorCheckIn by ID when data already exists in previous_checkins - unnecessary database query",
+        "description": "Line 91 performs a database query `MonitorCheckIn.objects.filter(id__in=[c['id'] for c in previous_checkins])` to fetch MonitorCheckIn objects. However, the previous_checkins list already contains the necessary data (id, date_added, status). The only additional fields needed from the full MonitorCheckIn object are monitor_environment and trace_id, but these are the same for all check-ins in the loop and are already available from failed_checkin. This results in unnecessary database queries.",
+        "is_valid": true,
+        "is_specific": true,
+        "reasoning": "Verified by examining the code flow. Line 91 queries the database to get full MonitorCheckIn objects, then line 92-93 iterates over them calling create_incident_occurrence(). Looking at create_incident_occurrence() in incident_occurrence.py, it receives failed_checkin parameter and uses it to get monitor_environment (line 37) and trace_id (line 83). The previous_checkins parameter is only used for get_failure_reason() which only needs the status field. Since all check-ins share the same monitor_environment and the trace_id is specific to failed_checkin, the database query to fetch all check-ins is unnecessary. However, this is labeled 'Low' severity because it's a performance optimization rather than a functional bug.",
+        "verified_with_grep": true,
+        "actual_code": "checkins = MonitorCheckIn.objects.filter(id__in=[c[\"id\"] for c in previous_checkins])\nfor checkin in checkins:\n    create_incident_occurrence(\n        previous_checkins,\n        checkin,\n        incident,\n        received=received,\n    )",
+        "expected_fix": "Remove the database query and pass failed_checkin directly since all occurrences share the same monitor environment and trace_id comes from failed_checkin"
+      }
+    ]
+  },
+  
+  "summary": {
+    "droid_performance": {
+      "true_positive_rate": "0% (0/0)",
+      "false_positive_rate": "N/A (0/0)",
+      "comments_found": 0,
+      "quality": "Poor - Droid completely missed this PR, providing no comments at all"
+    },
+    "golden_coverage": {
+      "total_valid_issues": 2,
+      "critical_issues": 1,
+      "code_quality_issues": 1,
+      "droid_overlap": 0,
+      "missed_by_droid": 2
+    },
+    "analysis": "Droid provided 0 comments on this PR, missing both valid issues identified by the golden standard. The first issue (High severity) is a clear logic bug where a function modifies a config copy but returns the original unmodified config, causing the modification to be lost. The second issue (Low severity) is a performance concern where unnecessary database queries are made for data that's already available in memory. This represents a complete miss by Droid - it should have at least caught the high-severity logic error in get_monitor_environment_context()."
+  }
+}

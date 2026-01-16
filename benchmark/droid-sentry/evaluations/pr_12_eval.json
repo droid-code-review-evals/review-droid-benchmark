@@ -1,0 +1,104 @@
+{
+  "pr_number": 12,
+  "pr_title": "feat(ecosystem): Implement cross-system issue synchronization",
+  "evaluation_date": "2026-01-16",
+  "evaluator": "droid",
+  
+  "droid_comments": {
+    "total": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "comments": [
+      {
+        "id": 1,
+        "file": "src/sentry/integrations/services/assignment_source.py",
+        "line": 17,
+        "severity": "P1",
+        "comment": "Fix frozen dataclass default to avoid shared timestamp",
+        "description": "`queued: datetime = timezone.now()` is evaluated at import/class definition time, so every instance without an explicit `queued` shares the same timestamp. Use a `default_factory` instead (e.g., `field(default_factory=timezone.now)`).",
+        "evaluation": "TRUE_POSITIVE",
+        "reasoning": "This is a valid bug. In Python dataclasses, default values are evaluated once at class definition time. timezone.now() will be called once when the class is defined, and all instances will share the same timestamp unless explicitly provided. The correct approach is to use field(default_factory=timezone.now) to ensure each instance gets a fresh timestamp.",
+        "verified_with_grep": true,
+        "actual_code": "queued: datetime = timezone.now()",
+        "impact": "High - all AssignmentSource instances will have the same timestamp, making it impossible to track when different assignments were queued"
+      }
+    ]
+  },
+  
+  "golden_comments": {
+    "total": 4,
+    "comments": [
+      {
+        "id": 1,
+        "file": "src/sentry/integrations/services/assignment_source.py",
+        "line": 17,
+        "severity": "Medium",
+        "comment": "Shared mutable default in dataclass timestamp",
+        "description": "The default value `timezone.now()` is evaluated at class definition time, causing all instances to share the same timestamp. Should use `field(default_factory=timezone.now)`",
+        "is_valid": true,
+        "is_specific": true,
+        "reasoning": "This is the same issue as the droid comment. The golden comment correctly identifies the shared mutable default problem and provides the correct solution using default_factory.",
+        "verified_with_grep": true,
+        "actual_code": "queued: datetime = timezone.now()",
+        "duplicate_of_droid": true
+      },
+      {
+        "id": 2,
+        "file": "tests/sentry/integrations/services/test_assignment_source.py",
+        "line": 13,
+        "severity": "Low",
+        "comment": "Method name typo: test_from_dict_inalid_data should be test_from_dict_invalid_data",
+        "description": "Typo in test method name - 'inalid' should be 'invalid'",
+        "is_valid": true,
+        "is_specific": true,
+        "reasoning": "Verified by grep - the method name is indeed 'test_from_dict_inalid_data' which contains a typo. Should be 'test_from_dict_invalid_data'.",
+        "verified_with_grep": true,
+        "actual_code": "def test_from_dict_inalid_data(self):"
+      },
+      {
+        "id": 3,
+        "file": "tests/sentry/integrations/services/test_assignment_source.py",
+        "line": 8,
+        "severity": "Low",
+        "comment": "Method says 'empty_array' but tests empty dict - rename to test_from_dict_empty_dict",
+        "description": "The method name test_from_dict_empty_array is misleading because it actually tests an empty dict `{}`, not an empty array `[]`. Should be renamed to test_from_dict_empty_dict for clarity.",
+        "is_valid": true,
+        "is_specific": true,
+        "reasoning": "Verified by reading the test file. The method test_from_dict_empty_array has `data: dict[str, Any] = {}` which is an empty dictionary, not an empty array. The name is misleading and should be test_from_dict_empty_dict.",
+        "verified_with_grep": true,
+        "actual_code": "def test_from_dict_empty_array(self):\n        data: dict[str, Any] = {}"
+      },
+      {
+        "id": 4,
+        "file": "src/sentry/integrations/services/assignment_source.py",
+        "line": 27,
+        "severity": "Medium",
+        "comment": "to_dict() returns datetime for queued - JSON serialization may fail",
+        "description": "The to_dict() method uses asdict() which will include the datetime object for the 'queued' field. When this dict is serialized to JSON (e.g., in sync_group_assignee_outbound where it's passed as assignment_source_dict), it will fail because datetime objects are not JSON serializable. Should convert datetime to string or timestamp.",
+        "is_valid": true,
+        "is_specific": true,
+        "reasoning": "Verified by examining the code flow. In sync_group_assignee_outbound (src/sentry/integrations/utils/sync.py), the code calls assignment_source.to_dict() and passes it as assignment_source_dict to a Celery task. Celery tasks serialize arguments to JSON, and datetime objects are not JSON serializable by default. This will cause a TypeError at runtime.",
+        "verified_with_grep": true,
+        "actual_code": "def to_dict(self) -> dict[str, Any]:\n        return asdict(self)",
+        "code_usage": "assignment_source_dict: assignment_source.to_dict() if assignment_source else None"
+      }
+    ]
+  },
+  
+  "summary": {
+    "droid_performance": {
+      "true_positive_rate": "100% (1/1)",
+      "false_positive_rate": "0% (0/1)",
+      "comments_found": 1,
+      "quality": "High - caught the most critical bug (shared mutable default)"
+    },
+    "golden_coverage": {
+      "total_valid_issues": 4,
+      "critical_issues": 2,
+      "code_quality_issues": 2,
+      "droid_overlap": 1,
+      "missed_by_droid": 3
+    },
+    "analysis": "Droid caught the most critical bug (shared mutable default timestamp) which is a P1 issue. However, it missed 3 other valid issues: 2 naming/typo issues in tests (low severity) and 1 medium severity JSON serialization bug in to_dict(). The JSON serialization issue is notable because it would cause runtime failures when the code is actually used. Droid's comment was accurate, specific, and actionable."
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "repo": "droid-sentry",
+  "evaluation_date": "2026-01-16",
+  "model_used": "claude-opus-4-5 (default)",
+  "prs": [
+    {
+      "pr_number": 6,
+      "pr_title": "Enhanced Pagination Performance for High-Volume Audit Logs",
+      "droid_tp": 3,
+      "droid_fp": 0,
+      "droid_fn": 2,
+      "golden_valid": 4,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 7,
+      "pr_title": "Optimize spans buffer insertion with eviction during insert",
+      "droid_tp": 6,
+      "droid_fp": 1,
+      "droid_fn": 1,
+      "golden_valid": 3,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 8,
+      "pr_title": "feat(upsampling)",
+      "droid_tp": 0,
+      "droid_fp": 0,
+      "droid_fn": 3,
+      "golden_valid": 0,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 9,
+      "pr_title": "GitHub OAuth Security Enhancement",
+      "droid_tp": 1,
+      "droid_fp": 0,
+      "droid_fn": 2,
+      "golden_valid": 3,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 10,
+      "pr_title": "Replays Self-Serve Bulk Delete System",
+      "droid_tp": 3,
+      "droid_fp": 0,
+      "droid_fn": 0,
+      "golden_valid": 0,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 11,
+      "pr_title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+      "droid_tp": 0,
+      "droid_fp": 0,
+      "droid_fn": 0,
+      "golden_valid": 0,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 12,
+      "pr_title": "feat(ecosystem): Implement cross-system issue synchronization",
+      "droid_tp": 1,
+      "droid_fp": 0,
+      "droid_fn": 0,
+      "golden_valid": 4,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 13,
+      "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+      "droid_tp": 0,
+      "droid_fp": 0,
+      "droid_fn": 0,
+      "golden_valid": 2,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 14,
+      "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+      "droid_tp": 1,
+      "droid_fp": 0,
+      "droid_fn": 0,
+      "golden_valid": 3,
+      "golden_invalid": 0
+    },
+    {
+      "pr_number": 15,
+      "pr_title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+      "droid_tp": 1,
+      "droid_fp": 0,
+      "droid_fn": 0,
+      "golden_valid": 0,
+      "golden_invalid": 0
+    }
+  ],
+  "summary": {
+    "total_prs": 10,
+    "droid_metrics": {
+      "total_comments": 17,
+      "true_positives": 16,
+      "false_positives": 1,
+      "false_negatives": 8,
+      "precision": 94.1,
+      "recall": 66.7,
+      "f1_score": 78.0
+    },
+    "golden_metrics": {
+      "total_comments": 19,
+      "valid": 19,
+      "invalid": 0,
+      "validity_rate": 100.0
+    }
+  }
+}
