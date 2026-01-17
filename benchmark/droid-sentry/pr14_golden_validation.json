@@ -1,0 +1,93 @@
+{
+  "pr_number": 14,
+  "validation_date": "2026-01-16",
+  "diff_file": "/tmp/pr14_diff.txt",
+  "python_version_in_use": "3.14.2",
+  "project_target_python": "3.13",
+  "golden_comments": [
+    {
+      "id": 1,
+      "severity": "High",
+      "comment": "queue.shutdown() method with immediate=False may not exist in standard Python queue module",
+      "is_valid": true,
+      "is_false_positive": false,
+      "evidence": {
+        "code_exists_in_diff": true,
+        "location_in_diff": "Line 266: q.shutdown(immediate=False)",
+        "context": "Found in FixedQueuePool.shutdown() method in src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+        "full_context": "def shutdown(self) -> None:\n    \"\"\"Gracefully shutdown all workers.\"\"\"\n    for worker in self.workers:\n        worker.shutdown = True\n\n    for q in self.queues:\n        try:\n            q.shutdown(immediate=False)\n        except Exception:\n            logger.exception(\"Error shutting down queue\")"
+      },
+      "validation_details": {
+        "queue_shutdown_availability": "queue.shutdown() was added in Python 3.13",
+        "project_compatibility": "Project targets Python 3.13+ (pyproject.toml specifies python_version = '3.13')",
+        "current_python": "System is running Python 3.14.2",
+        "assessment": "VALID CONCERN - The method exists in Python 3.13+, but the severity depends on whether the project needs to support older Python versions. Since the project explicitly targets Python 3.13, this is actually compatible. However, the comment is valid as a heads-up about version requirements."
+      }
+    },
+    {
+      "id": 2,
+      "severity": "Low",
+      "comment": "Magic number 50 for max_wait used repeatedly throughout tests",
+      "is_valid": true,
+      "is_false_positive": false,
+      "evidence": {
+        "code_exists_in_diff": true,
+        "occurrences": [
+          {
+            "line": 998,
+            "context": "test_thread_queue_parallel - max_wait = 50"
+          },
+          {
+            "line": 1045,
+            "context": "test_thread_queue_parallel_preserves_order - max_wait = 50"
+          },
+          {
+            "line": 1092,
+            "context": "test_thread_queue_parallel_concurrent_subscriptions - max_wait = 50"
+          }
+        ],
+        "full_grep_output": "998:+            max_wait = 50\n1045:+            max_wait = 50\n1092:+            max_wait = 50"
+      },
+      "validation_details": {
+        "magic_number_count": 3,
+        "locations": "tests/sentry/uptime/consumers/test_results_consumer.py",
+        "assessment": "VALID ISSUE - The magic number 50 is used in 3 different test methods. This should be extracted to a constant for better maintainability.",
+        "recommendation": "Define a constant like MAX_WAIT_ITERATIONS = 50 at the class or module level"
+      }
+    },
+    {
+      "id": 3,
+      "severity": "Low",
+      "comment": "Test test_thread_queue_parallel_error_handling has docstring that doesn't match implementation",
+      "is_valid": true,
+      "is_false_positive": false,
+      "evidence": {
+        "code_exists_in_diff": true,
+        "location_in_diff": "Line 1154-1157",
+        "test_name": "test_thread_queue_parallel_error_handling",
+        "docstring": "Test that errors in processing don't block offset commits for other messages.",
+        "implementation_analysis": "The test creates a factory with thread-queue-parallel mode, mocks the processor to raise an exception on first call and succeed on second call, submits two messages, and verifies that both are processed. The test checks that commits either don't happen or the partition is not committed, suggesting errors DO block commits.",
+        "full_context": "def test_thread_queue_parallel_error_handling(self) -> None:\n    \"\"\"\n    Test that errors in processing don't block offset commits for other messages.\n    \"\"\"\n    committed_offsets: dict[Partition, int] = {}\n\n    def track_commits(offsets: Mapping[Partition, int], force: bool = False) -> None:\n        committed_offsets.update(offsets)"
+      },
+      "validation_details": {
+        "docstring_claim": "errors in processing don't block offset commits for other messages",
+        "actual_behavior": "The test verifies that when processing errors occur, commits either don't happen or the partition is not committed (line ~1222: 'assert len(committed_offsets) == 0 or test_partition not in committed_offsets')",
+        "mismatch": "The docstring says errors DON'T block commits, but the test verifies that commits DON'T happen when there are errors - which is the opposite",
+        "assessment": "VALID ISSUE - There is a discrepancy between what the docstring claims and what the test actually verifies. Either the docstring needs to be updated to match the implementation, or the test logic needs to be changed to match the docstring."
+      }
+    }
+  ],
+  "summary": {
+    "total_golden_comments": 3,
+    "validated_as_true": 3,
+    "validated_as_false_positive": 0,
+    "notes": [
+      "All 3 golden comments were validated as TRUE and code exists in the PR diff",
+      "Golden Comment #1 (High): queue.shutdown(immediate=False) does exist in the diff and is a valid concern regarding Python 3.13+ requirement",
+      "Golden Comment #2 (Low): Magic number 50 is confirmed in 3 locations in test files",
+      "Golden Comment #3 (Low): Confirmed mismatch between test docstring and implementation behavior",
+      "Project targets Python 3.13 which includes queue.shutdown(), so Comment #1's concern is mitigated by version requirements",
+      "System is currently running Python 3.14.2 which fully supports queue.shutdown()"
+    ]
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "pr_number": 10,
+  "branch_base": "replays-delete-vulnerable",
+  "branch_head": "replays-delete-stable",
+  "total_comments": 3,
+  "valid_comments": 3,
+  "invalid_comments": 0,
+  "validation_results": [
+    {
+      "comment_id": 1,
+      "severity": "Medium",
+      "description": "Breaking changes in error response format",
+      "found_in_diff": true,
+      "is_valid": true,
+      "is_breaking_change": true,
+      "evidence": [
+        "Changed from django.http.HttpResponse to rest_framework.response.Response",
+        "Uses DRF status constants: HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_422_UNPROCESSABLE_ENTITY",
+        "Previously returned plain status codes without JSON body"
+      ],
+      "analysis": "VALID: This is a breaking API change. The endpoint previously returned plain HTTP status codes (e.g., HttpResponse(status=422)), but now returns JSON-formatted error responses with {'error': ..., 'details': ...}. Clients expecting the old format (empty response body) will break when parsing the new JSON response. This is a legitimate breaking change, not just an intentional improvement."
+    },
+    {
+      "comment_id": 2,
+      "severity": "Medium",
+      "description": "Detector validator uses wrong key when updating type",
+      "found_in_diff": true,
+      "is_valid": true,
+      "bug_confirmed": true,
+      "evidence": [
+        "Serializer field is defined as 'type'",
+        "Code uses 'detector_type' key to access validated_data"
+      ],
+      "analysis": "VALID BUG: The serializer defines the field as 'type' but the update() method tries to access it using 'detector_type' key. Django REST Framework's CamelSnakeSerializer will convert field names, but the field is named 'type', not 'detector_type'. This means the code will always use the fallback value (instance.group_type) instead of the submitted value. This is a clear bug."
+    },
+    {
+      "comment_id": 3,
+      "severity": "Low",
+      "description": "Using zip(error_ids, events.values()) assumes the get_multi result preserves the input order",
+      "found_in_diff": true,
+      "is_valid": true,
+      "bug_confirmed": true,
+      "evidence": [
+        "Found: zip(error_ids, events.values())",
+        "Found: events = nodestore.backend.get_multi(node_ids)",
+        "Found: node_ids created from error_ids in order"
+      ],
+      "analysis": "VALID CONCERN: The code creates node_ids from error_ids in order, calls nodestore.backend.get_multi(node_ids), and then zips error_ids with events.values(). While Python dicts preserve insertion order (since 3.7+), there's no guarantee that get_multi() inserts results into the dict in the same order as the input node_ids. The get_multi method may return results in arbitrary order, fetch them from cache/storage in different order, or skip missing items. This could lead to mismatched error_id/data pairs. The correct approach would be to use get_multi() to return a dict and then iterate: [events.get(node_id) for node_id in node_ids] or similar."
+    }
+  ],
+  "deep_programmatic_tests": [
+    {
+      "test": "response_format_breaking_change",
+      "breaking_change_confirmed": true,
+      "old_format": "HttpResponse(status=422) with empty body",
+      "new_format": "Response({'error': ..., 'details': ...}, status=422) with JSON body",
+      "explanation": "Clients expecting empty response body will encounter JSON data instead. This breaks API contract and requires client updates."
+    },
+    {
+      "test": "detector_key_mismatch",
+      "bug_confirmed": true,
+      "expected_value": "new_type_slug",
+      "actual_value_with_bug": "old_type_slug",
+      "explanation": "The buggy code uses 'detector_type' key which doesn't exist in validated_data, so it always falls back to the old value 'old_type_slug' instead of using the new submitted value 'new_type_slug'."
+    },
+    {
+      "test": "zip_order_assumption",
+      "bug_confirmed": true,
+      "explanation": "When get_multi returns results out of order (which it can), zip(error_ids, events.values()) will create incorrect pairings. The fix should use the dict lookup to ensure correct order."
+    }
+  ]
+}

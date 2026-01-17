@@ -1,0 +1,61 @@
+{
+  "pr_number": 7,
+  "branch_checked": "performance-enhancement-complete",
+  "baseline_branch": "performance-optimization-baseline (not found, analyzed commit 8ab8814511)",
+  "commit_analyzed": "8ab88145113dd23a930e23b9cbbcf8b30e4c0b17",
+  "commit_message": "feat(audit-logs): Enhanced pagination performance for high-volume deployments",
+  "validation_timestamp": "2026-01-16",
+  "golden_comments_validation": {
+    "1_optimized_cursor_paginator_negative_offset_slices_queryset": {
+      "requirement": "OptimizedCursorPaginator negative-offset slices QuerySet",
+      "found": true,
+      "details": {
+        "file": "src/sentry/api/paginator.py",
+        "class": "OptimizedCursorPaginator",
+        "method": "get_result",
+        "code_snippet": "if self.enable_advanced_features and cursor.offset < 0:\n    start_offset = cursor.offset  # Allow negative offsets for advanced pagination\n    stop = start_offset + limit + extra\n    results = list(queryset[start_offset:stop])",
+        "explanation": "When enable_advanced_features is True and cursor.offset < 0, the code uses the negative offset directly to slice the queryset, allowing negative-offset pagination."
+      }
+    },
+    "2_base_paginator_negative_offset_slices_queryset": {
+      "requirement": "BasePaginator negative-offset slices QuerySet",
+      "found": true,
+      "details": {
+        "file": "src/sentry/api/paginator.py",
+        "class": "BasePaginator",
+        "method": "get_result",
+        "code_snippet": "start_offset = max(0, offset) if not cursor.is_prev else offset\nstop = start_offset + limit + extra\nresults = list(queryset[start_offset:stop])",
+        "explanation": "When cursor.is_prev is True, the code uses offset directly (which can be negative) without applying max(0, offset), thus allowing negative-offset slicing of the queryset."
+      }
+    },
+    "3_get_item_key_uses_floor_ceil_on_datetime": {
+      "requirement": "get_item_key uses floor/ceil on datetime",
+      "found": true,
+      "details": {
+        "file": "src/sentry/api/paginator.py",
+        "class": "OptimizedCursorPaginator",
+        "method": "get_item_key",
+        "code_snippet": "def get_item_key(self, item, for_prev=False):\n    value = getattr(item, self.key)\n    return int(math.floor(value) if self._is_asc(for_prev) else math.ceil(value))",
+        "explanation": "The get_item_key method uses math.floor() when sorting ascending and math.ceil() when sorting descending on the value attribute, which would be a datetime in the context of DateTimePaginator usage."
+      }
+    }
+  },
+  "summary": {
+    "all_golden_comments_found": true,
+    "total_requirements": 3,
+    "requirements_met": 3,
+    "requirements_not_met": 0
+  },
+  "files_modified": [
+    "src/sentry/api/endpoints/organization_auditlogs.py",
+    "src/sentry/api/paginator.py",
+    "src/sentry/utils/cursors.py"
+  ],
+  "key_changes": [
+    "Added OptimizedCursorPaginator class with advanced boundary handling",
+    "Enhanced BasePaginator to support negative-offset slicing for reverse pagination",
+    "Implemented get_item_key with floor/ceil datetime handling in OptimizedCursorPaginator",
+    "Added optimized_pagination query parameter support in organization_auditlogs.py",
+    "Added enable_advanced_features parameter support in Cursor class"
+  ]
+}

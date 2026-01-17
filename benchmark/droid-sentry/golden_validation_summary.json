@@ -1,0 +1,59 @@
+{
+  "per_pr": {
+    "10": {
+      "valid": 0,
+      "false_positive": 0,
+      "file": "pr10_golden_validation.json"
+    },
+    "11": {
+      "valid": 0,
+      "false_positive": 1,
+      "file": "pr11_golden_validation.json"
+    },
+    "12": {
+      "valid": 0,
+      "false_positive": 0,
+      "file": "pr12_golden_validation.json"
+    },
+    "13": {
+      "valid": 2,
+      "false_positive": 0,
+      "file": "pr13_golden_validation.json"
+    },
+    "14": {
+      "valid": 0,
+      "false_positive": 0,
+      "file": "pr14_golden_validation.json"
+    },
+    "15": {
+      "valid": 0,
+      "false_positive": 0,
+      "file": "pr15_golden_validation.json"
+    },
+    "6": {
+      "valid": 3,
+      "false_positive": 1,
+      "file": "pr6_golden_validation.json"
+    },
+    "7": {
+      "valid": 0,
+      "false_positive": 0,
+      "file": "pr7_golden_validation.json"
+    },
+    "8": {
+      "valid": 0,
+      "false_positive": 0,
+      "file": "pr8_golden_validation.json"
+    },
+    "9": {
+      "valid": 0,
+      "false_positive": 0,
+      "file": "pr9_golden_validation.json"
+    }
+  },
+  "total": {
+    "valid": 5,
+    "false_positive": 2,
+    "accuracy": 71.4
+  }
+}

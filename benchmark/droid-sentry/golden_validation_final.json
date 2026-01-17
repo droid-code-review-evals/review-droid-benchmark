@@ -1,0 +1,72 @@
+{
+  "per_pr": {
+    "6": {
+      "valid": 3,
+      "fp": 1,
+      "total": 4
+    },
+    "7": {
+      "valid": 3,
+      "fp": 0,
+      "total": 3
+    },
+    "8": {
+      "valid": 3,
+      "fp": 0,
+      "total": 3
+    },
+    "9": {
+      "valid": 3,
+      "fp": 0,
+      "total": 3
+    },
+    "10": {
+      "valid": 3,
+      "fp": 0,
+      "total": 3
+    },
+    "11": {
+      "valid": 4,
+      "fp": 1,
+      "total": 5
+    },
+    "12": {
+      "valid": 4,
+      "fp": 0,
+      "total": 4
+    },
+    "13": {
+      "valid": 2,
+      "fp": 0,
+      "total": 2
+    },
+    "14": {
+      "valid": 3,
+      "fp": 0,
+      "total": 3
+    },
+    "15": {
+      "valid": 2,
+      "fp": 0,
+      "total": 2
+    }
+  },
+  "totals": {
+    "valid": 30,
+    "false_positive": 2,
+    "total": 32,
+    "validity_rate": 93.8
+  },
+  "false_positives_details": [
+    {
+      "pr": 6,
+      "comment": "Importing non-existent OptimizedCursorPaginator",
+      "reason": "Class OptimizedCursorPaginator IS defined at line 821 of paginator.py in the same PR"
+    },
+    {
+      "pr": 11,
+      "comment": "SpawnProcess isinstance check always false - hung processes won't be killed",
+      "reason": "isinstance(process, multiprocessing.Process) works correctly; SpawnProcess IS a multiprocessing.Process"
+    }
+  ]
+}

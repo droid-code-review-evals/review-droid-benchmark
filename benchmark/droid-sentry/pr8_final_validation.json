@@ -1,0 +1,88 @@
+{
+  "pr_number": 8,
+  "branch": "error-upsampling-race-condition",
+  "validation_timestamp": "2026-01-16",
+  "diff_file": "/tmp/pr8_diff.txt",
+  "diff_lines": 621,
+  "golden_comments_validation": [
+    {
+      "comment_id": 1,
+      "severity": "Low",
+      "description": "sample_rate = 0.0 is falsy and skipped",
+      "validation_status": "CONFIRMED",
+      "evidence": {
+        "grep_pattern": "if client_sample_rate",
+        "found_in_diff": true,
+        "location": "src/sentry/testutils/factories.py, line 316",
+        "code_snippet": "if client_sample_rate:\n        try:\n            normalized_data[\"sample_rate\"] = float(client_sample_rate)",
+        "issue_explanation": "The condition 'if client_sample_rate:' will evaluate to False when client_sample_rate is 0.0, causing the sample_rate to not be set even when it's explicitly 0.0",
+        "programmatic_verification": {
+          "test_command": "python3 -c \"x=0.0; print('bool(0.0) =', bool(x)); print('0.0 is falsy:', not x)\"",
+          "test_result": "bool(0.0) = False\n0.0 is falsy: True",
+          "conclusion": "0.0 is indeed falsy in Python, confirming the bug"
+        }
+      }
+    },
+    {
+      "comment_id": 2,
+      "severity": "Low",
+      "description": "Using Python hash() to build cache keys is non-deterministic across processes (hash randomization)",
+      "validation_status": "CONFIRMED",
+      "evidence": {
+        "grep_pattern": "hash\\(",
+        "found_in_diff": true,
+        "locations": [
+          "src/sentry/api/helpers/error_upsampling.py, line 153",
+          "src/sentry/api/helpers/error_upsampling.py, line 199"
+        ],
+        "code_snippet": "cache_key = f\"error_upsampling_eligible:{organization.id}:{hash(tuple(sorted(snuba_params.project_ids)))}\"",
+        "issue_explanation": "Python's hash() function uses hash randomization (enabled by default since Python 3.3) which produces different hash values across different processes/interpreters/machines, causing cache key inconsistencies in distributed systems",
+        "programmatic_verification": {
+          "test_command": "python3 -c 'import sys; print(\"PYTHONHASHSEED:\", sys.flags.hash_randomization)'",
+          "test_result": "PYTHONHASHSEED: 1",
+          "python_version": "3.14.2",
+          "conclusion": "Hash randomization is enabled (flag=1). While some hash values may appear consistent in controlled tests, different Python interpreters/machines may produce different hashes, making hash() unsuitable for distributed cache keys"
+        },
+        "recommendation": "Use a deterministic hashing method for cache keys, such as hashlib.md5() or hashlib.sha256() with the project_ids serialized as a string"
+      }
+    },
+    {
+      "comment_id": 3,
+      "severity": "Medium",
+      "description": "The upsampling eligibility check passes the outer dataset instead of the actual dataset used by scoped_dataset",
+      "validation_status": "CONFIRMED",
+      "evidence": {
+        "grep_pattern": "should_upsample = is_errors_query_for_error_upsampled_projects",
+        "found_in_diff": true,
+        "location": "src/sentry/api/endpoints/organization_events_stats.py, line 220",
+        "issue_explanation": "The function _get_event_stats() receives 'scoped_dataset' as a parameter and uses it for all queries, but the upsampling eligibility check uses 'dataset' from the outer scope instead of 'scoped_dataset'",
+        "code_analysis": {
+          "function_signature": "def _get_event_stats(scoped_dataset: Any, ...)",
+          "problematic_line": "should_upsample = is_errors_query_for_error_upsampled_projects(snuba_params, organization, dataset, request)",
+          "correct_variable": "scoped_dataset (function parameter)",
+          "incorrect_variable": "dataset (outer scope variable)",
+          "query_uses": "All queries use scoped_dataset: scoped_dataset.run_top_events_timeseries_query(), scoped_dataset.top_events_timeseries(), scoped_dataset.run_timeseries_query(), scoped_dataset.timeseries_query()"
+        },
+        "programmatic_verification": {
+          "grep_command": "grep '_get_event_stats(' organization_events_stats.py",
+          "call_sites_found": 7,
+          "different_dataset_values": [
+            "split_dataset (line 373)",
+            "discover (lines 387, 428, 445)",
+            "scoped_dataset (lines 346, 400, 488)"
+          ],
+          "conclusion": "The function is called with different dataset values (split_dataset, discover, scoped_dataset), confirming that scoped_dataset can differ from the outer dataset variable. Using 'dataset' instead of 'scoped_dataset' in the eligibility check creates a mismatch between what dataset is checked and what dataset is actually used"
+        },
+        "impact": "The eligibility check may incorrectly determine whether to apply upsampling transformations based on the wrong dataset type, potentially applying upsampling to transaction queries or not applying it to error queries",
+        "recommendation": "Change the eligibility check to use 'scoped_dataset' instead of 'dataset': is_errors_query_for_error_upsampled_projects(snuba_params, organization, scoped_dataset, request)"
+      }
+    }
+  ],
+  "summary": {
+    "total_comments": 3,
+    "confirmed": 3,
+    "not_found": 0,
+    "validation_methodology": "For each golden comment: (1) grep the diff for relevant patterns, (2) run programmatic verification tests, (3) analyze code context to confirm the issue exists",
+    "overall_assessment": "All 3 golden comments are CONFIRMED as valid issues in the PR diff"
+  }
+}

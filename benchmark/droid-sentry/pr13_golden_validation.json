@@ -1,0 +1,51 @@
+{
+  "pr_number": 13,
+  "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+  "branches": {
+    "before": "monitor-incident-refactor-before",
+    "after": "monitor-incident-refactor-after"
+  },
+  "validation_date": "2026-01-16",
+  "golden_comments": [
+    {
+      "id": 1,
+      "severity": "High",
+      "description": "Function modifies config variable but returns original monitor.config instead of modified version",
+      "is_valid": true,
+      "found_in_diff": true,
+      "evidence": {
+        "function_name": "get_monitor_environment_context",
+        "file_locations": [
+          "src/sentry/monitors/logic/incident_occurrence.py (new file, lines +158-170)",
+          "src/sentry/monitors/logic/mark_failed.py (removed, lines -300-312)"
+        ],
+        "code_snippet": "def get_monitor_environment_context(monitor_environment: MonitorEnvironment):\n    config = monitor_environment.monitor.config.copy()\n    if \"schedule_type\" in config:\n        config[\"schedule_type\"] = monitor_environment.monitor.get_schedule_type_display()\n\n    return {\n        \"id\": str(monitor_environment.monitor.guid),\n        \"slug\": str(monitor_environment.monitor.slug),\n        \"name\": monitor_environment.monitor.name,\n        \"config\": monitor_environment.monitor.config,  # BUG: Should return 'config' variable\n        \"status\": monitor_environment.get_status_display(),\n        \"type\": monitor_environment.monitor.get_type_display(),\n    }",
+        "explanation": "The function creates a copy of monitor.config, modifies the 'schedule_type' field in the copy, but then returns the original monitor.config in the return dictionary instead of the modified 'config' variable. This bug was moved from mark_failed.py to incident_occurrence.py during the refactor but was NOT fixed."
+      },
+      "verdict": "TRUE_POSITIVE"
+    },
+    {
+      "id": 2,
+      "severity": "Low",
+      "description": "Code fetches MonitorCheckIn objects by ID when data already exists in previous_checkins - unnecessary database query",
+      "is_valid": true,
+      "found_in_diff": true,
+      "evidence": {
+        "function_name": "try_incident_threshold (formerly mark_failed_threshold)",
+        "file_locations": [
+          "src/sentry/monitors/logic/incidents.py (new file, lines +92-93)",
+          "src/sentry/monitors/logic/mark_failed.py (removed, lines -234-235)"
+        ],
+        "code_snippet": "if not monitor_env.monitor.is_muted and not monitor_env.is_muted and incident:\n    checkins = MonitorCheckIn.objects.filter(id__in=[c[\"id\"] for c in previous_checkins])\n    for checkin in checkins:\n        create_incident_occurrence(\n            previous_checkins,\n            checkin,\n            incident,\n            received=received,\n        )",
+        "explanation": "The code queries the database to fetch MonitorCheckIn objects when previous_checkins already contains the necessary data. In two scenarios: (1) when failure_issue_threshold==1, previous_checkins is built from failed_checkin which is already a full MonitorCheckIn object available in the function scope, and (2) when monitor_env.status==ERROR, previous_checkins is also built from failed_checkin. In these cases, the database query is unnecessary since we already have the full object. This bug was moved from mark_failed.py to incidents.py during the refactor but was NOT fixed."
+      },
+      "verdict": "TRUE_POSITIVE"
+    }
+  ],
+  "summary": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "false_positives": 0,
+    "notes": "Both golden comments are valid. Both bugs exist in the PR diff and were moved during the refactoring but not fixed. Comment 1 is a logic bug where modified config is not returned. Comment 2 is a performance issue where unnecessary database queries are made when the data is already available in memory."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "pr_number": 15,
+  "validation_timestamp": "2026-01-16",
+  "golden_comments": [
+    {
+      "id": 1,
+      "severity": "High",
+      "comment": "MetricAlertDetectorHandler missing abstract method implementations",
+      "code_in_diff": true,
+      "verdict": "VALID",
+      "reason": "Class inherits from StatefulDetectorHandler but only contains 'pass' - will fail at instantiation with TypeError for missing abstract methods"
+    },
+    {
+      "id": 2,
+      "severity": "Low",
+      "comment": "Docstring says returns list but method returns dict",
+      "code_in_diff": true,
+      "verdict": "VALID",
+      "reason": "Documentation mismatch: docstring says 'list' but method returns dict - senior engineer would flag for documentation accuracy"
+    }
+  ],
+  "summary": {
+    "valid": 2,
+    "invalid": 0
+  }
+}

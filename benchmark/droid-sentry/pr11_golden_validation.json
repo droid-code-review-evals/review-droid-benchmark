@@ -1,0 +1,120 @@
+{
+  "pr_number": 11,
+  "branch_head": "span-flusher-multiprocess",
+  "branch_base": "span-flusher-stable",
+  "validation_date": "2026-01-16",
+  "golden_comments": [
+    {
+      "id": 1,
+      "severity": "Medium",
+      "description": "Inconsistent metric tagging with shard and shards",
+      "is_valid": true,
+      "is_false_positive": false,
+      "evidence": {
+        "line_numbers": [226, 237, 242],
+        "code_snippets": [
+          "metrics.timer(\"spans.buffer.flusher.produce\", tags={\"shard\": shard_tag})",
+          "metrics.timing(\"spans.buffer.segment_size_bytes\", len(kafka_payload.value), tags={\"shard\": shard_tag})",
+          "metrics.timer(\"spans.buffer.flusher.wait_produce\", tags={\"shards\": shard_tag})"
+        ],
+        "issue_details": "Line 226 and 237 use 'shard' (singular) as the tag key, but line 242 uses 'shards' (plural). This inconsistency will make metrics filtering and aggregation difficult."
+      },
+      "validation_notes": "CONFIRMED: Inconsistent tagging found in flusher.py. Two metrics use tags={'shard': ...} while one uses tags={'shards': ...}. This is a real bug that will cause issues with metrics queries."
+    },
+    {
+      "id": 2,
+      "severity": "Low",
+      "description": "Fixed sleep in tests can be flaky; wait on condition instead",
+      "is_valid": true,
+      "is_false_positive": false,
+      "evidence": {
+        "line_numbers": [403],
+        "code_snippets": [
+          "# Give flusher threads time to process after drift change",
+          "time.sleep(0.1)"
+        ],
+        "issue_details": "In test_consumer.py, a fixed 0.1 second sleep is used to wait for flusher threads to process after drift change. This is a race condition - the threads might not finish in 0.1 seconds on slower systems."
+      },
+      "validation_notes": "CONFIRMED: Fixed sleep (0.1s) added in test_basic() at line 403. This is a minor issue but could cause flaky tests on slow CI systems. Better approach would be to poll a condition or use a synchronization primitive."
+    },
+    {
+      "id": 3,
+      "severity": "High",
+      "description": "SpawnProcess isinstance check always false - hung processes won't be killed",
+      "is_valid": false,
+      "is_false_positive": true,
+      "evidence": {
+        "line_numbers": [154, 163, 167, 303, 377],
+        "code_snippets": [
+          "make_process: Callable[..., multiprocessing.context.SpawnProcess | threading.Thread]",
+          "make_process = self.mp_context.Process",
+          "make_process = threading.Thread",
+          "if isinstance(process, multiprocessing.Process):",
+          "if isinstance(process, multiprocessing.Process):"
+        ],
+        "issue_details": "The type annotation shows SpawnProcess, but the isinstance check uses multiprocessing.Process. However, self.mp_context.Process is the spawn context's Process class, which IS multiprocessing.Process (or a subclass). The isinstance check will work correctly."
+      },
+      "validation_notes": "FALSE POSITIVE: While the type hint says 'SpawnProcess', the actual check 'isinstance(process, multiprocessing.Process)' is correct. The mp_context.Process (spawn context) creates instances that ARE multiprocessing.Process objects. The isinstance check will work. The type system annotation is just more specific, but runtime check is valid."
+    },
+    {
+      "id": 4,
+      "severity": "Medium",
+      "description": "Sleep in test_consumer.py won't wait because time.sleep was monkeypatched",
+      "is_valid": true,
+      "is_false_positive": false,
+      "evidence": {
+        "line_numbers": [396, 403],
+        "code_snippets": [
+          "monkeypatch.setattr(\"time.sleep\", lambda _: None)",
+          "time.sleep(0.1)"
+        ],
+        "issue_details": "The test monkeypatches time.sleep to do nothing (lambda _: None) at line 396, but then tries to use time.sleep(0.1) at line 403. The sleep will be a no-op, making the test even more racy."
+      },
+      "validation_notes": "CONFIRMED: This is a real bug. The test monkeypatches time.sleep to be a no-op, then later calls time.sleep(0.1) expecting it to actually wait. The sleep will not work as intended. This makes issue #2 even worse - not only is it a fixed sleep (bad), but it doesn't even sleep (worse)."
+    },
+    {
+      "id": 5,
+      "severity": "Medium",
+      "description": "Breaking out of loop when deadline elapsed skips terminating remaining processes",
+      "is_valid": true,
+      "is_false_positive": false,
+      "evidence": {
+        "line_numbers": [366, 367, 368, 369, 370, 377, 378],
+        "code_snippets": [
+          "for process_index, process in self.processes.items():",
+          "    if deadline is not None:",
+          "        remaining_time = deadline - time.time()",
+          "        if remaining_time <= 0:",
+          "            break",
+          "    if isinstance(process, multiprocessing.Process):",
+          "        process.terminate()"
+        ],
+        "issue_details": "In the join() method, when the deadline is exceeded (remaining_time <= 0), the code breaks out of the loop. This means any processes that haven't been checked yet will never reach the terminate() call at line 377-378, potentially leaving hung processes running."
+      },
+      "validation_notes": "CONFIRMED: Real bug in the join() method. When deadline expires, 'break' exits the loop immediately, skipping terminate() for remaining unprocessed processes. This could leave processes running indefinitely. The terminate() calls at lines 377-378 will only execute for processes already iterated before the deadline, not for any remaining processes."
+    }
+  ],
+  "summary": {
+    "total_golden_comments": 5,
+    "valid_issues": 4,
+    "false_positives": 1,
+    "true_positive_rate": 0.8,
+    "severity_breakdown": {
+      "high": {
+        "total": 1,
+        "valid": 0,
+        "false_positive": 1
+      },
+      "medium": {
+        "total": 3,
+        "valid": 3,
+        "false_positive": 0
+      },
+      "low": {
+        "total": 1,
+        "valid": 1,
+        "false_positive": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "pr_number": 6,
+  "pr_commit": "8ab88145113dd23a930e23b9cbbcf8b30e4c0b17",
+  "pr_title": "feat(audit-logs): Enhanced pagination performance for high-volume deployments",
+  "golden_comments": [
+    {
+      "id": 1,
+      "severity": "Low",
+      "comment": "Importing non-existent OptimizedCursorPaginator",
+      "in_pr_diff": false,
+      "grep_evidence": "Line 10: +from sentry.api.paginator import DateTimePaginator, OptimizedCursorPaginator\nLine 77: +class OptimizedCursorPaginator(BasePaginator):",
+      "verdict": "FALSE_POSITIVE",
+      "reason": "The diff shows that OptimizedCursorPaginator IS defined in this PR at line 77 of the diff (+class OptimizedCursorPaginator(BasePaginator):). It's a new class being added in src/sentry/api/paginator.py in the same PR. The import at line 10 references this newly created class, so it exists and is not non-existent. This is a valid addition, not an error."
+    },
+    {
+      "id": 2,
+      "severity": "High",
+      "comment": "Django querysets do not support negative slicing",
+      "in_pr_diff": true,
+      "grep_evidence": "Lines 133-138:\n+        if self.enable_advanced_features and cursor.offset < 0:\n+            # Special handling for negative offsets - enables access to data beyond normal pagination bounds\n+            # This is safe because permissions are checked at the queryset level\n+            start_offset = cursor.offset  # Allow negative offsets for advanced pagination\n+            stop = start_offset + limit + extra\n+            results = list(queryset[start_offset:stop])",
+      "verdict": "VALID",
+      "reason": "The code explicitly allows negative offsets when enable_advanced_features is True. At line 136, start_offset is set to cursor.offset (which can be negative), and then at line 138, queryset[start_offset:stop] is called with a potentially negative start_offset. Django querysets do NOT support negative slicing - this will raise an AssertionError. This is a real bug in the PR code."
+    },
+    {
+      "id": 3,
+      "severity": "High",
+      "comment": "organization_context.member is None for API key auth, causes AttributeError",
+      "in_pr_diff": true,
+      "grep_evidence": "Line 28:\n+        enable_advanced = request.user.is_superuser or organization_context.member.has_global_access",
+      "verdict": "VALID",
+      "reason": "The code directly accesses organization_context.member.has_global_access without checking if organization_context.member is None. In Sentry, when API key authentication is used (as opposed to user session authentication), organization_context.member can be None, which would cause an AttributeError when trying to access .has_global_access. This is a real bug that would crash the endpoint for API key authenticated requests."
+    },
+    {
+      "id": 4,
+      "severity": "High",
+      "comment": "get_item_key uses math.floor/ceil on datetime, will raise TypeError",
+      "in_pr_diff": true,
+      "grep_evidence": "Lines 94-96:\n+    def get_item_key(self, item, for_prev=False):\n+        value = getattr(item, self.key)\n+        return int(math.floor(value) if self._is_asc(for_prev) else math.ceil(value))",
+      "verdict": "VALID",
+      "reason": "The get_item_key method calls math.floor() or math.ceil() on 'value' which is obtained from getattr(item, self.key). In the context of audit logs with order_by='-datetime', self.key would be 'datetime', making value a datetime object. math.floor() and math.ceil() only work with numeric types (int, float), not datetime objects, and will raise a TypeError. This is a real bug in the paginator implementation."
+    }
+  ],
+  "summary": {
+    "total_comments": 4,
+    "valid": 3,
+    "false_positive": 1,
+    "validation_method": "programmatic_diff_grep",
+    "notes": "All comments were validated by grepping the actual PR diff file. Comment #1 is a false positive because OptimizedCursorPaginator is defined in the same PR. Comments #2, #3, and #4 are valid bugs that exist in the PR's changed code."
+  }
+}

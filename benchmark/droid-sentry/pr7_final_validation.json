@@ -1,0 +1,81 @@
+{
+  "pr_number": 7,
+  "branch": "performance-enhancement-complete",
+  "diff_baseline": "74618671bf (feat(spans): Evict spans during insert)",
+  "diff_head": "8ab8814511 (feat(audit-logs): Enhanced pagination performance for high-volume deployments)",
+  "diff_file": "/tmp/pr7_diff.txt",
+  "validation_timestamp": "2026-01-16",
+  "golden_comments_validation": [
+    {
+      "id": 1,
+      "severity": "Critical",
+      "comment": "OptimizedCursorPaginator negative-offset branch slices QuerySet with a negative start index",
+      "validation_status": "CONFIRMED",
+      "verification_method": "grep_diff",
+      "evidence": {
+        "file": "src/sentry/api/paginator.py",
+        "diff_line_number": 136,
+        "code_snippet": "start_offset = cursor.offset  # Allow negative offsets for advanced pagination\nstop = start_offset + limit + extra\nresults = list(queryset[start_offset:stop])",
+        "context": "Found in OptimizedCursorPaginator.get_result() method, within the branch:\n  if self.enable_advanced_features and cursor.offset < 0:",
+        "issue_description": "When enable_advanced_features is True and cursor.offset < 0, the code directly assigns cursor.offset to start_offset without normalization, then uses it to slice the QuerySet with queryset[start_offset:stop]. Negative start indices in Python slicing count from the end of the sequence, which is not the intended pagination behavior and can lead to incorrect results or security issues."
+      }
+    },
+    {
+      "id": 2,
+      "severity": "High",
+      "comment": "BasePaginator negative-offset branch slices QuerySet with a negative start index",
+      "validation_status": "CONFIRMED",
+      "verification_method": "grep_diff",
+      "evidence": {
+        "file": "src/sentry/api/paginator.py",
+        "diff_line_number": 64,
+        "code_snippet": "start_offset = max(0, offset) if not cursor.is_prev else offset\nstop = start_offset + limit + extra\nresults = list(queryset[start_offset:stop])",
+        "context": "Found in BasePaginator's get_result() method logic",
+        "issue_description": "When cursor.is_prev is True, the code uses 'offset' directly without max(0, offset) normalization, allowing negative offsets to be used in QuerySet slicing. If offset is negative and cursor.is_prev is True, start_offset becomes negative, leading to unexpected slicing behavior where Python's negative indexing semantics apply (counting from the end)."
+      }
+    },
+    {
+      "id": 3,
+      "severity": "High",
+      "comment": "OptimizedCursorPaginator.get_item_key uses floor/ceil on a datetime key (order_by=-datetime), causing TypeError",
+      "validation_status": "CONFIRMED",
+      "verification_method": "programmatic_verification",
+      "evidence": {
+        "file": "src/sentry/api/paginator.py",
+        "diff_line_number": 94,
+        "code_snippet": "def get_item_key(self, item, for_prev=False):\n    value = getattr(item, self.key)\n    return int(math.floor(value) if self._is_asc(for_prev) else math.ceil(value))",
+        "context": "Found in OptimizedCursorPaginator class. Used in organization_auditlogs.py endpoint with order_by='-datetime'",
+        "issue_description": "The get_item_key method calls math.floor() or math.ceil() on the value attribute, which is a datetime object when order_by='-datetime'. This causes a TypeError at runtime.",
+        "programmatic_test": {
+          "command": "python3 -c \"import math; from datetime import datetime; math.floor(datetime.now())\"",
+          "result": "TypeError: must be real number, not datetime.datetime",
+          "exit_code": 1
+        },
+        "additional_test": {
+          "command": "python3 -c \"import math; from datetime import datetime; math.ceil(datetime.now())\"",
+          "result": "TypeError: must be real number, not datetime.datetime",
+          "exit_code": 1
+        },
+        "usage_context": "In organization_auditlogs.py, the endpoint uses OptimizedCursorPaginator with order_by='-datetime', meaning self.key would be 'datetime' and getattr(item, self.key) would return a datetime object, triggering this TypeError when get_item_key is called."
+      }
+    }
+  ],
+  "summary": {
+    "total_golden_comments": 3,
+    "confirmed": 3,
+    "not_found": 0,
+    "false_positives": 0,
+    "validation_notes": [
+      "All three golden comments were successfully validated with evidence from the diff",
+      "Golden comment #1: Negative offset slicing confirmed in OptimizedCursorPaginator at line 136 of diff",
+      "Golden comment #2: Negative offset slicing confirmed in BasePaginator at line 64 of diff",
+      "Golden comment #3: TypeError confirmed via programmatic testing of math.floor/ceil on datetime objects",
+      "All issues represent real bugs that would cause runtime errors or incorrect pagination behavior"
+    ]
+  },
+  "modified_files": [
+    "src/sentry/api/endpoints/organization_auditlogs.py",
+    "src/sentry/api/paginator.py",
+    "src/sentry/utils/cursors.py"
+  ]
+}

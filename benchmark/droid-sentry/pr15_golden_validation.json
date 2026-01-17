@@ -1,0 +1,84 @@
+{
+  "pr_number": 15,
+  "branch_before": "workflow-engine-stateful-detector-before",
+  "branch_after": "workflow-engine-stateful-detector-after",
+  "validation_timestamp": "2026-01-16",
+  "issues_validated": [
+    {
+      "issue_number": 1,
+      "description": "MetricAlertDetectorHandler only contains pass - missing abstract methods",
+      "validation_status": "VALID",
+      "details": {
+        "file": "src/sentry/incidents/grouptype.py",
+        "class_name": "MetricAlertDetectorHandler",
+        "issue_summary": "Class changed from DetectorHandler to StatefulDetectorHandler and now only contains 'pass', missing implementation of abstract methods",
+        "evidence": {
+          "before": {
+            "parent_class": "DetectorHandler[QuerySubscriptionUpdate]",
+            "implements": "evaluate() method with return type list[DetectorEvaluationResult]"
+          },
+          "after": {
+            "parent_class": "StatefulDetectorHandler[QuerySubscriptionUpdate]",
+            "implements": "only 'pass' statement"
+          },
+          "missing_abstract_methods": [
+            "counter_names (property)",
+            "get_dedupe_value(self, data_packet: DataPacket[T]) -> int",
+            "get_group_key_values(self, data_packet: DataPacket[T]) -> dict[str, int]",
+            "build_occurrence_and_event_data(self, group_key: DetectorGroupKey, value: int, new_status: PriorityLevel) -> tuple[IssueOccurrence, dict[str, Any]]"
+          ]
+        },
+        "location_in_diff": "Lines 8-12 in diff for src/sentry/incidents/grouptype.py",
+        "severity": "high",
+        "impact": "Class is incomplete and will fail to instantiate due to missing abstract method implementations"
+      }
+    },
+    {
+      "issue_number": 2,
+      "description": "Docstring says returns list but method returns dict",
+      "validation_status": "VALID",
+      "details": {
+        "file": "src/sentry/workflow_engine/processors/detector.py",
+        "method_name": "StatefulDetectorHandler.evaluate",
+        "issue_summary": "Method signature changed return type from list to dict, but docstring was not updated",
+        "evidence": {
+          "before": {
+            "return_type": "list[DetectorEvaluationResult]",
+            "docstring": "Evaluates a given data packet and returns a list of `DetectorEvaluationResult`.",
+            "implementation": "returns results (a list)"
+          },
+          "after": {
+            "return_type": "dict[DetectorGroupKey, DetectorEvaluationResult]",
+            "docstring": "Evaluates a given data packet and returns a list of `DetectorEvaluationResult`.",
+            "implementation": "returns results (a dict)"
+          },
+          "discrepancy": "Docstring still says 'returns a list' but return type is now 'dict[DetectorGroupKey, DetectorEvaluationResult]'"
+        },
+        "location_in_diff": "Lines around evaluate method in StatefulDetectorHandler (diff shows return type change)",
+        "severity": "medium",
+        "impact": "Documentation does not match implementation, misleading for developers"
+      }
+    }
+  ],
+  "summary": {
+    "total_issues_to_validate": 2,
+    "issues_confirmed_valid": 2,
+    "issues_not_found": 0,
+    "validation_result": "PASS - Both golden comments are valid and present in the diff"
+  },
+  "diff_analysis": {
+    "files_changed": [
+      "src/sentry/incidents/grouptype.py",
+      "src/sentry/workflow_engine/models/detector.py",
+      "src/sentry/workflow_engine/processors/detector.py",
+      "tests/sentry/workflow_engine/processors/test_detector.py"
+    ],
+    "key_changes": [
+      "MetricAlertDetectorHandler changed parent class from DetectorHandler to StatefulDetectorHandler",
+      "evaluate() method return type changed from list to dict throughout",
+      "Added new abstract method build_occurrence_and_event_data to StatefulDetectorHandler",
+      "Removed duplicate group key detection logic in process_detectors",
+      "Updated tests to reflect dict return type instead of list"
+    ]
+  }
+}

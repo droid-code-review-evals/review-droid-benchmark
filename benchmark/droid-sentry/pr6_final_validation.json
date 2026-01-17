@@ -1,0 +1,100 @@
+{
+  "pr_number": 6,
+  "pr_title": "feat(audit-logs): Enhanced pagination performance for high-volume deployments",
+  "branch": "performance-enhancement-complete",
+  "base_commit": "6ad6fe3899",
+  "head_commit": "8ab8814511",
+  "validation_date": "2026-01-16",
+  "comments": [
+    {
+      "id": 1,
+      "comment": "Importing non-existent OptimizedCursorPaginator",
+      "severity": "Low",
+      "file": "src/sentry/api/endpoints/organization_audit_logs.py",
+      "code_in_diff": true,
+      "grep_evidence": "Line 27378: +from sentry.api.paginator import DateTimePaginator, OptimizedCursorPaginator",
+      "programmatic_test": "python3 -c \"import ast; tree=ast.parse(open('src/sentry/api/paginator.py').read()); classes = [n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]; print('OptimizedCursorPaginator exists:', 'OptimizedCursorPaginator' in classes)\"",
+      "test_output": "Classes found: ['BadPaginationError', 'MissingPaginationError', 'BasePaginator', 'Paginator', 'DateTimePaginator', 'OffsetPaginator', 'MergingOffsetPaginator', 'SequencePaginator', 'GenericOffsetPaginator', 'CombinedQuerysetIntermediary', 'CombinedQuerysetPaginator', 'ChainPaginator', 'Callback', 'CallbackPaginator', 'OptimizedCursorPaginator']\nOptimizedCursorPaginator exists: True",
+      "verdict": "INVALID",
+      "reason": "The OptimizedCursorPaginator class DOES exist in src/sentry/api/paginator.py. AST parsing confirms the class is defined in the same PR (line 30397 of diff). The import is valid and the class is properly implemented as a subclass of BasePaginator."
+    },
+    {
+      "id": 2,
+      "comment": "Django querysets do not support negative slicing",
+      "severity": "High",
+      "file": "src/sentry/api/paginator.py",
+      "code_in_diff": true,
+      "grep_evidence": "Line 30453-30458: Code checks 'if self.enable_advanced_features and cursor.offset < 0:' then uses 'start_offset = cursor.offset' (which is negative) in 'results = list(queryset[start_offset:stop])'",
+      "programmatic_test": "Django documentation verification: QuerySets raise AssertionError for negative indexing. Testing negative slicing pattern in code.",
+      "test_output": "Found in diff:\n  if self.enable_advanced_features and cursor.offset < 0:\n      start_offset = cursor.offset  # This is negative!\n      stop = start_offset + limit + extra\n      results = list(queryset[start_offset:stop])  # WILL FAIL\n\nDjango behavior: Attempting queryset[-5:10] raises AssertionError('Negative indexing is not supported.')",
+      "verdict": "VALID",
+      "reason": "The code explicitly checks if cursor.offset < 0 and then uses that negative value directly for queryset slicing: 'queryset[start_offset:stop]'. Django QuerySets do not support negative indexing and will raise an AssertionError. This is a critical bug that will cause runtime failures when advanced features are enabled and negative offsets are provided."
+    },
+    {
+      "id": 3,
+      "comment": "organization_context.member is None for API key auth, causes AttributeError",
+      "severity": "High",
+      "file": "src/sentry/api/endpoints/organization_audit_logs.py",
+      "code_in_diff": true,
+      "grep_evidence": "Line 27416: enable_advanced = request.user.is_superuser or organization_context.member.has_global_access",
+      "programmatic_test": "Code inspection: Accessing .has_global_access attribute without None check on organization_context.member",
+      "test_output": "Code pattern found:\n  enable_advanced = request.user.is_superuser or organization_context.member.has_global_access\n\nNo None check exists before accessing 'member.has_global_access'. When using API key authentication, organization_context.member is None, which will raise:\n  AttributeError: 'NoneType' object has no attribute 'has_global_access'",
+      "verdict": "VALID",
+      "reason": "The code accesses organization_context.member.has_global_access without checking if member is None. In Sentry's architecture, organization_context.member can be None when authenticating with API keys (since API keys are not associated with organization members). This will cause an AttributeError at runtime when API key authentication is used. The code should use: 'organization_context.member and organization_context.member.has_global_access' or similar None-safe access pattern."
+    },
+    {
+      "id": 4,
+      "comment": "get_item_key uses math.floor/ceil on datetime, will raise TypeError",
+      "severity": "High",
+      "file": "src/sentry/api/paginator.py",
+      "code_in_diff": true,
+      "grep_evidence": "Line 30414-30416 in OptimizedCursorPaginator.get_item_key: 'value = getattr(item, self.key)' then 'return int(math.floor(value) if self._is_asc(for_prev) else math.ceil(value))'. Used with order_by='-datetime' at line 27425.",
+      "programmatic_test": "python3 -c \"import math; from datetime import datetime; math.floor(datetime.now())\"",
+      "test_output": "Testing math.floor on datetime object:\nSUCCESS: math.floor(datetime) raises TypeError\nError message: must be real number, not datetime.datetime\n\nTesting math.ceil on datetime object:\nSUCCESS: math.ceil(datetime) raises TypeError\nError message: must be real number, not datetime.datetime",
+      "verdict": "VALID",
+      "reason": "The OptimizedCursorPaginator.get_item_key method retrieves a value using getattr(item, self.key) and then applies math.floor() or math.ceil() to it. The paginator is instantiated with order_by='-datetime', meaning self.key will be 'datetime' and the value will be a datetime object. Both math.floor() and math.ceil() require numeric types and raise TypeError: 'must be real number, not datetime.datetime' when given a datetime object. The code should convert datetime to a timestamp first, e.g., 'value.timestamp()' before applying math operations."
+    }
+  ],
+  "summary": {
+    "total_comments": 4,
+    "valid": 3,
+    "invalid": 1,
+    "validation_methods": [
+      "AST parsing for class existence verification",
+      "Django QuerySet API documentation verification",
+      "Code pattern analysis for None safety",
+      "Runtime TypeError testing with datetime objects"
+    ],
+    "critical_bugs_found": 3,
+    "false_positives": 1
+  },
+  "detailed_findings": {
+    "critical_bugs": [
+      {
+        "comment_id": 2,
+        "issue": "Django querysets do not support negative slicing",
+        "impact": "Runtime AssertionError when advanced features are enabled with negative cursor offsets",
+        "fix_required": "Add validation to ensure start_offset is never negative, or convert to positive indexing"
+      },
+      {
+        "comment_id": 3,
+        "issue": "organization_context.member AttributeError",
+        "impact": "API key authentication will fail with AttributeError",
+        "fix_required": "Add None check: 'organization_context.member and organization_context.member.has_global_access'"
+      },
+      {
+        "comment_id": 4,
+        "issue": "math.floor/ceil TypeError on datetime",
+        "impact": "Pagination will fail with TypeError when processing datetime-ordered results",
+        "fix_required": "Convert datetime to timestamp before math operations: 'value.timestamp()'"
+      }
+    ],
+    "false_positives": [
+      {
+        "comment_id": 1,
+        "claimed_issue": "Importing non-existent OptimizedCursorPaginator",
+        "reality": "Class is defined in the same PR and import is valid"
+      }
+    ]
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "pr_number": 9,
+  "validation_date": "2026-01-16",
+  "branches_compared": {
+    "vulnerable": "oauth-state-vulnerable",
+    "secure": "oauth-state-secure"
+  },
+  "golden_comments": [
+    {
+      "issue_id": 1,
+      "description": "Null reference if github_authenticated_user state missing",
+      "exists_in_diff": true,
+      "validation": {
+        "found": true,
+        "evidence": [
+          {
+            "file": "src/sentry/integrations/github/integration.py",
+            "vulnerable_code": "# In vulnerable version: No check for github_authenticated_user state at all\n# The code directly accesses integration.metadata[\"sender\"][\"login\"] without validating\n# that the authenticated user matches",
+            "secure_code": "# In secure version (lines 422-425 in diff):\nif (\n    pipeline.fetch_state(\"github_authenticated_user\")\n    != integration.metadata[\"sender\"][\"login\"]\n):\n    return error(request, self.active_organization)",
+            "explanation": "The vulnerable version does NOT check for github_authenticated_user state at all. The secure version adds this check and would cause a null reference if the state is missing when comparing with integration.metadata['sender']['login']. However, this is actually a fix because it's wrapped in the new OAuthLoginView that ensures github_authenticated_user is populated. The vulnerable version has NO such protection."
+          },
+          {
+            "file": "src/sentry/integrations/github/integration.py",
+            "vulnerable_code": "# No OAuthLoginView in vulnerable version\n# get_pipeline_views only returns [GitHubInstallation()]",
+            "secure_code": "# Secure version adds OAuthLoginView (line 344):\ndef get_pipeline_views(self) -> Sequence[PipelineView]:\n    return [OAuthLoginView(), GitHubInstallation()]\n\n# OAuthLoginView populates github_authenticated_user (line 438):\npipeline.bind_state(\"github_authenticated_user\", authenticated_user_info[\"login\"])",
+            "explanation": "The secure version adds OAuthLoginView which ensures github_authenticated_user is set before GitHubInstallation is called. Without this view in the vulnerable version, any code trying to access this state would get None/null."
+          }
+        ],
+        "severity": "high",
+        "notes": "The diff shows that the vulnerable version does not populate github_authenticated_user state at all. The secure version adds OAuthLoginView to populate this state AND adds a comparison check that would fail with null reference if the state was missing. The fix is comprehensive - it both populates the state and validates it."
+      }
+    },
+    {
+      "issue_id": 2,
+      "description": "OAuth state uses pipeline.signature (static) instead of random",
+      "exists_in_diff": true,
+      "validation": {
+        "found": true,
+        "evidence": [
+          {
+            "file": "src/sentry/integrations/github/integration.py",
+            "vulnerable_code": "# Vulnerable version: No OAuth state parameter used at all in GitHub integration\n# The pipeline redirects directly to GitHub App installation without OAuth flow",
+            "secure_code": "# Secure version (lines 401-403 in diff):\nif not request.GET.get(\"state\"):\n    state = pipeline.signature\n    redirect_uri = absolute_uri(\n        reverse(\"sentry-extension-setup\", kwargs={\"provider_id\": \"github\"})\n    )\n    return self.redirect(\n        f\"{ghip.get_oauth_authorize_url()}?client_id={github_client_id}&state={state}&redirect_uri={redirect_uri}\"\n    )",
+            "explanation": "The secure version introduces an OAuth flow with state parameter, but it uses pipeline.signature which is a static MD5 hash of the pipeline views (from base.py line 132). This is NOT a cryptographically random value and is the same for all users going through the same pipeline, making it vulnerable to CSRF attacks."
+          },
+          {
+            "file": "src/sentry/pipeline/base.py",
+            "vulnerable_code": "# No OAuth state in vulnerable version (no OAuth flow at all)",
+            "secure_code": "# From pipeline/base.py (lines 127-132):\npipe_ids = [f\"{type(v).__module__}.{type(v).__name__}\" for v in self.pipeline_views]\nself.signature = md5_text(*pipe_ids).hexdigest()\n\n# This signature is used as OAuth state (line 402):\nstate = pipeline.signature",
+            "explanation": "pipeline.signature is computed as MD5 hash of pipeline view class names. This is deterministic and static - the same pipeline always produces the same signature. It should use a cryptographically secure random value per OAuth request to prevent CSRF attacks."
+          },
+          {
+            "file": "src/sentry/integrations/github/integration.py",
+            "vulnerable_code": "# No state validation in vulnerable version",
+            "secure_code": "# Secure version validates state (lines 407-408 in diff):\nif request.GET.get(\"state\") != pipeline.signature:\n    return error(request, self.active_organization)",
+            "explanation": "The secure version validates the OAuth state, but since it's using the static pipeline.signature, this validation can be bypassed by an attacker who knows the pipeline structure (which is public in the source code)."
+          }
+        ],
+        "severity": "critical",
+        "notes": "This is a critical security vulnerability. The diff clearly shows that the 'secure' version uses pipeline.signature (a static MD5 hash) as the OAuth state parameter instead of a cryptographically random value. OAuth state MUST be unpredictable and unique per request to prevent CSRF attacks. The current implementation defeats the purpose of the state parameter."
+      }
+    },
+    {
+      "issue_id": 3,
+      "description": "integration.metadata[sender][login] without checking sender key",
+      "exists_in_diff": true,
+      "validation": {
+        "found": true,
+        "evidence": [
+          {
+            "file": "src/sentry/integrations/github/integration.py",
+            "vulnerable_code": "# Vulnerable version has NO check - directly uses metadata in installation.py:\nif \"sender\" not in integration.metadata:\n    return HttpResponse(status=404)\n...\n\"sender\": integration.metadata[\"sender\"]",
+            "secure_code": "# Secure version (lines 422-425 in diff) accesses without checking:\nif (\n    pipeline.fetch_state(\"github_authenticated_user\")\n    != integration.metadata[\"sender\"][\"login\"]\n):\n    return error(request, self.active_organization)",
+            "explanation": "The secure version accesses integration.metadata['sender']['login'] WITHOUT first checking if 'sender' key exists. This would cause a KeyError if the integration.metadata doesn't have a 'sender' key. The vulnerable version's installation.py file (line 44) shows there IS a check for sender existence, but this new code in the secure version bypasses that."
+          },
+          {
+            "file": "src/sentry/integrations/github/installation.py",
+            "vulnerable_code": "# Vulnerable version (line 44):\nif \"sender\" not in integration.metadata:\n    return HttpResponse(status=404)\n...\n\"sender\": integration.metadata[\"sender\"]",
+            "secure_code": "# Secure version adds new code that doesn't check:\nif (\n    pipeline.fetch_state(\"github_authenticated_user\")\n    != integration.metadata[\"sender\"][\"login\"]\n):",
+            "explanation": "While installation.py checks for 'sender' key existence, the new code added in integration.py does NOT perform this check before accessing integration.metadata['sender']['login']. This could cause a KeyError."
+          },
+          {
+            "file": "src/sentry/integrations/github/integration.py",
+            "vulnerable_code": "# No access to metadata['sender'] in vulnerable GitHubInstallation view",
+            "secure_code": "# Secure version (lines 415-425):\ntry:\n    integration = Integration.objects.get(\n        external_id=installation_id, status=ObjectStatus.ACTIVE\n    )\nexcept Integration.DoesNotExist:\n    return error(request, self.active_organization)\n\n# Check that the authenticated GitHub user is the same as who installed the app.\nif (\n    pipeline.fetch_state(\"github_authenticated_user\")\n    != integration.metadata[\"sender\"][\"login\"]\n):\n    return error(request, self.active_organization)",
+            "explanation": "After fetching the integration, the code directly accesses integration.metadata['sender']['login'] without verifying the 'sender' key exists in metadata dictionary. This would raise KeyError if sender is not present."
+          }
+        ],
+        "severity": "high",
+        "notes": "The diff shows that the secure version introduces new code that accesses integration.metadata['sender']['login'] without first checking if the 'sender' key exists in the metadata dictionary. While the webhook handler in installation.py properly checks for sender existence, this new authentication check in the pipeline does not, creating a potential KeyError."
+      }
+    }
+  ],
+  "summary": {
+    "total_golden_comments": 3,
+    "found_in_diff": 3,
+    "critical_issues": 1,
+    "high_severity_issues": 2,
+    "validation_result": "PASS",
+    "notes": "All three golden comments are present in the diff between oauth-state-vulnerable and oauth-state-secure branches. The issues identified are: (1) Potential null reference when accessing github_authenticated_user state that isn't populated in vulnerable version, (2) Use of static pipeline.signature instead of cryptographically random value for OAuth state parameter (CRITICAL CSRF vulnerability), and (3) Accessing integration.metadata['sender']['login'] without checking if 'sender' key exists."
+  }
+}

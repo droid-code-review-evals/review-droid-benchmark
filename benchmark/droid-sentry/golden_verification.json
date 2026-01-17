@@ -1,0 +1,237 @@
+{
+  "6": {
+    "valid": 3,
+    "invalid": 1,
+    "details": [
+      {
+        "comment": 1,
+        "claim": "Importing non-existent OptimizedCursorPaginator",
+        "valid": false,
+        "reason": "Class OptimizedCursorPaginator exists at line 821 of paginator.py, inheriting from BasePaginator"
+      },
+      {
+        "comment": 2,
+        "claim": "Django querysets do not support negative slicing",
+        "valid": true,
+        "reason": "Django QuerySets raise AssertionError on negative indexing - programmatically confirmed"
+      },
+      {
+        "comment": 3,
+        "claim": "organization_context.member is None causes AttributeError",
+        "valid": true,
+        "reason": "member.has_global_access accessed without None check - confirmed with grep and Python test"
+      },
+      {
+        "comment": 4,
+        "claim": "get_item_key uses math.floor on datetime",
+        "valid": true,
+        "reason": "math.floor(datetime) raises TypeError - programmatically confirmed"
+      }
+    ]
+  },
+  "7": {
+    "valid": 3,
+    "invalid": 0,
+    "details": [
+      {
+        "comment": 1,
+        "claim": "OptimizedCursorPaginator negative-offset slices QuerySet",
+        "valid": true,
+        "reason": "Negative offset passed to queryset slice - confirmed with grep"
+      },
+      {
+        "comment": 2,
+        "claim": "BasePaginator negative-offset slices QuerySet",
+        "valid": true,
+        "reason": "Similar negative offset issue exists"
+      },
+      {
+        "comment": 3,
+        "claim": "get_item_key uses floor/ceil on datetime",
+        "valid": true,
+        "reason": "math.floor on datetime - same as PR6"
+      }
+    ]
+  },
+  "8": {
+    "valid": 1,
+    "invalid": 0,
+    "needs_verification": 2,
+    "details": [
+      {
+        "comment": 1,
+        "claim": "sample_rate = 0.0 is falsy and skipped",
+        "valid": "NEEDS_VERIFICATION",
+        "reason": "0.0 is falsy in Python - need to verify code uses boolean context"
+      },
+      {
+        "comment": 2,
+        "claim": "hash() is non-deterministic across processes",
+        "valid": true,
+        "reason": "Python hash randomization since 3.3 - programmatically confirmed"
+      },
+      {
+        "comment": 3,
+        "claim": "upsampling eligibility passes wrong dataset",
+        "valid": "NEEDS_VERIFICATION",
+        "reason": "Requires tracing data flow"
+      }
+    ]
+  },
+  "14": {
+    "valid": 2,
+    "invalid": 1,
+    "details": [
+      {
+        "comment": 1,
+        "claim": "queue.shutdown(immediate=False) may not exist",
+        "valid": false,
+        "reason": "queue.Queue.shutdown EXISTS in Python 3.13+ - programmatically confirmed"
+      },
+      {
+        "comment": 2,
+        "claim": "Magic number 50 for max_wait",
+        "valid": true,
+        "reason": "Code quality suggestion - valid concern"
+      },
+      {
+        "comment": 3,
+        "claim": "test docstring doesn't match implementation",
+        "valid": true,
+        "reason": "Documentation bug - valid concern"
+      }
+    ]
+  },
+  "9": {
+    "valid": 3,
+    "invalid": 0,
+    "details": [
+      {
+        "comment": 1,
+        "valid": true,
+        "reason": "fetch_state can return None"
+      },
+      {
+        "comment": 2,
+        "valid": true,
+        "reason": "Static OAuth state enables CSRF"
+      },
+      {
+        "comment": 3,
+        "valid": true,
+        "reason": "Direct dict access can raise KeyError"
+      }
+    ]
+  },
+  "10": {
+    "valid": 2,
+    "invalid": 0,
+    "needs_verification": 1,
+    "details": [
+      {
+        "comment": 1,
+        "valid": true,
+        "reason": "API compatibility concern"
+      },
+      {
+        "comment": 2,
+        "valid": "NEEDS_VERIFICATION",
+        "reason": "Requires code inspection"
+      },
+      {
+        "comment": 3,
+        "valid": true,
+        "reason": "Dict iteration order may not match input list order"
+      }
+    ]
+  },
+  "11": {
+    "valid": 5,
+    "invalid": 0,
+    "details": [
+      {
+        "comment": 1,
+        "valid": true,
+        "reason": "Metric tag inconsistency"
+      },
+      {
+        "comment": 2,
+        "valid": true,
+        "reason": "Flaky test concern"
+      },
+      {
+        "comment": 3,
+        "valid": true,
+        "reason": "SpawnProcess is not subclass of multiprocessing.Process"
+      },
+      {
+        "comment": 4,
+        "valid": true,
+        "reason": "Monkeypatch affects test"
+      },
+      {
+        "comment": 5,
+        "valid": true,
+        "reason": "Termination may be skipped"
+      }
+    ]
+  },
+  "12": {
+    "valid": 4,
+    "invalid": 0,
+    "details": [
+      {
+        "comment": 1,
+        "valid": true,
+        "reason": "Mutable default in dataclass"
+      },
+      {
+        "comment": 2,
+        "valid": true,
+        "reason": "Typo confirmed"
+      },
+      {
+        "comment": 3,
+        "valid": true,
+        "reason": "Naming inconsistency"
+      },
+      {
+        "comment": 4,
+        "valid": true,
+        "reason": "datetime not JSON serializable"
+      }
+    ]
+  },
+  "13": {
+    "valid": 2,
+    "invalid": 0,
+    "details": [
+      {
+        "comment": 1,
+        "valid": true,
+        "reason": "Copy-modify-return-original bug pattern"
+      },
+      {
+        "comment": 2,
+        "valid": true,
+        "reason": "Redundant DB query"
+      }
+    ]
+  },
+  "15": {
+    "valid": 2,
+    "invalid": 0,
+    "details": [
+      {
+        "comment": 1,
+        "valid": true,
+        "reason": "Abstract methods not implemented"
+      },
+      {
+        "comment": 2,
+        "valid": true,
+        "reason": "Documentation mismatch"
+      }
+    ]
+  }
+}

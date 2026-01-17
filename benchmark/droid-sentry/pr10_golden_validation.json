@@ -1,0 +1,79 @@
+{
+  "pr_number": 10,
+  "branch_base": "replays-delete-vulnerable",
+  "branch_head": "replays-delete-stable",
+  "validation_timestamp": "2026-01-16",
+  "golden_comments": [
+    {
+      "comment_id": 1,
+      "severity": "Medium",
+      "title": "Breaking changes in error response format",
+      "validation_status": "VALID",
+      "evidence": {
+        "file": "src/sentry/issues/endpoints/browser_reporting_collector.py",
+        "lines_in_diff": [
+          "401--    def post(self, request: Request, *args: Any, **kwargs: Any) -> HttpResponse:",
+          "402-+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:",
+          "404:-            return HttpResponse(status=404)",
+          "405:+            return Response(status=HTTP_404_NOT_FOUND)",
+          "413:-            return HttpResponse(status=422)",
+          "414:+            return Response(status=HTTP_422_UNPROCESSABLE_ENTITY)",
+          "426:+                return Response(",
+          "427-+                    {\"error\": \"Invalid report data\", \"details\": serializer.errors},",
+          "428-+                    status=HTTP_422_UNPROCESSABLE_ENTITY,",
+          "429-+                )",
+          "442:-        return HttpResponse(status=200)",
+          "443:+        return Response(status=HTTP_200_OK)"
+        ],
+        "description": "The code changes HttpResponse to Response (Django REST Framework) and changes the 422 error response to return a JSON body with error details. This is a breaking change in the error response format that API clients may depend on.",
+        "issue_exists": true
+      },
+      "validation_notes": "CONFIRMED: The PR changes the response type from HttpResponse to Response and adds a structured error response body for validation failures. The 422 error response now returns {\"error\": \"Invalid report data\", \"details\": serializer.errors} instead of an empty response body, which is a breaking change for API consumers."
+    },
+    {
+      "comment_id": 2,
+      "severity": "Medium",
+      "title": "Detector validator uses wrong key when updating type",
+      "validation_status": "VALID",
+      "evidence": {
+        "file": "src/sentry/workflow_engine/endpoints/validators/base/detector.py",
+        "lines_in_diff": [
+          "880:@@ -33,6 +34,7 @@ class BaseDetectorTypeValidator(CamelSnakeSerializer):",
+          "881-     )",
+          "882-     type = serializers.CharField()",
+          "883-     config = serializers.JSONField(default={})",
+          "886:     def validate_type(self, value: str) -> builtins.type[GroupType]:",
+          "891-         instance.type = validated_data.get(\"detector_type\", instance.group_type).slug"
+        ],
+        "description": "The serializer field is named 'type' (line 882), but the update method tries to get 'detector_type' from validated_data (line 891). The validate_type method is called for the 'type' field, so validated_data will contain 'type', not 'detector_type'. This is a key mismatch bug.",
+        "issue_exists": true
+      },
+      "validation_notes": "CONFIRMED: The serializer defines a field 'type' but the update() method tries to access 'detector_type' from validated_data. Since the field is named 'type', validated_data will have the key 'type', not 'detector_type'. This will cause the default value (instance.group_type) to always be used instead of the provided value."
+    },
+    {
+      "comment_id": 3,
+      "severity": "Low",
+      "title": "Using zip(error_ids, events.values()) assumes dict preserves order",
+      "validation_status": "VALID",
+      "evidence": {
+        "file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+        "lines_in_diff": [
+          "715:+def fetch_error_details(project_id: int, error_ids: list[str]) -> list[ErrorEvent]:",
+          "718:+        node_ids = [Event.generate_node_id(project_id, event_id=id) for id in error_ids]",
+          "719-+        events = nodestore.backend.get_multi(node_ids)",
+          "729:+            for event_id, data in zip(error_ids, events.values())",
+          "730-+            if data is not None"
+        ],
+        "description": "The code uses zip(error_ids, events.values()) which assumes the dictionary values will be in the same order as the error_ids list. While Python 3.7+ guarantees dict order preservation, get_multi() may return results in a different order than requested, leading to incorrect pairing of event_ids with data.",
+        "issue_exists": true
+      },
+      "validation_notes": "CONFIRMED: The code generates node_ids from error_ids in order, calls get_multi(node_ids), then zips error_ids with events.values(). This assumes get_multi() returns results in the same order as the input, which may not be guaranteed by the nodestore backend. Even with dict order preservation in Python 3.7+, the order of results from get_multi() depends on the backend implementation, not dict iteration order."
+    }
+  ],
+  "summary": {
+    "total_comments": 3,
+    "valid_comments": 3,
+    "false_positives": 0,
+    "validation_success_rate": "100%"
+  }
+}

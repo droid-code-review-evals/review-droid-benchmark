@@ -1,0 +1,64 @@
+{
+  "pr_number": 12,
+  "validation_results": [
+    {
+      "comment_id": 1,
+      "severity": "Medium",
+      "description": "Shared mutable default in dataclass timestamp",
+      "validation_status": "VALID",
+      "found_in_diff": true,
+      "evidence": {
+        "file": "src/sentry/integrations/services/assignment_source.py",
+        "line_reference": "+    queued: datetime = timezone.now()",
+        "context": "In the AssignmentSource dataclass, the queued field has a default value of timezone.now(). This is a mutable default that will be evaluated once at class definition time, causing all instances to share the same timestamp unless explicitly overridden.",
+        "actual_code_in_diff": true
+      }
+    },
+    {
+      "comment_id": 2,
+      "severity": "Low",
+      "description": "Method name typo: test_from_dict_inalid_data should be test_from_dict_invalid_data",
+      "validation_status": "VALID",
+      "found_in_diff": true,
+      "evidence": {
+        "file": "tests/sentry/integrations/services/test_assignment_source.py",
+        "line_reference": "+    def test_from_dict_inalid_data(self):",
+        "context": "The test method name has a typo: 'inalid' should be 'invalid'.",
+        "actual_code_in_diff": true
+      }
+    },
+    {
+      "comment_id": 3,
+      "severity": "Low",
+      "description": "Method name says empty_array but tests empty dict",
+      "validation_status": "VALID",
+      "found_in_diff": true,
+      "evidence": {
+        "file": "tests/sentry/integrations/services/test_assignment_source.py",
+        "line_reference": "+    def test_from_dict_empty_array(self):\n+        data: dict[str, Any] = {}",
+        "context": "The test method is named test_from_dict_empty_array but it actually tests an empty dictionary ({}), not an empty array ([]).",
+        "actual_code_in_diff": true
+      }
+    },
+    {
+      "comment_id": 4,
+      "severity": "Medium",
+      "description": "to_dict() returns datetime for queued; JSON serialization may fail",
+      "validation_status": "VALID",
+      "found_in_diff": true,
+      "evidence": {
+        "file": "src/sentry/integrations/services/assignment_source.py",
+        "line_reference": "+    def to_dict(self) -> dict[str, Any]:\n+        return asdict(self)",
+        "context": "The to_dict() method uses asdict() which returns the datetime object directly for the 'queued' field. This will cause JSON serialization failures since datetime objects are not JSON serializable. The test in test_assignment_source.py confirms this with 'assert result.get(\"queued\") is not None'.",
+        "actual_code_in_diff": true
+      }
+    }
+  ],
+  "summary": {
+    "total_golden_comments": 4,
+    "valid_comments": 4,
+    "false_positives": 0,
+    "validation_method": "Programmatic grep analysis of git diff between ecosystem-sync-integration-before and ecosystem-sync-integration-after branches",
+    "diff_file": "/tmp/pr12_diff.txt"
+  }
+}
