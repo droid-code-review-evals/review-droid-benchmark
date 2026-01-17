@@ -1,0 +1,112 @@
+[
+  {
+    "golden_comment": "NoMethodError before_validation in EmbeddableHost",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/models/embeddable_host.rb",
+        "line": 6
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "line number",
+        "which method call fails (sub! on nil)"
+      ],
+      "vagueness_issues": [
+        "Doesn't explain the condition that triggers the error (host being nil)"
+      ],
+      "code_evidence": "Lines 5-8: before_validation do self.host.sub!(/^https?:\\/\\//,'') - if host is nil, sub! will raise NoMethodError: undefined method `sub!' for nil:NilClass",
+      "reasoning": "Real bug confirmed. The before_validation block calls self.host.sub! without nil checking. If a new EmbeddableHost is created without setting host first (or with nil host), this will raise NoMethodError. Droid did not catch this specific bug.",
+      "files_explored": [
+        "app/models/embeddable_host.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The update and destroy methods in Admin::EmbeddableHostsController do not validate the existence of the EmbeddableHost record retrieved by ID. If EmbeddableHost.where(id: params[:id]).first returns nil (i.e., the host does not exist), attempting to call methods on the nil object (e.g., save_host or destroy) will result in a NoMethodError.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/controllers/admin/embeddable_hosts_controller.rb",
+        "line": 10
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "specific line numbers"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 10-11: host = EmbeddableHost.where(id: params[:id]).first; save_host(host) - if record not found, host is nil. Lines 14-16: host = EmbeddableHost.where(id: params[:id]).first; host.destroy - same issue",
+      "reasoning": "Real bug confirmed. Both update (line 10-11) and destroy (line 14-16) methods use .first which returns nil if not found, then call methods on the result without nil check. This will cause NoMethodError in production if someone tries to update/destroy a non-existent host.",
+      "files_explored": [
+        "app/controllers/admin/embeddable_hosts_controller.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "record_for_host compares lower(host) = ? but does not normalize the parameter's case, so mixed\u2011case referer hosts may fail to match even though comparison intends to be case\u2011insensitive.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/models/embeddable_host.rb",
+        "line": 17
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 17: where(\"lower(host) = ?\", host).first - the SQL lowercases the column but the host parameter is not lowercased. If host='Example.COM', it won't match a row with host='example.com'",
+      "reasoning": "Real bug confirmed. The query uses lower(host) on the database column but passes the host parameter as-is. For case-insensitive comparison, should be: where(\"lower(host) = ?\", host.downcase).first",
+      "files_explored": [
+        "app/models/embeddable_host.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Because this migration inserts embeddable_hosts rows with raw SQL, any existing embeddable_hosts values that include http:// or /https:// or path segments won't go through the EmbeddableHost model's normalization, so the new host lookup (which compares only the bare host) may fail for migrated data. Consider ensuring that migrated hosts are normalized to the same format as newly created EmbeddableHost records so existing embedding configurations keep working.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+        "line": 25
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Migration line 25 inserts raw host values from site_settings. Model's before_validation (lines 5-8) strips http:// and path segments. record_for_host uses URI(host).host which extracts just the hostname. If migrated data has 'http://example.com/path', it won't match lookups.",
+      "reasoning": "Real bug confirmed. The migration inserts hosts as-is from the old site_setting, but the model normalizes hosts on save (strips http://, paths). The record_for_host lookup extracts just the hostname from the URL. This mismatch means migrated data with full URLs won't be found by the lookup.",
+      "files_explored": [
+        "db/migrate/20150818190757_create_embeddable_hosts.rb",
+        "app/models/embeddable_host.rb"
+      ]
+    }
+  }
+]

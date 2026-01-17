@@ -1,0 +1,44 @@
+{
+  "pr_number": 8,
+  "pr_title": "FIX: proper handling of group memberships",
+  "ground_truth_bug_count": 5,
+  "droid_analysis": {
+    "total_comments": 5,
+    "true_positives": 4,
+    "false_positives": 1,
+    "precision": 0.80,
+    "recall": 0.80,
+    "f1": 0.80
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 3,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.60,
+    "f1": 0.75,
+    "avg_clarity_score": 4.67,
+    "avg_specificity_score": 3.33
+  },
+  "coverage": {
+    "bugs_found_by_both": 2,
+    "bugs_found_only_by_droid": 2,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": [
+      "Pagination offset edge case - next action caps offset at user_count causing empty last page"
+    ],
+    "golden_missed": [
+      "create action ignores alias_level parameter",
+      "Template uses 'members' instead of 'model.members'"
+    ]
+  },
+  "validation_notes": {
+    "droid_false_positive": "Comment #5 about template path was a false positive - the template naming follows the same convention as all other admin views in the codebase",
+    "key_findings": [
+      "Droid found 2 unique bugs that golden missed (alias_level and template binding)",
+      "Golden found 1 unique bug that droid missed (pagination edge case)",
+      "Both found the findMembers async issue and the HTTP method mismatch in tests",
+      "Droid had one false positive about template naming conventions"
+    ]
+  }
+}

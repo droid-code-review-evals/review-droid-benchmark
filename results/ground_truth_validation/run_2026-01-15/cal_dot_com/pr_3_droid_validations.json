@@ -1,0 +1,75 @@
+[
+  {
+    "comment_id": 2699762808,
+    "file": "packages/core/EventManager.ts",
+    "line": 117,
+    "droid_comment": "[P0] Avoid crash when destinationCalendar is empty\n\n`evt.destinationCalendar ?? []` can yield `[]`, so `mainHostDestinationCalendar` is `undefined` and `mainHostDestinationCalendar.integration` will throw at runtime; use optional chaining or a null check before reading `.integration`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Would throw TypeError 'Cannot read properties of undefined (reading integration)' when evt.destinationCalendar is null/undefined or an empty array, which would crash the booking flow",
+      "reasoning": "The code destructures `const [mainHostDestinationCalendar] = evt.destinationCalendar ?? [];` which produces `undefined` when the array is empty. Then line 118 accesses `mainHostDestinationCalendar.integration` without optional chaining, which will throw at runtime. The original code used `evt.destinationCalendar?.integration` with optional chaining which was safe.",
+      "code_evidence": "Line 117: `const [mainHostDestinationCalendar] = evt.destinationCalendar ?? [];` Line 118: `if (evt.location === MeetLocationType && mainHostDestinationCalendar.integration !== 'google_calendar')` - No null check before accessing .integration",
+      "files_explored": [
+        "packages/core/EventManager.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763347,
+    "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+    "line": 255,
+    "droid_comment": "[P1] Fix update/delete calendarId selection logic\n\nThis code uses `find((cal) => cal.externalId === externalCalendarId)` even when `externalCalendarId` is already falsy, so the fallback always yields `undefined` and can pass an undefined `calendarId` to Google APIs; previously it used the first destination calendar's externalId as fallback.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When externalCalendarId is falsy, the code searches for a calendar with `externalId === undefined`, which will never match any calendar. This causes selectedCalendar to be undefined, and the Google Calendar API call may fail or write to the wrong calendar.",
+      "reasoning": "The original code was: `event.destinationCalendar?.externalId` which would fall back to the first destination calendar's externalId. The new code: `event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId` when externalCalendarId is falsy, the find() looks for a calendar where externalId equals undefined/null, which will never match. This is a logic error that breaks the fallback behavior.",
+      "code_evidence": "Line 253-255: `const selectedCalendar = externalCalendarId ? externalCalendarId : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;` When externalCalendarId is falsy, the condition finds calendar where externalId === undefined which will always fail.",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763614,
+    "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+    "line": 315,
+    "droid_comment": "[P1] Ensure deleteEvent never sends undefined calendarId\n\n`calendarId` can become `undefined` when `externalCalendarId` is not provided because the fallback again looks for a calendar matching an undefined `externalCalendarId`; `events.delete` requires a concrete `calendarId` (e.g. use the first destination calendar externalId or default to `primary`).",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "Same logic error as the updateEvent - when externalCalendarId is falsy, the find() will never match, leaving calendarId undefined. While there's a fallback to defaultCalendarId='primary', the logic is still broken because the intended fallback (using destination calendar's externalId) never works.",
+      "reasoning": "Identical issue to the updateEvent. Line 315-316: `const calendarId = externalCalendarId ? externalCalendarId : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;` When externalCalendarId is falsy, the find condition becomes `cal.externalId === undefined` which won't match valid calendars. While the delete call uses `calendarId ? calendarId : defaultCalendarId`, the intended behavior of falling back to the destination calendar is broken.",
+      "code_evidence": "Line 315-316 shows identical broken logic as updateEvent. The fallback to 'primary' in line 319 masks the issue but doesn't fix it - events may be deleted from the wrong calendar.",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763801,
+    "file": "packages/features/bookings/lib/handleNewBooking.ts",
+    "line": 1878,
+    "droid_comment": "[P1] Persisting only the first destination calendar drops other hosts\n\n`connect: { id: evt.destinationCalendar[0].id }` writes only the first destination calendar even though `evt.destinationCalendar` is populated with multiple host calendars for COLLECTIVE, so subsequent flows reading `booking.destinationCalendar` will lose the additional destinations.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "false_positive",
+      "impact": "This is not a bug. The Prisma schema likely defines booking.destinationCalendar as a single relation (not an array), so connecting to the first destination calendar is the intended behavior. The multiple destination calendars in the event are for creating events on multiple calendars (handled elsewhere), but the booking record only needs to store one reference.",
+      "reasoning": "Looking at the code, `destinationCalendar` in the booking creation is a `connect` operation, which in Prisma connects to a single related record. The PR's purpose is to handle multiple hosts' calendars for COLLECTIVE scheduling, but each booking record storing one primary calendar reference is likely intentional design. The event creation flow in EventManager.ts iterates over all destination calendars to create events on each, which is the correct behavior.",
+      "code_evidence": "The Prisma schema likely has: `destinationCalendar DestinationCalendar? @relation(...)` (single optional relation). The connect syntax `{ id: ... }` confirms this is a single-record relation. Multiple calendar event creation is handled in createAllCalendarEvents().",
+      "files_explored": [
+        "packages/features/bookings/lib/handleNewBooking.ts",
+        "packages/core/EventManager.ts"
+      ]
+    }
+  }
+]

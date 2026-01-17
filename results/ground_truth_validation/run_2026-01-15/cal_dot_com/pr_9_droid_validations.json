@@ -1,0 +1,57 @@
+[
+  {
+    "comment_id": 2699763876,
+    "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+    "line": 48,
+    "droid_comment": "[P1] Fix team admin/owner check (AND makes it too strict)\n\n`isTeamAdminOrOwner` currently requires the user to be **both** admin and owner:\n```ts\n(await isTeamAdmin(...)) && (await isTeamOwner(...))\n```\nThis likely blocks legitimate team admins (non-owners) from adding guests, causing unexpected `FORBIDDEN` for valid roles.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "logic_bug",
+      "impact": "Team admins who are not owners will be incorrectly denied permission to add guests, causing FORBIDDEN errors for legitimate team admin users. Only users who are BOTH admin AND owner (which is typically only the team owner) can add guests.",
+      "reasoning": "Verified by examining isTeamAdmin() and isTeamOwner() functions in packages/lib/server/queries/teams/index.ts. isTeamAdmin returns membership if role is ADMIN or OWNER, isTeamOwner returns true only if role is OWNER. The && condition means only OWNER users pass both checks. Should use || to allow either admin OR owner.",
+      "code_evidence": "Line 46-48: (await isTeamAdmin(user.id, booking.eventType?.teamId ?? 0)) && (await isTeamOwner(user.id, booking.eventType?.teamId ?? 0)). isTeamAdmin at line 256 returns false or membership object for ADMIN/OWNER roles. isTeamOwner at line 273 returns true only for OWNER role.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "packages/lib/server/queries/teams/index.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763879,
+    "file": "apps/web/components/dialog/AddGuestsDialog.tsx",
+    "line": 31,
+    "droid_comment": "[P2] Don't send empty string as guest email\n\n`multiEmailValue` is initialized to `[\"\"]` and `handleAdd` only checks `length === 0`, so clicking Add with the default state will call the mutation with an empty string unless the Zod parse fails (then the UI shows error). Consider initializing to `[]` or filtering empty strings before `safeParse` to avoid unnecessary mutation attempts and confusing UX.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "medium",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "Poor UX - clicking Add without entering any email will trigger Zod validation failure showing an error, but this is caught. The Zod schema requires valid emails so the empty string won't pass validation. The bug is about UX/efficiency, not a runtime error.",
+      "reasoning": "The multiEmailValue is initialized to [''] at line 31. handleAdd at line 45 checks if length === 0 but [''] has length 1, so it proceeds to Zod validation. ZAddGuestsInputSchema uses z.string().email() which will fail for empty string. The safeParse catches this and sets isInvalidEmail to true. It's inefficient but not a crash.",
+      "code_evidence": "Line 31: useState<string[]>([\"\"]). Line 45-53: handleAdd checks length === 0 but [''].length is 1. Zod schema at line 25-28 validates email format.",
+      "files_explored": [
+        "apps/web/components/dialog/AddGuestsDialog.tsx"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763885,
+    "file": "packages/emails/email-manager.ts",
+    "line": 542,
+    "droid_comment": "[P1] Swap attendee email types (new guests get wrong email)\n\nIn `sendAddGuestsEmails`, the condition is inverted: `newGuests` currently receive `AttendeeScheduledEmail` while existing attendees receive `AttendeeAddGuestsEmail`. This produces the opposite email content than intended for newly added guests.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "New guests receive AttendeeScheduledEmail (a 'you've been scheduled' email) instead of a proper 'you've been added as a guest' notification. Existing attendees receive AttendeeAddGuestsEmail (notification that guests were added) which is correct. The email types are swapped for new guests.",
+      "reasoning": "Looking at the code: if newGuests.includes(attendee.email) is true, it sends AttendeeScheduledEmail. But AttendeeScheduledEmail is for booking confirmations, not for being added as a guest. New guests should receive AttendeeAddGuestsEmail (or a dedicated new guest email) informing them they've been added. The semantics are inverted.",
+      "code_evidence": "Lines 539-547: if (newGuests.includes(attendee.email)) sends AttendeeScheduledEmail, else sends AttendeeAddGuestsEmail. New guests get the scheduled email template instead of the add-guests template.",
+      "files_explored": [
+        "packages/emails/email-manager.ts"
+      ]
+    }
+  }
+]

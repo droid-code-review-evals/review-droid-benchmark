@@ -1,0 +1,81 @@
+[
+  {
+    "golden_comment": "Inconsistent feature flag bug causing orphaned permissions. The AdminPermissions event listener, responsible for cleaning up permissions upon role, client, or group removal, is incorrectly guarded by the ADMIN_FINE_GRAINED_AUTHZ (V1) feature flag. This is inconsistent with other methods in the class that use ADMIN_FINE_GRAINED_AUTHZ_V2. Consequently, if ADMIN_FINE_GRAINED_AUTHZ_V2 is enabled but V1 is not, the permission cleanup logic will not execute, leading to orphaned permission data. Cleanup should occur regardless of which fine-grained authorization version is enabled.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/AdminPermissions.java",
+        "line": 77
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 77: 'if (Profile.isFeatureEnabled(Profile.Feature.ADMIN_FINE_GRAINED_AUTHZ))' uses V1 flag, but lines 40, 45, 54, 59, 66 all check ADMIN_FINE_GRAINED_AUTHZ_V2. When V2 is enabled but V1 is not, registerListener's cleanup code won't execute, leaving orphaned permissions when roles/clients/groups are removed.",
+      "reasoning": "This is a real bug. The event listener at line 77 uses the V1 feature flag while all other methods in AdminPermissions use V2. If only V2 is enabled (which is the new permission system), permission cleanup on entity removal won't happen, leading to orphaned data. The golden comment accurately describes the issue with good specificity about which flag is wrong and what the consequence is.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/services/resources/admin/permissions/AdminPermissions.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "In hasPermission(ClientModel client, String scope), the resource lookup uses findByName(server, client.getId(), server.getId()), but AdminPermissionsSchema.getOrCreateResource creates per-client resources with the owner set to resourceServer.getClientId(), so this lookup will never find those resources and will always fall back to the 'all-clients' resource, effectively ignoring client-specific permissions.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+        "line": 213
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 213: resourceStore.findByName(server, client.getId(), server.getId()) uses server.getId() as owner. But AdminPermissionsSchema.getOrCreateResource line 104 creates resources with owner=resourceServer.getClientId(). ResourceServer.getId() != ResourceServer.getClientId() - getId() returns the resource server's ID while getClientId() returns the associated client's ID.",
+      "reasoning": "This is a real and significant bug. The findByName lookup uses server.getId() as the owner parameter, but resources are created with resourceServer.getClientId() as owner. Since these are different values, per-client resources will never be found, causing the code to always fall back to the 'all-clients' resource check. This effectively breaks client-specific permission granularity.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/AdminPermissionsSchema.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/store/ResourceStore.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/model/ResourceServer.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "In getClientsWithPermission(String scope), iterating resourceStore.findByType(server, AdminPermissionsSchema.CLIENTS_RESOURCE_TYPE) and returning resource.getName() will only ever consider the type-level 'Clients' resource (per-client resources have no type) and return its name, while AvailableRoleMappingResource#getRoleIdsWithPermissions expects actual client IDs to pass to realm.getClientById, which can lead to incorrect behavior or a null client and subsequent failures.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+        "line": 137
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699749823,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 137: resourceStore.findByType(server, AdminPermissionsSchema.CLIENTS_RESOURCE_TYPE, ...) searches for resources with type='Clients'. AdminPermissionsSchema.init() creates the all-clients resource with type='Clients', but getOrCreateResource creates per-client resources WITHOUT setting a type (only name and owner). So findByType only finds the type-level resource named 'Clients', not individual per-client resources.",
+      "reasoning": "This is a real bug. The findByType call only finds resources with type='Clients', which is only the all-clients type-level resource. Per-client resources created by getOrCreateResource don't have a type set, so they won't be found. The method would then return {'Clients'} (the type-level resource name) instead of actual client IDs. Callers expecting client UUIDs would fail. Droid comment 2699749823 touched on this issue but incorrectly focused on prefix stripping rather than the type-based search problem.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/AdminPermissionsSchema.java"
+      ]
+    }
+  }
+]

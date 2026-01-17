@@ -1,0 +1,71 @@
+[
+  {
+    "golden_comment": "OptimizedCursorPaginator negative-offset branch slices QuerySet with a negative start index",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/paginator.py",
+        "line": 883
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2696000722,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 877-884: if self.enable_advanced_features and cursor.offset < 0: start_offset = cursor.offset; results = list(queryset[start_offset:stop]) - Django raises AssertionError on negative slicing",
+      "reasoning": "Real bug confirmed. The OptimizedCursorPaginator explicitly allows negative offsets in the 'advanced features' path, but Django querysets do not support negative indexing. Droid caught this exact bug.",
+      "files_explored": ["src/sentry/api/paginator.py"]
+    }
+  },
+  {
+    "golden_comment": "BasePaginator negative-offset branch slices QuerySet with a negative start index",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/paginator.py",
+        "line": 182
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2696000721,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 182: start_offset = max(0, offset) if not cursor.is_prev else offset - when cursor.is_prev=True, offset can be negative and passed directly to queryset slicing",
+      "reasoning": "Real bug confirmed. BasePaginator.get_result allows negative start_offset when cursor.is_prev is True, which will crash Django queryset slicing. Droid caught this exact bug.",
+      "files_explored": ["src/sentry/api/paginator.py"]
+    }
+  },
+  {
+    "golden_comment": "OptimizedCursorPaginator.get_item_key uses floor/ceil on a datetime key (order_by='-datetime'), causing TypeError.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/paginator.py",
+        "line": 839
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 839-840: value = getattr(item, self.key); return int(math.floor(value)...) - organization_auditlogs.py uses OptimizedCursorPaginator with order_by='-datetime', so self.key='datetime' and value is a datetime object, math.floor(datetime) raises TypeError",
+      "reasoning": "Real bug confirmed. The OptimizedCursorPaginator.get_item_key uses math.floor/ceil which only works on numeric types. When used with order_by='-datetime' (as in organization_auditlogs.py), it will raise TypeError: must be real number, not datetime. Droid did NOT catch this bug.",
+      "files_explored": ["src/sentry/api/paginator.py", "src/sentry/api/endpoints/organization_auditlogs.py"]
+    }
+  }
+]

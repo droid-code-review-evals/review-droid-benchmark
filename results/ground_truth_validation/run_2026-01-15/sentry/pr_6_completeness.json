@@ -1,0 +1,33 @@
+{
+  "pr_number": 6,
+  "ground_truth_bugs": [
+    {"id": 1, "description": "member None AttributeError", "file": "src/sentry/api/endpoints/organization_auditlogs.py", "line": 71},
+    {"id": 2, "description": "BasePaginator negative slicing", "file": "src/sentry/api/paginator.py", "line": 186},
+    {"id": 3, "description": "OptimizedCursorPaginator negative slicing", "file": "src/sentry/api/paginator.py", "line": 877},
+    {"id": 4, "description": "datetime TypeError in get_item_key", "file": "src/sentry/api/paginator.py", "line": 838}
+  ],
+  "droid_metrics": {
+    "total_comments": 3,
+    "valid_comments": 3,
+    "bugs_found": [1, 2, 3],
+    "precision": 1.0,
+    "recall": 0.75,
+    "f1": 0.857
+  },
+  "golden_metrics": {
+    "total_comments": 4,
+    "valid_comments": 3,
+    "bugs_found": [1, 2, 3, 4],
+    "precision": 0.75,
+    "recall": 1.0,
+    "f1": 0.857
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "Importing non-existent OptimizedCursorPaginator",
+      "reasoning": "OptimizedCursorPaginator exists in src/sentry/api/paginator.py at line 819. The import is valid."
+    }
+  ],
+  "droid_missed": [4],
+  "golden_missed": []
+}

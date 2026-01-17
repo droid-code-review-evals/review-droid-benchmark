@@ -1,0 +1,116 @@
+[
+  {
+    "golden_comment": "The exported function TwoFactor handles backup codes and is in BackupCode.tsx. Inconsistent naming.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "apps/web/components/auth/BackupCode.tsx",
+        "line": 7
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "File BackupCode.tsx exports function named 'TwoFactor': `export default function TwoFactor({ center = true })`. The function handles backup code input but is named TwoFactor, which is confusing since there's already a TwoFactor component for TOTP codes.",
+      "reasoning": "Valid code quality issue. The naming is genuinely inconsistent - a file called BackupCode.tsx exports a function named TwoFactor. This could cause developer confusion. However, severity is appropriately Low as it doesn't affect runtime behavior.",
+      "files_explored": [
+        "apps/web/components/auth/BackupCode.tsx",
+        "apps/web/components/auth/TwoFactor.tsx"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Error message mentions 'backup code login' but this is a disable endpoint, not login",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+        "line": 48
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 48 in disable.ts: `console.error(\"Missing encryption key; cannot proceed with backup code login.\");` - The log message says 'login' but this is the disable endpoint. Should say 'backup code verification' or similar.",
+      "reasoning": "Valid but very minor issue. The error message is misleading but only affects developer debugging experience, not end users. The same copy-paste error exists in the login flow (next-auth-options.ts) where 'login' is appropriate, suggesting this was copied without updating the message.",
+      "files_explored": [
+        "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+        "packages/features/auth/lib/next-auth-options.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Backup code validation is case-sensitive due to the use of indexOf(). This causes validation to fail if a user enters uppercase hex characters, as backup codes should be case-insensitive for a better user experience.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/features/auth/lib/next-auth-options.ts",
+        "line": 130
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "both affected locations (login and disable)"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Backup codes are generated as lowercase hex: `crypto.randomBytes(5).toString('hex')` (setup.ts line 58). Validation uses indexOf which is case-sensitive: `backupCodes.indexOf(credentials.backupCode.replaceAll('-', ''))` (next-auth-options.ts line 130). If user types 'ABCDE-12345' instead of 'abcde-12345', validation fails. Same issue in disable.ts line 57.",
+      "reasoning": "Real UX bug. Hex codes displayed to users could reasonably be typed in uppercase (e.g., from screenshots or manual transcription), but validation would fail. Easy fix: toLowerCase() on user input before comparison. Affects both login (next-auth-options.ts) and disable (disable.ts) flows.",
+      "files_explored": [
+        "packages/features/auth/lib/next-auth-options.ts",
+        "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+        "apps/web/pages/api/auth/two-factor/totp/setup.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Because backupCodes are decrypted and mutated in memory before being written back, two concurrent login requests using the same backupCode could both pass this check and update, so a single backup code may effectively be accepted more than once if used concurrently, weakening the intended one-time-use semantics.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/features/auth/lib/next-auth-options.ts",
+        "line": 127
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 127-140 in next-auth-options.ts: The code decrypts backupCodes, checks if user code is valid, then writes back with that code nullified. Between read and write, another concurrent request could also read the same codes, pass validation, and write back. Both requests succeed with the same backup code. No database-level locking or atomic compare-and-swap.",
+      "reasoning": "Valid race condition bug. The read-check-modify-write pattern without atomicity means two concurrent requests can both succeed using the same backup code. In practice this is hard to exploit (requires precise timing), but for security-critical one-time codes, it's a real vulnerability. Fix would require atomic database operations or row-level locking.",
+      "files_explored": [
+        "packages/features/auth/lib/next-auth-options.ts"
+      ]
+    }
+  }
+]

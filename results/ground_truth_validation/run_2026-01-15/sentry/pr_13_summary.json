@@ -1,0 +1,30 @@
+{
+  "pr_number": 13,
+  "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+  "ground_truth_bug_count": 1,
+  "droid_analysis": {
+    "total_comments": 0,
+    "true_positives": 0,
+    "false_positives": 0,
+    "precision": null,
+    "recall": 0.0,
+    "f1": null
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667,
+    "avg_clarity_score": 4.5,
+    "avg_specificity_score": 2.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["get_monitor_environment_context returns original config instead of modified copy"],
+    "golden_missed": []
+  }
+}

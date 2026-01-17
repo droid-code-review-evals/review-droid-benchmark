@@ -1,0 +1,31 @@
+{
+  "pr_number": 5,
+  "pr_title": "Optimize header layout performance with flexbox mixins",
+  "ground_truth_bug_count": 2,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.5,
+    "recall": 0.5,
+    "f1": 0.5
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 3.5
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["Removing float:right from .panel breaks noscript header layout"],
+    "golden_missed": []
+  },
+  "notes": "Droid had one false positive claiming -webkit-inline-box is invalid, when it's actually a supported legacy value. Droid missed the more subtle layout regression where removing float:right from .panel breaks the noscript header (where .panel is nested inside .row and not a direct flex child). Golden correctly identified both issues."
+}

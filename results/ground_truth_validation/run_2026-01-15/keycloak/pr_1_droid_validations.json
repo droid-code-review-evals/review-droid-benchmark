@@ -1,0 +1,58 @@
+[
+  {
+    "comment_id": 2699751929,
+    "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/WebAuthnConditionalUIAuthenticator.java",
+    "line": 64,
+    "droid_comment": "[P0] Add `@Override` to ensure this method actually overrides\n\nIf the superclass signature changes or differs, this silently becomes an overload and `WebAuthnAuthenticator` will still show authenticators; adding `@Override` makes the intended behavior (always `false` for conditional UI) compile-time enforced.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "false_positive",
+      "impact": "None - this is a code quality suggestion, not a bug. The method DOES override the parent class method correctly.",
+      "reasoning": "Explored the code: WebAuthnConditionalUIAuthenticator extends WebAuthnPasswordlessAuthenticator which extends WebAuthnAuthenticator. WebAuthnAuthenticator has 'protected boolean shouldShowWebAuthnAuthenticators(AuthenticationFlowContext context)' at line 128. The child class method at line 65 has the exact same signature and DOES correctly override it. Adding @Override is a best practice but NOT adding it is not a bug - the method works correctly. The droid's concern about 'silently becomes an overload' is wrong because the signatures match exactly.",
+      "code_evidence": "WebAuthnAuthenticator.java line 128: 'protected boolean shouldShowWebAuthnAuthenticators(AuthenticationFlowContext context)'. WebAuthnConditionalUIAuthenticator.java line 65: same signature. These match exactly.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/WebAuthnConditionalUIAuthenticator.java",
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/WebAuthnAuthenticator.java",
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/WebAuthnPasswordlessAuthenticator.java"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751930,
+    "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+    "line": 116,
+    "droid_comment": "[P0] Guard against null `webauthnAuth` before calling `fillContextForm`\n\n`isConditionalPasskeysEnabled(context.getUser())` can be true even when `webauthnAuth` is null (e.g., `context.getUser()!=null`), but the next line unconditionally calls `webauthnAuth.fillContextForm(context)`, which will throw an NPE during re-authentication.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the droid misread the code. isConditionalPasskeysEnabled() already checks webauthnAuth != null.",
+      "reasoning": "The droid's claim is factually wrong. Looking at line 157-159 of UsernamePasswordForm.java: 'protected boolean isConditionalPasskeysEnabled(UserModel user) { return webauthnAuth != null && webauthnAuth.isPasskeysEnabled() && user != null; }'. The method explicitly checks 'webauthnAuth != null' as the FIRST condition. Due to short-circuit evaluation, if webauthnAuth is null, the method returns false immediately. Therefore, when isConditionalPasskeysEnabled() returns true, webauthnAuth is GUARANTEED to be non-null. The NPE concern is unfounded.",
+      "code_evidence": "Line 157-159: 'protected boolean isConditionalPasskeysEnabled(UserModel user) { return webauthnAuth != null && webauthnAuth.isPasskeysEnabled() && user != null; }' - null check is present.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751936,
+    "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+    "line": 139,
+    "droid_comment": "[P0] Prevent NPE in `challenge()` when `webauthnAuth` is null\n\nThis method now calls `webauthnAuth.fillContextForm(context)` whenever `isConditionalPasskeysEnabled(context.getUser())` is true, but `webauthnAuth` is only non-null in the session constructor; default construction will crash.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - same false positive as comment 2. isConditionalPasskeysEnabled() already guards against null webauthnAuth.",
+      "reasoning": "Same issue as the previous comment. The isConditionalPasskeysEnabled() method at line 157-159 checks 'webauthnAuth != null' first. If webauthnAuth is null (from default constructor), isConditionalPasskeysEnabled() will return false, and fillContextForm() will never be called. The droid failed to read the full implementation of isConditionalPasskeysEnabled().",
+      "code_evidence": "Line 157-159: isConditionalPasskeysEnabled checks webauthnAuth != null first, preventing any NPE.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java"
+      ]
+    }
+  }
+]

@@ -1,0 +1,83 @@
+{
+  "pr_number": 7,
+  "pr_title": "Optimize spans buffer insertion with eviction during insert",
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "end_timestamp_precise KeyError in process_batch",
+      "file": "src/sentry/spans/consumers/process/factory.py",
+      "line": 141
+    },
+    {
+      "id": 2,
+      "description": "organization_context.member None AttributeError",
+      "file": "src/sentry/api/endpoints/organization_auditlogs.py",
+      "line": 70
+    },
+    {
+      "id": 3,
+      "description": "BasePaginator negative slicing AssertionError",
+      "file": "src/sentry/api/paginator.py",
+      "line": 182
+    },
+    {
+      "id": 4,
+      "description": "OptimizedCursorPaginator negative slicing AssertionError",
+      "file": "src/sentry/api/paginator.py",
+      "line": 883
+    },
+    {
+      "id": 5,
+      "description": "ZUNIONSTORE score corruption (default SUM corrupts timestamps)",
+      "file": "src/sentry/scripts/spans/add-buffer.lua",
+      "line": 47
+    },
+    {
+      "id": 6,
+      "description": "SET to ZSET WRONGTYPE during migration",
+      "file": "src/sentry/spans/buffer.py",
+      "line": 197
+    },
+    {
+      "id": 7,
+      "description": "OptimizedCursorPaginator.get_item_key datetime TypeError",
+      "file": "src/sentry/api/paginator.py",
+      "line": 839
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 7,
+    "valid_comments": 6,
+    "false_positives": 1,
+    "bugs_found": [1, 2, 3, 4, 5, 6],
+    "bugs_missed": [7],
+    "precision": 0.857,
+    "recall": 0.857,
+    "f1": 0.857
+  },
+  "golden_metrics": {
+    "total_comments": 3,
+    "valid_comments": 3,
+    "false_positives": 0,
+    "bugs_found": [3, 4, 7],
+    "bugs_missed": [1, 2, 5, 6],
+    "precision": 1.0,
+    "recall": 0.429,
+    "f1": 0.6
+  },
+  "golden_false_positives": [],
+  "droid_false_positives": [
+    {
+      "comment_id": 2696000719,
+      "comment": "ZPOPMIN eviction ordering",
+      "reasoning": "This is a design clarification request, not a definite bug. ZPOPMIN removing oldest spans may be intentional behavior for keeping newest telemetry data."
+    }
+  ],
+  "droid_missed": [7],
+  "golden_missed": [1, 2, 5, 6],
+  "coverage_analysis": {
+    "bugs_found_by_both": [3, 4],
+    "bugs_found_only_by_droid": [1, 2, 5, 6],
+    "bugs_found_only_by_golden": [7]
+  }
+}

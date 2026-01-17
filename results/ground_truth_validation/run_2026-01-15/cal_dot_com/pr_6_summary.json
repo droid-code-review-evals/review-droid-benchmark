@@ -1,0 +1,31 @@
+{
+  "pr_number": 6,
+  "pr_title": "Advanced date override handling and timezone compatibility improvements",
+  "ground_truth_bug_count": 2,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "avg_clarity_score": 4.5,
+    "avg_specificity_score": 2.5
+  },
+  "coverage": {
+    "bugs_found_by_both": 2,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": []
+  },
+  "validation_notes": "Both droid and golden identified the same 2 bugs in this PR. Droid comments were more specific with file paths and line numbers, while golden comments described the issues clearly but lacked location details. The bugs are: (1) dayjs object comparison using === which always returns false, creating dead code for all-day override detection, and (2) copy-paste error where 'end' variable uses slotStartTime instead of slotEndTime, allowing bookings to extend past working hours."
+}

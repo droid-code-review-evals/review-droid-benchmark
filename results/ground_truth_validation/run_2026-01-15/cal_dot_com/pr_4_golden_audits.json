@@ -1,0 +1,56 @@
+[
+  {
+    "golden_comment": "In getBaseConditions(), the else if (filterConditions) and final else branches are unreachable. This is because getAuthorizationConditions() always returns a non-null Prisma.Sql object, making authConditions always truthy, which means only the first two if/else if conditions are ever evaluated.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/lib/server/service/insightsBooking.ts",
+        "line": 77
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "Exact line numbers for the unreachable branches"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "getAuthorizationConditions() at line 81 returns Promise<Prisma.Sql> (non-nullable). A Prisma.Sql object is always truthy in JavaScript. Therefore in getBaseConditions() (lines 68-80): 1) Branch 1 (line 72): authConditions && filterConditions - can be true/false depending on filterConditions. 2) Branch 2 (line 74): else if (authConditions) - always true when reached since authConditions is always truthy. 3) Branch 3 (line 76): else if (filterConditions) - UNREACHABLE because if we get here, authConditions must be falsy, but it never is. 4) Branch 4 (line 78): else { NOTHING_CONDITION } - UNREACHABLE for same reason.",
+      "reasoning": "This is a valid code quality bug. While it doesn't cause runtime errors, it's dead code that indicates a logic oversight. The severity is correctly marked as Low since the code still functions correctly - the unreachable branches are essentially no-ops. However, if the intention was to handle cases where authConditions might be null/undefined, the code would silently fail to do so.",
+      "files_explored": [
+        "packages/lib/server/service/insightsBooking.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Fetching userIdsFromOrg only when teamsFromOrg.length > 0 can exclude org-level members for orgs without child teams; consider deriving from teamIds (which includes orgId) or removing the guard so org-only orgs still include member user bookings.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/lib/server/service/insightsBooking.ts",
+        "line": 157
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "Exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 155-161: `const userIdsFromOrg = teamsFromOrg.length > 0 ? (await MembershipRepository.findAllByTeamIds({ teamIds, ... })) : [];` - The guard checks teamsFromOrg.length, NOT teamIds.length. Since teamIds = [options.orgId, ...teamsFromOrg], an org with no child teams has teamIds = [orgId] but userIdsFromOrg = [] because the membership fetch is skipped. This means org-level members' individual bookings (isTeamBooking=false) won't be included in the query results for orgs without child teams.",
+      "reasoning": "This is a valid logic bug that could cause data to be missing from insights queries. For organizations without child teams, their direct members' non-team bookings would be excluded from results. The guard should check teamIds.length > 0 instead of teamsFromOrg.length > 0, or simply always fetch memberships since teamIds is never empty.",
+      "files_explored": [
+        "packages/lib/server/service/insightsBooking.ts"
+      ]
+    }
+  }
+]

@@ -1,0 +1,101 @@
+[
+  {
+    "comment_id": 2699756307,
+    "file": "app/assets/javascripts/discourse/models/group.js",
+    "line": 19,
+    "droid_comment": "[P0] Return a promise from `findMembers` when group name is blank\n\n`findMembers` now does `return ;` when `name` is empty, but callers (`setupController` in routes and the admin controller actions) call it without guarding; returning `Ember.RSVP.resolve([])` (as before) avoids a runtime `undefined.then` / async flow break when the route expects a promise.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "When findMembers is called with an empty group name, it returns undefined instead of a promise. Callers in setupController (both group-members.js.es6 and admin_group_route.js) call model.findMembers() without awaiting or checking the return value. If any code chains on the promise (e.g., .then()), it would fail with 'Cannot read property then of undefined'. The current callers do not chain on the result, so this is more of a defensive bug that could cause issues if callers change.",
+      "reasoning": "Verified: findMembers at line 21 does 'return ;' when name is empty (returns undefined). Both route setupController methods call model.findMembers() without chaining. While current code doesn't chain on the promise return value, returning undefined breaks the method's contract and could cause issues if callers change. This is a real but medium-impact bug since current callers don't chain on the result.",
+      "code_evidence": "Line 21: 'if (Em.isEmpty(this.get('name'))) { return ; }' - returns undefined. group-members.js.es6 setupController calls 'model.findMembers();' without chaining. admin_group_route.js setupController also calls 'model.findMembers();' without chaining.",
+      "files_explored": [
+        "app/assets/javascripts/discourse/models/group.js",
+        "app/assets/javascripts/discourse/routes/group-members.js.es6",
+        "app/assets/javascripts/admin/routes/admin_group_route.js"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699756472,
+    "file": "app/controllers/admin/groups_controller.rb",
+    "line": 23,
+    "droid_comment": "[P0] Keep request payload shape consistent between `create` and `update`\n\nThe JS model posts raw fields (`{name, visible, alias_level}`), but `Admin::GroupsController#create` only handles `name` and `visible` (and never sets `alias_level`), while `#update` does handle `alias_level`; this causes newly-created groups to ignore the chosen alias level until a subsequent edit.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "When creating a new group, the alias_level parameter sent by the JS model is silently ignored. Users must edit the group after creation to set alias_level. This creates a data inconsistency where newly created groups always have default alias_level regardless of user selection.",
+      "reasoning": "Verified: group.js asJSON() method returns {name, alias_level, visible}. The create action in controller only uses params[:name] and params[:visible], completely ignoring params[:alias_level]. The update action does handle alias_level via 'group.alias_level = params[:alias_level].to_i if params[:alias_level].present?'. This is a real logic bug causing silent data loss.",
+      "code_evidence": "group.js line 64-68: asJSON returns {name: ..., alias_level: ..., visible: ...}. groups_controller.rb create action (lines 20-28): only sets group.name and group.visible, no alias_level. Update action (line 34): 'group.alias_level = params[:alias_level].to_i if params[:alias_level].present?'",
+      "files_explored": [
+        "app/controllers/admin/groups_controller.rb",
+        "app/assets/javascripts/discourse/models/group.js"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699756662,
+    "file": "spec/controllers/admin/groups_controller_spec.rb",
+    "line": 119,
+    "droid_comment": "[P0] Use DELETE for `remove_member` in spec (route is `delete \"members\"`)\n\nThe spec calls `xhr :put, :remove_member` for the automatic-group case, but the route is registered as `DELETE /admin/groups/:group_id/members`; this will fail routing and won't exercise the controller action.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "The test for 'cannot remove members from automatic groups' uses PUT method but the route expects DELETE. This test will fail with a routing error and does not actually test the controller logic. The test is broken.",
+      "reasoning": "Verified: routes.rb line 48 shows 'delete \"members\" => \"groups#remove_member\"'. Spec line 112-114 uses 'xhr :put, :remove_member, group_id: 1, user_id: 42'. This HTTP method mismatch means the test will hit a routing error rather than test the intended controller action. Interestingly, the second test in the same context (line 117-126) correctly uses 'xhr :delete, :remove_member'.",
+      "code_evidence": "routes.rb line 48: 'delete \"members\" => \"groups#remove_member\"'. Spec line 112-114: 'it \"cannot remove members from automatic groups\" do\\n  xhr :put, :remove_member, group_id: 1, user_id: 42'. Spec line 117: 'xhr :delete, :remove_member' (correct usage in second test).",
+      "files_explored": [
+        "spec/controllers/admin/groups_controller_spec.rb",
+        "config/routes.rb"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699756862,
+    "file": "app/assets/javascripts/discourse/templates/group/members.hbs",
+    "line": 6,
+    "droid_comment": "[P0] Fix members template binding (`members` is undefined here)\n\nThis template switched from `model` to `members`, but the `group-members` route now sets `controller.model = group` (not an array) and `findMembers` populates `group.members`; without changing the template to iterate `model.members` (or adding a `members` alias on the controller), this renders nothing / errors.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "The template iterates over 'members' but the controller doesn't have a 'members' property. The route sets model = group, and findMembers sets model.members. The template should iterate over 'model.members' not 'members'. This will cause the member list to be empty or produce a rendering error.",
+      "reasoning": "Verified: Template line 6 uses '{{#each m in members}}'. group-members.js.es6 route sets 'controller.set(\"model\", model)' where model is the group object. findMembers() in group.js sets 'self.members = ...' (sets members on the group model object). So model.members exists but direct 'members' on the controller does not. The template should use '{{#each m in model.members}}' or the controller needs a computed property alias.",
+      "code_evidence": "Template line 6: '{{#each m in members}}'. group-members.js.es6 line 10: 'controller.set(\"model\", model)'. group.js findMembers line 32-35: 'self.setProperties({...members: result.members.map(...)})'. Members are set on model, not on controller.",
+      "files_explored": [
+        "app/assets/javascripts/discourse/templates/group/members.hbs",
+        "app/assets/javascripts/discourse/routes/group-members.js.es6",
+        "app/assets/javascripts/discourse/models/group.js"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699757048,
+    "file": "app/assets/javascripts/admin/views/group-member.js.es6",
+    "line": 3,
+    "droid_comment": "[P1] Use the correct template name for the new admin view\n\nIn Ember/Discourse, `templateName` usually matches the logical template path (e.g. `admin/templates/logs/...` in existing code). This file points at `admin/templates/group_member`, but the template was added at `app/assets/javascripts/admin/templates/group_member.hbs` (no `templates/` subdir), so the view may fail to resolve its template at runtime.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No impact - this is a false positive.",
+      "reasoning": "Verified by examining all existing admin views: they ALL use the 'admin/templates/...' pattern for templateName, and their corresponding templates are at 'app/assets/javascripts/admin/templates/...'. For example: admin_api_view.js uses templateName: 'admin/templates/api' and the file is at admin/templates/api.hbs. The new group-member.js.es6 uses templateName: 'admin/templates/group_member' and the file is at admin/templates/group_member.hbs. This follows the exact same pattern as all other admin views.",
+      "code_evidence": "admin_api_view.js: 'templateName: \"admin/templates/api\"' -> admin/templates/api.hbs exists. admin_dashboard_view.js: 'templateName: \"admin/templates/dashboard\"' -> admin/templates/dashboard.hbs exists. group-member.js.es6: 'templateName: \"admin/templates/group_member\"' -> admin/templates/group_member.hbs exists.",
+      "files_explored": [
+        "app/assets/javascripts/admin/views/group-member.js.es6",
+        "app/assets/javascripts/admin/views/admin_api_view.js",
+        "app/assets/javascripts/admin/views/admin_dashboard_view.js",
+        "app/assets/javascripts/admin/templates/"
+      ]
+    }
+  }
+]

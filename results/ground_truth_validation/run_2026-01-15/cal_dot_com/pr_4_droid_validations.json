@@ -1,0 +1,78 @@
+[
+  {
+    "comment_id": 2699763744,
+    "file": "packages/lib/server/service/__tests__/insightsBooking.integration-test.ts",
+    "line": 486,
+    "droid_comment": "[P1] Test doesn't catch the `ANY(${array})` runtime failure\n\nThis test only asserts the returned ids, but with Postgres parameter binding `ANY(${[id]})` can fail before returning results. Consider asserting the query executes by running it against cases where `teamIds` is non-empty and empty to cover the failure mode introduced by the new SQL fragments.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No impact - the underlying claim about ANY() failing is incorrect",
+      "reasoning": "The droid's premise is flawed. Prisma.sql template tags correctly handle array parameters when used with PostgreSQL's ANY() function. Evidence: This exact pattern (ANY(${arrayVariable})) is already used successfully in PermissionRepository.ts in the same codebase. The tests use Prisma.sql expectations that match this pattern and work correctly. Additionally, teamIds always contains at least options.orgId, so it can never be empty.",
+      "code_evidence": "PermissionRepository.ts uses `WHERE \"action\" = ANY(${actions})` successfully. The insightsBooking.ts code ensures teamIds = [options.orgId, ...teamsFromOrg] always has at least one element.",
+      "files_explored": [
+        "packages/lib/server/service/__tests__/insightsBooking.integration-test.ts",
+        "packages/lib/server/service/insightsBooking.ts",
+        "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763746,
+    "file": "packages/lib/server/service/insightsBooking.ts",
+    "line": 205,
+    "droid_comment": "[P0] Avoid `ANY(${userIdsFromTeam})` when array can be empty\n\nWhen `userIdsFromTeam` is empty, this branch is skipped (good), but in the org path `teamIds` can be empty and still hits `ANY(${teamIds})`, yielding invalid SQL (`ANY()` on an empty/non-array bind). Ensure `teamIds.length > 0` or return `NOTHING_CONDITION` / a false predicate.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No impact - teamIds can never be empty",
+      "reasoning": "The droid correctly notes that userIdsFromTeam is guarded, but incorrectly claims teamIds can be empty in the org path. Looking at buildOrgAuthorizationCondition (line 154): `const teamIds = [options.orgId, ...teamsFromOrg.map((t) => t.id)]`. This always includes options.orgId at minimum, so teamIds can NEVER be empty.",
+      "code_evidence": "Line 154: `const teamIds = [options.orgId, ...teamsFromOrg.map((t) => t.id)]` - options.orgId is always present",
+      "files_explored": [
+        "packages/lib/server/service/insightsBooking.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763752,
+    "file": "packages/lib/server/service/insightsBooking.ts",
+    "line": 117,
+    "droid_comment": "[P0] Fix invalid SQL from reduce() without initial accumulator\n\n`conditions.reduce((acc, condition, index) => index === 0 ? condition : Prisma.sql`(${acc}) AND (${condition})`)` returns a `Prisma.Sql` fragment on the first iteration, but `acc` is inferred as `Prisma.Sql | string` and can stringify incorrectly; this can emit malformed SQL at runtime when `conditions.length > 1`.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No impact - the reduce pattern is correct and type-safe",
+      "reasoning": "The droid's claim about type inference is incorrect. When reduce() is called without an initial value, the first element becomes the initial accumulator. TypeScript infers the accumulator type from the return type of the callback function, which always returns Prisma.Sql. The `if (index === 0) return condition` handles the first element correctly. The guard `if (conditions.length === 0) return null` at line 113 ensures reduce() is never called on an empty array. This exact pattern is also used in buildOrgAuthorizationCondition and buildTeamAuthorizationCondition.",
+      "code_evidence": "Lines 113-120: The length check prevents empty array issues. The reduce callback always returns Prisma.Sql type. The pattern is reused in lines 168-171 and 204-207.",
+      "files_explored": [
+        "packages/lib/server/service/insightsBooking.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699764201,
+    "file": "packages/lib/server/service/insightsBooking.ts",
+    "line": 168,
+    "droid_comment": "[P0] Fix `ANY(${teamIds})` array binding (runtime SQL error)\n\n`\"teamId\" = ANY(${teamIds})` expects a single Postgres array parameter, but Prisma will bind `${teamIds}` as multiple parameters; this breaks `ANY()` at runtime. Prefer `\"teamId\" IN (${Prisma.join(teamIds)})` (with an empty-array guard) or pass a typed array parameter explicitly.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No impact - Prisma.sql correctly handles array parameters with ANY()",
+      "reasoning": "The droid's claim that Prisma binds ${teamIds} as multiple parameters is incorrect. Prisma.sql template tags handle JavaScript arrays correctly when used with PostgreSQL's ANY() function. Evidence: 1) PermissionRepository.ts in this same codebase uses `ANY(${actions})` successfully. 2) The test file expects this exact pattern and the tests pass. 3) Prisma documentation confirms array handling in raw queries.",
+      "code_evidence": "PermissionRepository.ts lines 122, 127, 132 all use `= ANY(${arrayVar})` pattern successfully. The integration tests expect Prisma.sql templates with arrays.",
+      "files_explored": [
+        "packages/lib/server/service/insightsBooking.ts",
+        "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+        "packages/lib/server/service/__tests__/insightsBooking.integration-test.ts"
+      ]
+    }
+  }
+]

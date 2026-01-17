@@ -1,0 +1,64 @@
+[
+  {
+    "golden_comment": "Asynchronous functions deleteScheduledEmailReminder and deleteScheduledSMSReminder are called without await inside forEach loops. This occurs during booking rescheduling/cancellation, and workflow/workflow step deletion/updates. Consequently, scheduled workflow reminders may not be reliably cancelled, potentially leaving them active.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/workflows.tsx",
+        "line": 575
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699763158,
+      "missing_details": [
+        "Exact file paths where the issue occurs",
+        "Specific line numbers"
+      ],
+      "vagueness_issues": [
+        "Does not specify which files specifically have the issue",
+        "Does not indicate there are actually 7+ instances of this pattern across multiple files"
+      ],
+      "code_evidence": "Found multiple instances of `forEach(async...)` pattern in: workflows.tsx (lines 428, 446, 456, 575, 600, 685, 755), handleCancelBooking.ts (line 424), reminderScheduler.ts (lines 65, 147). The specific instance droid caught is at workflows.tsx:575 with `remindersToUpdate.forEach(async (reminder) => { deleteScheduledEmailReminder/deleteScheduledSMSReminder... })`. None of these async operations are awaited.",
+      "reasoning": "This is a real bug. The golden comment correctly identifies the async forEach anti-pattern that causes fire-and-forget behavior. The comment is very clear about what the bug is and its impact. However, it lacks specificity - it doesn't point to specific files/lines. Droid caught one instance (workflows.tsx:575) but the issue is more pervasive. The golden comment's general nature actually covers more instances than droid's specific comment.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/workflows.tsx",
+        "packages/features/bookings/lib/handleCancelBooking.ts",
+        "packages/features/ee/workflows/lib/reminders/reminderScheduler.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "When immediateDelete is true, the deleteScheduledEmailReminder function cancels the SendGrid email but fails to delete the corresponding WorkflowReminder record from the database. This creates orphaned database entries and is inconsistent with the immediateDelete: false path, which marks the record as cancelled. The SendGrid DELETE API call is also omitted in this path.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/features/ee/workflows/lib/reminders/emailReminderManager.ts",
+        "line": 213
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "Exact line numbers"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "In emailReminderManager.ts lines 213-224: `if (immediateDelete) { await client.request({ url: '/v3/user/scheduled_sends', method: 'POST', body: { batch_id: referenceId, status: 'cancel' } }); return; }`. The function returns immediately after cancelling with SendGrid - it never deletes the WorkflowReminder record from the database. Compare to !referenceId path (lines 202-210) which does delete the record, and the default path (lines 226-233) which updates cancelled=true. Call sites with immediateDelete=true: handleNewBooking.ts:972 (rescheduling), workflows.tsx:211 (workflow delete), workflows.tsx:521 (step delete). All these leave orphaned DB records.",
+      "reasoning": "This is a clear, real bug. The `immediateDelete=true` code path cancels the SendGrid scheduled email but then immediately returns without deleting or updating the WorkflowReminder record in the database. This creates orphaned records. The golden comment is accurate, specific about the function and issue, and correctly notes the inconsistency with other code paths. Droid did NOT catch this bug.",
+      "files_explored": [
+        "packages/features/ee/workflows/lib/reminders/emailReminderManager.ts",
+        "packages/features/bookings/lib/handleNewBooking.ts",
+        "packages/trpc/server/routers/viewer/workflows.tsx"
+      ]
+    }
+  }
+]

@@ -1,0 +1,36 @@
+{
+  "pr_number": 9,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "enableSqlExpressions function always returns false due to inverted flag and both branches returning false",
+      "file": "pkg/expr/reader.go",
+      "line": 193
+    },
+    {
+      "id": 2,
+      "description": "sql.NewInMemoryDB returns stub with 'not implemented' errors replacing working go-duck implementation",
+      "file": "pkg/expr/sql/db.go",
+      "line": 23
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [],
+  "golden_missed": []
+}

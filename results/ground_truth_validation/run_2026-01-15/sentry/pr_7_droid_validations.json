@@ -1,0 +1,117 @@
+[
+  {
+    "comment_id": 2696000718,
+    "file": "src/sentry/spans/consumers/process/factory.py",
+    "line": 141,
+    "droid_comment": "[P0] Guard missing `end_timestamp_precise` in span payload - `SpanEvent` ingestion will KeyError if older producers don't send `end_timestamp_precise`. This is a hard crash in `process_batch`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "KeyError crash when processing spans from older producers that don't include end_timestamp_precise field",
+      "reasoning": "Line 141 uses val[\"end_timestamp_precise\"] with direct key access. If older producers don't send this field, it will raise KeyError. Should use val.get(\"end_timestamp_precise\") with a fallback.",
+      "code_evidence": "Line 141: end_timestamp_precise=val[\"end_timestamp_precise\"] - no defensive .get() used",
+      "files_explored": ["src/sentry/spans/consumers/process/factory.py"]
+    }
+  },
+  {
+    "comment_id": 2696000719,
+    "file": "src/sentry/scripts/spans/add-buffer.lua",
+    "line": 58,
+    "droid_comment": "[P1] Fix eviction ordering: ZPOPMIN removes oldest, not excess - This trims by popping the *lowest* scores, but scores are `end_timestamp_precise` so you're deleting the oldest spans.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "medium",
+      "severity": "low",
+      "bug_type": "unclear",
+      "impact": "The behavior depends on design intent - ZPOPMIN removes oldest timestamps which may be intentional for keeping newest spans",
+      "reasoning": "This is a design clarification request, not necessarily a bug. If the intent is to keep the newest N spans and evict oldest (which is common for telemetry), then ZPOPMIN is correct. Droid asks for confirmation rather than asserting it's wrong.",
+      "code_evidence": "Line 62: redis.call(\"zpopmin\", set_key, span_count - 1000) removes spans with lowest timestamps (oldest)",
+      "files_explored": ["src/sentry/scripts/spans/add-buffer.lua"]
+    }
+  },
+  {
+    "comment_id": 2696000720,
+    "file": "src/sentry/api/endpoints/organization_auditlogs.py",
+    "line": 70,
+    "droid_comment": "[P0] Fix undefined `organization_context.member` access - `RpcUserOrganizationContext` does not guarantee `member` is present; this will raise at runtime for users without a membership context.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "AttributeError when organization_context.member is None (e.g., API key auth, org auth tokens)",
+      "reasoning": "Confirmed in RpcUserOrganizationContext model: 'member: RpcOrganizationMember | None = None' with comment 'member can be None when the given user_id does not have membership'. Line 70 accesses organization_context.member.has_global_access without null check.",
+      "code_evidence": "Line 70: enable_advanced = request.user.is_superuser or organization_context.member.has_global_access - no null check on member",
+      "files_explored": [
+        "src/sentry/api/endpoints/organization_auditlogs.py",
+        "src/sentry/organizations/services/organization/model.py"
+      ]
+    }
+  },
+  {
+    "comment_id": 2696000721,
+    "file": "src/sentry/api/paginator.py",
+    "line": 187,
+    "droid_comment": "[P0] Do not slice querysets with negative offsets - When `cursor.is_prev` is true, `start_offset` can be negative and Django queryset slicing with a negative start raises `AssertionError: Negative indexing is not supported`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "AssertionError crash on reverse pagination when offset becomes negative",
+      "reasoning": "Line 182: start_offset = max(0, offset) if not cursor.is_prev else offset - when cursor.is_prev is True, offset is used directly without clamping to 0. Django querysets raise AssertionError on negative slicing.",
+      "code_evidence": "Line 182-183: start_offset = max(0, offset) if not cursor.is_prev else offset; results = list(queryset[start_offset:stop])",
+      "files_explored": ["src/sentry/api/paginator.py"]
+    }
+  },
+  {
+    "comment_id": 2696000722,
+    "file": "src/sentry/api/paginator.py",
+    "line": 869,
+    "droid_comment": "[P0] Remove negative slicing path in `OptimizedCursorPaginator` - This explicitly slices a Django queryset with a negative start (`queryset[start_offset:stop]`) when `cursor.offset < 0`, which is not supported.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "AssertionError crash in OptimizedCursorPaginator when using negative offset pagination",
+      "reasoning": "Lines 877-884 explicitly allow negative offsets: 'start_offset = cursor.offset  # Allow negative offsets for advanced pagination'. The comment claims Django ORM handles negative slicing, but it doesn't - raises AssertionError.",
+      "code_evidence": "Lines 877-884: if self.enable_advanced_features and cursor.offset < 0: start_offset = cursor.offset; results = list(queryset[start_offset:stop])",
+      "files_explored": ["src/sentry/api/paginator.py"]
+    }
+  },
+  {
+    "comment_id": 2696000725,
+    "file": "src/sentry/scripts/spans/add-buffer.lua",
+    "line": 44,
+    "droid_comment": "[P1] Use ZUNIONSTORE correctly to preserve scores - `ZUNIONSTORE` needs an explicit `WEIGHTS`/`AGGREGATE` if you want the merged members to keep their original timestamps; the default SUM will add scores from both sets and corrupt `end_timestamp_precise` ordering.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Corrupted timestamps when spans are merged - ZUNIONSTORE with default SUM adds scores together instead of keeping original timestamps",
+      "reasoning": "ZUNIONSTORE default aggregation is SUM. When merging sorted sets, if a span exists in both sets, its scores will be summed, corrupting the end_timestamp_precise value. Should use AGGREGATE MAX or MIN to preserve original timestamps.",
+      "code_evidence": "Lines 47-48: redis.call(\"zunionstore\", set_key, 2, set_key, span_key) - no AGGREGATE specified, defaults to SUM",
+      "files_explored": ["src/sentry/scripts/spans/add-buffer.lua"]
+    }
+  },
+  {
+    "comment_id": 2696001059,
+    "file": "src/sentry/spans/buffer.py",
+    "line": 197,
+    "droid_comment": "[P0] Handle WRONGTYPE during SET→ZSET transition - This switches segment storage to ZSETs (`ZADD`/`ZSCAN`), but existing Redis keys may still be SETs from the prior `SADD` implementation. The Lua script now uses `ZCARD`/`ZUNIONSTORE` and will fail with WRONGTYPE on mixed deployments.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "WRONGTYPE Redis error during deployment transition when old SET keys exist alongside new ZSET operations",
+      "reasoning": "The PR changes from SADD (SET) to ZADD (ZSET) for span storage. During deployment, old keys stored as SETs will still exist. ZCARD/ZUNIONSTORE on SET keys will fail with 'WRONGTYPE Operation against a key holding the wrong kind of value'.",
+      "code_evidence": "Line 197: p.zadd(set_key, ...) - changed from p.sadd(). Lua script uses zcard/zunionstore which fail on SET type keys.",
+      "files_explored": ["src/sentry/spans/buffer.py", "src/sentry/scripts/spans/add-buffer.lua"]
+    }
+  }
+]

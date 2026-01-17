@@ -1,0 +1,84 @@
+{
+  "pr_number": 7,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Webhook header case sensitivity - CALCOM_WEBHOOK_HEADER_NAME with uppercase chars will fail lookup",
+      "file": "apps/web/pages/api/webhook/app-credential.ts",
+      "line": 24
+    },
+    {
+      "id": 2,
+      "description": "Invalid Zod schema syntax - computed keys [z.string().toString()] don't work in z.object()",
+      "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+      "line": 7
+    },
+    {
+      "id": 3,
+      "description": "Hardcoded 'refresh_token' string when refresh_token is missing from response",
+      "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+      "line": 26
+    },
+    {
+      "id": 4,
+      "description": "parseRefreshTokenResponse returns safeParse result {success,data,error} instead of parsed data",
+      "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+      "line": 29
+    },
+    {
+      "id": 5,
+      "description": "Salesforce CalendarService missing prisma import - ReferenceError on token refresh",
+      "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+      "line": 96
+    },
+    {
+      "id": 6,
+      "description": "Salesforce uses stale credentialKey.access_token after refresh instead of refreshed token",
+      "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+      "line": 103
+    },
+    {
+      "id": 7,
+      "description": "zoho-bigin passes credentialId instead of userId to refreshOAuthTokens",
+      "file": "packages/app-store/zoho-bigin/lib/CalendarService.ts",
+      "line": 93
+    },
+    {
+      "id": 8,
+      "description": "refreshOAuthTokens returns fetch Response when sync enabled, but callers expect token object",
+      "file": "packages/app-store/_utils/oauth/refreshOAuthTokens.ts",
+      "line": 12
+    },
+    {
+      "id": 9,
+      "description": "GoogleCalendarService res?.data is undefined when sync endpoint used (Response has no .data)",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 92
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 5,
+    "valid_comments": 5,
+    "bugs_found": [1, 2, 3, 4, 5, 6, 7],
+    "precision": 1.0,
+    "recall": 0.778,
+    "f1": 0.875
+  },
+  "golden_metrics": {
+    "total_comments": 5,
+    "valid_comments": 5,
+    "bugs_found": [2, 3, 4, 8, 9],
+    "precision": 1.0,
+    "recall": 0.556,
+    "f1": 0.714
+  },
+  "golden_false_positives": [],
+  "droid_missed": [8, 9],
+  "golden_missed": [1, 5, 6, 7],
+  "notes": {
+    "overlap_analysis": "Bugs 2, 3, 4 are covered by both droid and golden. Droid comment 2699764747 covers multiple issues in parseRefreshTokenResponse (bugs 2, 3, 4). Golden comments 4 and 5 both describe the same fundamental issue (bug 8 and 9) - the return type mismatch in refreshOAuthTokens.",
+    "droid_strengths": "Droid caught the missing prisma import (critical runtime error), stale token usage in Salesforce, credentialId/userId mismatch in zoho-bigin, and header case sensitivity - all specific, actionable bugs with clear fixes.",
+    "golden_strengths": "Golden correctly identified the Response vs token object mismatch in refreshOAuthTokens which affects multiple callers when credential sync is enabled.",
+    "coverage_gap": "Droid missed the refreshOAuthTokens return type issue when credential sync is enabled. Golden missed the header case sensitivity, missing import, stale token usage, and userId mismatch bugs."
+  }
+}

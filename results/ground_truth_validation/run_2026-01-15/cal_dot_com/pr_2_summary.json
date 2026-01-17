@@ -1,0 +1,59 @@
+{
+  "pr_number": 2,
+  "pr_title": "feat: 2fa backup codes (#10600)",
+  "ground_truth_bug_count": 6,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.5,
+    "recall": 0.167,
+    "f1": 0.25,
+    "notes": "Droid correctly identified the API signature breaking change affecting security/DisableTwoFactorModal.tsx. However, it produced a false positive about formatBackupCode temporal dead zone which is not a real issue due to React component lifecycle."
+  },
+  "golden_analysis": {
+    "total_comments": 4,
+    "true_positives": 4,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.833,
+    "f1": 0.909,
+    "avg_clarity_score": 4.75,
+    "avg_specificity_score": 2.5,
+    "notes": "Golden comments correctly identified naming inconsistency, misleading error message, case-sensitivity bug (affects 2 locations), and race condition. However, golden lacks file/line specificity - most comments describe the bug conceptually without pinpointing exact locations."
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 5,
+    "droid_missed": [
+      "Inconsistent naming: BackupCode.tsx exports TwoFactor function",
+      "Misleading 'login' error message in disable endpoint",
+      "Case-sensitive backup code validation (2 locations)",
+      "Race condition allowing concurrent backup code reuse"
+    ],
+    "golden_missed": [
+      "TwoFactorAuthAPI.disable() signature breaking change - security modal not updated"
+    ]
+  },
+  "key_findings": {
+    "droid_strengths": [
+      "Found a real bug that golden missed: the API signature change broke an existing caller",
+      "Provided exact file and line references"
+    ],
+    "droid_weaknesses": [
+      "Misunderstood JavaScript/React lifecycle leading to false positive on formatBackupCode",
+      "Missed security-critical bugs (race condition, case sensitivity)"
+    ],
+    "golden_strengths": [
+      "No false positives",
+      "Identified security-critical race condition",
+      "Found subtle UX bug (case sensitivity)",
+      "Good clarity in describing bugs"
+    ],
+    "golden_weaknesses": [
+      "Low specificity - lacks file paths and line numbers",
+      "Missed the breaking API change that droid found"
+    ]
+  }
+}

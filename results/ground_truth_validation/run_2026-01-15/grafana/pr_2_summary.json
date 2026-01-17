@@ -1,0 +1,31 @@
+{
+  "pr_number": 2,
+  "pr_title": "AuthZService: improve authz caching",
+  "ground_truth_bug_count": 1,
+  "droid_analysis": {
+    "total_comments": 0,
+    "true_positives": 0,
+    "false_positives": 0,
+    "precision": null,
+    "recall": 0.0,
+    "f1": null
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 4.5
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["Asymmetric cache trust logic: cached grants trusted immediately but cached denials fall through to DB, allowing stale grants to persist after permission revocation"],
+    "golden_missed": []
+  },
+  "notes": "Droid produced no comments for this PR. The golden comments identified one valid security concern about asymmetric cache behavior where stale permission grants could persist after revocation. The second golden comment about a misleading test comment is a false positive - the test logic is correct, only the explanatory comment is confusing."
+}

@@ -1,0 +1,43 @@
+{
+  "pr_number": 5,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Invalid -ms-align-items property in align-items mixin",
+      "file": "app/assets/stylesheets/common/foundation/mixins.scss",
+      "line": 122
+    },
+    {
+      "id": 2,
+      "description": "Removing float:right from .panel breaks noscript header layout",
+      "file": "app/assets/stylesheets/common/base/header.scss",
+      "line": 35
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 0.5,
+    "recall": 0.5,
+    "f1": 0.5
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_false_positives": [
+    {
+      "comment_id": 2699756205,
+      "comment": "[P1] Fix invalid legacy flexbox `inline-flex` display value - claims -webkit-inline-box is not valid",
+      "reasoning": "-webkit-inline-box IS a valid legacy value recognized by browsers for backward compatibility. Mozilla Bug #1257661 shows it was explicitly added as an alias for inline-flex. The declaration is not ignored."
+    }
+  ],
+  "droid_missed": [2],
+  "golden_missed": []
+}

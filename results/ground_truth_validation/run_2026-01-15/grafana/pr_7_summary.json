@@ -1,0 +1,32 @@
+{
+  "pr_number": 7,
+  "pr_title": "Annotations: Split cleanup into separate queries and deletes to avoid deadlocks on MySQL (#80329)",
+  "pr_base_branch": "db-cleanup-baseline",
+  "ground_truth_bug_count": 2,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_analysis": {
+    "total_comments": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667,
+    "avg_clarity_score": 4.0,
+    "avg_specificity_score": 2.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": ["Cleanup ticker changed from 10m to 1m - increases DB load 10x"]
+  },
+  "summary": "This PR modifies the annotation cleanup logic to split queries and deletes to avoid MySQL deadlocks. Droid found 2 valid issues: (1) Error log level used for debugging info which will flood production logs and leak internal IDs, and (2) the cleanup ticker was changed from 10 minutes to 1 minute, increasing DB load 10x - this appears to be test/debug code accidentally committed. Golden found only the logging issue (1/2 bugs). Droid achieved perfect precision and recall (1.0), while Golden achieved perfect precision but only 50% recall (0.667 F1)."
+}

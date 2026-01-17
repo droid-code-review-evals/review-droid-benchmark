@@ -1,0 +1,22 @@
+[
+  {
+    "comment_id": 2699751446,
+    "file": "pkg/storage/unified/search/bleve.go",
+    "line": 137,
+    "droid_comment": "**[P0] Guard bleveBackend cache writes with deferred unlock to avoid deadlock/panic**\n\n`b.cacheMu.Lock()` was moved to only cover `b.cache[key] = idx`, but now early returns above can race with other goroutines reading/writing `b.cache` (and this write itself can race with concurrent reads if they aren't locked elsewhere), leading to `fatal error: concurrent map writes`. Keep the lock around *all* cache access or ensure all other cache reads are also protected by `cacheMu` (e.g. lock before any `b.cache[...]` read/write).",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Would cause 'fatal error: concurrent map read and map write' panic when TotalDocs() iterates b.cache without synchronization while BuildIndex() writes to it concurrently. The event watcher goroutine started at search.go:207 can trigger BuildIndex calls that race with the TotalDocs() call at search.go:216.",
+      "reasoning": "Verified by examining the code: (1) BuildIndex() was changed to only hold cacheMu lock during the map write at lines 137-139, not during the entire build operation. (2) TotalDocs() at lines 144-153 iterates over b.cache WITHOUT any lock - this is a clear race with concurrent writes. (3) GetIndex() uses RLock for reads, but TotalDocs() doesn't use any lock. (4) In search.go, the init() function starts an event watcher goroutine at line 207, then calls s.search.TotalDocs() at line 216 - these can race. This is a real bug that would cause a panic in production.",
+      "code_evidence": "TotalDocs() at bleve.go:144-153 has 'for _, v := range b.cache' without any lock. BuildIndex() at bleve.go:137-139 writes 'b.cache[key] = idx' with lock but the expensive build work happens before the lock is acquired, allowing concurrent builds. In search.go:207-216, event watcher goroutine is started before TotalDocs() is called.",
+      "files_explored": [
+        "pkg/storage/unified/search/bleve.go",
+        "pkg/storage/unified/resource/search.go",
+        "pkg/storage/unified/resource/server.go"
+      ]
+    }
+  }
+]

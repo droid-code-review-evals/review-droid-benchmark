@@ -1,0 +1,31 @@
+{
+  "pr_number": 4,
+  "pr_title": "Query splitting: Interpolate queries at the start of the process (#107534)",
+  "ground_truth_bug_count": 0,
+  "droid_analysis": {
+    "total_comments": 0,
+    "true_positives": 0,
+    "false_positives": 0,
+    "precision": null,
+    "recall": null,
+    "f1": null
+  },
+  "golden_analysis": {
+    "total_comments": 1,
+    "true_positives": 0,
+    "false_positives": 1,
+    "precision": 0.0,
+    "recall": null,
+    "f1": null,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 3.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": []
+  },
+  "notes": "This PR is a refactoring to move template variable interpolation earlier in the query splitting process. The change moves the call from interpolateVariablesInQueries (batch) to applyTemplateVariables (per-query) at the start of both runSplitQuery and runShardSplitQuery. The golden comment incorrectly flags the lack of filters in test setup as a bug - it's actually just a test coverage observation. The filters parameter is optional, and there are existing tests for adhocFilters functionality in datasource.test.ts. No actual bugs were found in this PR."
+}

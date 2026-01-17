@@ -1,0 +1,61 @@
+[
+  {
+    "golden_comment": "The updateManyByCredentialId call uses an empty data object, which prevents Prisma's @updatedAt decorator from updating the updatedAt timestamp. This results in inaccurate cache status tracking, as the timestamp isn't updated when the cache is refreshed. To fix this, explicitly set the updatedAt field.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "line": 1024
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "Exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 1024: `await SelectedCalendarRepository.updateManyByCredentialId(this.credential.id, {});` - The comment says 'Update SelectedCalendar.updatedAt for all calendars under this credential' but passing empty data {} to updateMany does not trigger Prisma's @updatedAt decorator. The SelectedCalendar model has `updatedAt DateTime? @updatedAt` which only updates when actual data changes are made.",
+      "reasoning": "Verified in Prisma schema that SelectedCalendar.updatedAt uses @updatedAt decorator. Prisma's updateMany with empty data object does not trigger @updatedAt - this is a known Prisma behavior. The fix would be to explicitly set `updatedAt: new Date()` in the data object.",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "packages/lib/server/repository/selectedCalendar.ts",
+        "packages/prisma/schema.prisma"
+      ]
+    }
+  },
+  {
+    "golden_comment": "logic: macOS-specific sed syntax with empty string after -i flag will fail on Linux systems",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "scripts/test-gcal-webhooks.sh",
+        "line": 68
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699764085,
+      "missing_details": [
+        "File path",
+        "Line number"
+      ],
+      "vagueness_issues": [
+        "Does not specify which file or exact location"
+      ],
+      "code_evidence": "Line 68: `sed -i '' -E \"s|^GOOGLE_WEBHOOK_URL=.*|GOOGLE_WEBHOOK_URL=$TUNNEL_URL|\" \"$ENV_FILE\"` - BSD sed uses -i '' for in-place without backup, GNU sed would interpret '' as a file argument.",
+      "reasoning": "Same bug as droid comment 1. Droid provided more detail (file path, specific line context). Golden comment is correct but lacks file/line specificity.",
+      "files_explored": [
+        "scripts/test-gcal-webhooks.sh"
+      ]
+    }
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "comment_id": 2699750751,
+    "file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+    "line": 69,
+    "droid_comment": "[P0] Avoid failing when English bundle file is missing - verifySafeHtml() unconditionally opens the computed *_en.properties file; for fixtures like illegalHtmlTag_en.properties and duplicateKeys_en.properties there is no corresponding _en_en.properties, so this path throws and breaks theme-verifier (and its tests) instead of reporting a validation message.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the code works correctly",
+      "reasoning": "Droid claims that files like 'illegalHtmlTag_en.properties' would look for 'illegalHtmlTag_en_en.properties'. This is incorrect. The regex '_[a-zA-Z-_]*\\.properties' matches '_en.properties' entirely, replacing it with '_en.properties'. So 'illegalHtmlTag_en.properties' maps to itself (which exists). The tests pass and confirm this behavior works correctly.",
+      "code_evidence": "Line 72-73: englishFile = file.getAbsolutePath().replaceAll(\"resources-community\", \"resources\").replaceAll(\"_[a-zA-Z-_]*\\\\.properties\", \"_en.properties\"); - the regex replaces the entire locale suffix with _en.properties",
+      "files_explored": [
+        "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+        "misc/theme-verifier/src/test/java/org/keycloak/themeverifier/VerifyMessagePropertiesTest.java",
+        "misc/theme-verifier/src/test/resources/illegalHtmlTag_en.properties",
+        "misc/theme-verifier/src/test/resources/duplicateKeys_en.properties"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751057,
+    "file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+    "line": 138,
+    "droid_comment": "[P1] Fix anchor sanitization logic (removes wrong string) - When an anchor matches, the code removes englishMatcher.group() from value. This should remove matcher.group() (the tag found in value); as written it can fail to remove the tag (or remove an unrelated substring) and then sanitized != value will flag legitimate translations.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the code works correctly because the condition requires equality",
+      "reasoning": "The code at line 153-155 checks Objects.equals(matcher.group(), englishMatcher.group()) before removing. Only when both groups are EQUAL does it proceed to remove. Since they're equal, removing either from 'value' produces the same result. The droid's claim that it 'can fail to remove the tag' is incorrect - when the equals check passes, both strings are identical so replacing either works. The code is confusing but functionally correct.",
+      "code_evidence": "Line 153: if (englishMatcher.find() && Objects.equals(matcher.group(), englishMatcher.group())) - the equality check ensures both groups are the same",
+      "files_explored": [
+        "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+        "misc/theme-verifier/src/test/resources/changedAnchor_de.properties",
+        "misc/theme-verifier/src/test/resources/changedAnchor_en.properties"
+      ]
+    }
+  }
+]

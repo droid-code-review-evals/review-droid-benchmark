@@ -1,0 +1,95 @@
+[
+  {
+    "golden_comment": "Breaking changes in error response format",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/issues/endpoints/browser_reporting_collector.py",
+        "line": 113
+      },
+      "is_specific": false,
+      "is_clear": false,
+      "clarity_score": 2,
+      "specificity_score": 1,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "what the breaking change is",
+        "old format vs new format"
+      ],
+      "vagueness_issues": [
+        "Does not specify which endpoint",
+        "Does not explain what changed",
+        "Does not explain impact on clients"
+      ],
+      "code_evidence": "The change from HttpResponse(status=422) to Response({'error': '...', 'details': ...}, status=422) adds a JSON body to error responses. However, this is an API improvement providing better error messages, not a bug. The endpoint is marked as PRIVATE/ApiPublishStatus.PRIVATE, so breaking changes to internal APIs are acceptable.",
+      "reasoning": "This is not a bug but rather a code quality/compatibility concern. The change adds structured error responses which is an improvement. The endpoint is private/experimental, so API stability is not guaranteed. This should not count as a bug for metrics purposes.",
+      "files_explored": [
+        "src/sentry/issues/endpoints/browser_reporting_collector.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Detector validator uses wrong key when updating type",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/workflow_engine/endpoints/validators/base/detector.py",
+        "line": 63
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which key is wrong vs correct"
+      ],
+      "vagueness_issues": [
+        "Does not specify the file",
+        "Does not specify the incorrect key name"
+      ],
+      "code_evidence": "Line 63: instance.type = validated_data.get('detector_type', instance.group_type).slug - The key 'detector_type' is wrong. The validate_type method validates the 'type' field and returns a GroupType, so the key in validated_data would be 'type', not 'detector_type'. This means the update will always fall back to instance.group_type, never actually updating the type.",
+      "reasoning": "Real bug confirmed. The update method uses 'detector_type' as the key but the field is named 'type' and validate_type validates the 'type' field. This is a clear key mismatch that prevents type updates from working.",
+      "files_explored": [
+        "src/sentry/workflow_engine/endpoints/validators/base/detector.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Using zip(error_ids, events.values()) assumes the get_multi result preserves the input order; dict value order is not guaranteed to match error_ids, so event data can be paired with the wrong ID (missing nodes also shift alignment).",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+        "line": 111
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2696085978,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 111: for event_id, data in zip(error_ids, events.values()) - events is returned from nodestore.backend.get_multi() which returns a dict. The dict may not preserve input order and missing nodes cause misalignment.",
+      "reasoning": "Real bug confirmed. Both droid and golden identified this issue. The golden comment provides a clear explanation of the problem. Droid caught it at the exact line with good detail.",
+      "files_explored": [
+        "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py"
+      ]
+    }
+  }
+]

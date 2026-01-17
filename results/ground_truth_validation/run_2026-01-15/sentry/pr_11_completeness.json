@@ -1,0 +1,104 @@
+{
+  "pr_number": 11,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Inconsistent metric tagging - 'shards' vs 'shard' typo",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 199,
+      "severity": "medium",
+      "bug_type": "logic_bug"
+    },
+    {
+      "id": 2,
+      "description": "ZeroDivisionError if max_processes=0 with empty shards",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 62,
+      "severity": "medium",
+      "bug_type": "runtime_error"
+    },
+    {
+      "id": 3,
+      "description": "isinstance(process, multiprocessing.Process) always False for SpawnProcess - hung processes not killed in _ensure_processes_alive",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 253,
+      "severity": "high",
+      "bug_type": "logic_bug"
+    },
+    {
+      "id": 4,
+      "description": "Monkeypatched time.sleep makes test_basic's sleep(0.1) a no-op",
+      "file": "tests/sentry/spans/consumers/process/test_consumer.py",
+      "line": 58,
+      "severity": "medium",
+      "bug_type": "logic_bug"
+    },
+    {
+      "id": 5,
+      "description": "join() breaks early on deadline, skipping terminate for remaining processes",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 336,
+      "severity": "medium",
+      "bug_type": "logic_bug"
+    },
+    {
+      "id": 6,
+      "description": "isinstance(process, multiprocessing.Process) always False for SpawnProcess in join() - terminate never called",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 343,
+      "severity": "high",
+      "bug_type": "logic_bug"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 3,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "bugs_found_descriptions": [
+      "Inconsistent metric tagging (bug 1)",
+      "ZeroDivisionError potential (bug 2)"
+    ],
+    "precision": 0.67,
+    "recall": 0.33,
+    "f1": 0.44
+  },
+  "golden_metrics": {
+    "total_comments": 5,
+    "valid_comments": 4,
+    "bugs_found": [1, 3, 4, 5, 6],
+    "bugs_found_descriptions": [
+      "Inconsistent metric tagging (bug 1)",
+      "isinstance check always False - _ensure_processes_alive (bug 3)",
+      "Monkeypatched sleep (bug 4)",
+      "join() early break (bug 5)",
+      "isinstance check always False - join() (bug 6)"
+    ],
+    "precision": 0.80,
+    "recall": 0.83,
+    "f1": 0.82,
+    "note": "Bug 3 and 6 are the same root cause (isinstance issue) in different locations - counted as separate bugs since each needs a fix"
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "Fixed sleep in tests can be flaky; wait on condition instead",
+      "reasoning": "This is a code quality/style suggestion, not a bug. Tests work correctly with the current sleep-based approach."
+    }
+  ],
+  "droid_false_positives": [
+    {
+      "droid_comment": "[P0] Fix click option declaration - flusher_processes without leading dashes",
+      "reasoning": "Misunderstanding of click.Option API. The syntax ['--flag-name', 'param_name'] is correct - first is CLI flag, second is Python parameter name."
+    }
+  ],
+  "droid_missed": [3, 4, 5, 6],
+  "droid_missed_descriptions": [
+    "isinstance(SpawnProcess) always False in _ensure_processes_alive",
+    "Monkeypatched time.sleep in test",
+    "join() breaks early skipping terminate",
+    "isinstance(SpawnProcess) always False in join()"
+  ],
+  "golden_missed": [2],
+  "golden_missed_descriptions": [
+    "ZeroDivisionError potential with max_processes=0"
+  ]
+}

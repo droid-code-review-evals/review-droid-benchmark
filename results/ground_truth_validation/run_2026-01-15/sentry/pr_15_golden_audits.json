@@ -1,0 +1,60 @@
+[
+  {
+    "golden_comment": "MetricAlertDetectorHandler inherits from StatefulDetectorHandler but only contains pass, failing to implement its required abstract methods: counter_names (property), get_dedupe_value(), get_group_key_values(), and build_occurrence_and_event_data(). This will cause a TypeError at runtime when the class is instantiated.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/incidents/grouptype.py",
+        "line": 12
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "MetricAlertDetectorHandler(StatefulDetectorHandler[QuerySubscriptionUpdate]) contains only 'pass' but StatefulDetectorHandler defines 4 abstract methods: @property counter_names, get_dedupe_value(), get_group_key_values(), and build_occurrence_and_event_data(). Python will raise TypeError: Can't instantiate abstract class MetricAlertDetectorHandler with abstract methods... when trying to instantiate.",
+      "reasoning": "Confirmed by examining both grouptype.py and detector.py. The StatefulDetectorHandler class has 4 @abc.abstractmethod decorated methods (lines 143, 150, 158, 166 in detector.py). The MetricAlertDetectorHandler class was changed from inheriting DetectorHandler (which only has 1 abstract method 'evaluate') to StatefulDetectorHandler (which has 4 additional abstract methods). The class only contains 'pass' and doesn't implement any of these required methods.",
+      "files_explored": [
+        "src/sentry/incidents/grouptype.py",
+        "src/sentry/workflow_engine/processors/detector.py",
+        "tests/sentry/workflow_engine/processors/test_detector.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Docstring says this returns a list of DetectorEvaluationResult, but the method now returns a dict keyed by DetectorGroupKey. Consider updating the docstring to match the new return type.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/workflow_engine/processors/detector.py",
+        "line": 201
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which method specifically"
+      ],
+      "vagueness_issues": [
+        "Does not specify which method has the outdated docstring"
+      ],
+      "code_evidence": "The evaluate() method in StatefulDetectorHandler has a docstring at line 201 saying 'returns a list of DetectorEvaluationResult' but the actual return type annotation and implementation return 'dict[DetectorGroupKey, DetectorEvaluationResult]'.",
+      "reasoning": "This is a documentation issue rather than a runtime bug. The code works correctly - the docstring is simply outdated after the return type was changed from list to dict. Low severity as it won't cause runtime issues but could confuse developers.",
+      "files_explored": [
+        "src/sentry/workflow_engine/processors/detector.py"
+      ]
+    }
+  }
+]

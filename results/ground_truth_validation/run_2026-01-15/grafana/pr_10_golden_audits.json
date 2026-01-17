@@ -1,0 +1,61 @@
+[
+  {
+    "golden_comment": "A race condition in BuildIndex allows multiple goroutines to concurrently build the same expensive index for the same key. This is caused by moving the b.cacheMu lock from protecting the entire function to only protecting the final cache assignment. ",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/storage/unified/search/bleve.go",
+        "line": 137
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699751446,
+      "missing_details": [
+        "exact line number",
+        "specific mention of TotalDocs() as the racing reader"
+      ],
+      "vagueness_issues": [
+        "Describes the race but doesn't specify which concurrent readers would race with the write"
+      ],
+      "code_evidence": "BuildIndex() was changed from holding lock for entire function to only lines 137-139 for the cache write. Multiple goroutines calling getOrCreateIndex() -> build() -> BuildIndex() could race on the map write, though more critically TotalDocs() iterates the map without any lock.",
+      "reasoning": "Real bug confirmed. The golden comment correctly identifies that moving the lock from protecting the entire function to just the cache assignment creates a race. The droid caught the same bug with similar analysis. Golden is clear about what the bug is but lacks exact file/line.",
+      "files_explored": [
+        "pkg/storage/unified/search/bleve.go",
+        "pkg/storage/unified/resource/search.go"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Calling s.search.TotalDocs() here may race with concurrent index creation: TotalDocs iterates b.cache without synchronization, and the event watcher goroutine started just above could trigger BuildIndex writes concurrently, potentially causing a concurrent map read/write panic.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/storage/unified/resource/search.go",
+        "line": 216
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699751446,
+      "missing_details": [
+        "exact line number for TotalDocs call"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "In search.go init(), the event watcher goroutine is started at line 207 with 'go func() { for { v := <-events; s.handleEvent(watchctx, v) } }()'. Then at line 216, s.search.TotalDocs() is called. handleEvent() calls getOrCreateIndex() which can call build() -> BuildIndex() which writes to b.cache. TotalDocs() iterates b.cache without a lock. This is a real race condition.",
+      "reasoning": "Real bug confirmed. This is actually a more specific manifestation of the same underlying race condition. The golden correctly identifies that TotalDocs() lacks synchronization and races with the event watcher that can trigger BuildIndex. The droid comment mentions this same issue ('this write itself can race with concurrent reads if they aren't locked elsewhere') but from the BuildIndex perspective rather than the TotalDocs caller perspective. Both are describing the same underlying race.",
+      "files_explored": [
+        "pkg/storage/unified/resource/search.go",
+        "pkg/storage/unified/search/bleve.go"
+      ]
+    }
+  }
+]

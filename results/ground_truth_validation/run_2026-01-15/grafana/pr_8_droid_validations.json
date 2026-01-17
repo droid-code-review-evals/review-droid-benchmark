@@ -1,0 +1,20 @@
+[
+  {
+    "comment_id": 2699750773,
+    "file": "pkg/api/webassets/webassets.go",
+    "line": 32,
+    "droid_comment": "[P1] Re-check cache after acquiring write lock\n\nAfter the initial `RLock` read fails, multiple goroutines can queue on the `Lock()` and each will rebuild assets because the code doesn't re-check `entryPointAssetsCache` under the write lock; add a second check inside the locked section to avoid redundant work and potential thundering herd.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "performance",
+      "impact": "Multiple goroutines will perform redundant expensive asset loading work when they queue up on the write lock. This is a classic incomplete double-checked locking pattern that causes thundering herd problems under concurrent load.",
+      "reasoning": "The PR introduces a mutex-based caching pattern for GetWebAssets. Lines 41-43 read the cache under RLock, lines 45-47 return if cached (non-dev), then lines 48-49 acquire the write Lock. However, after acquiring the write lock, there's no re-check of entryPointAssetsCache before doing the expensive work (lines 51-67). When multiple goroutines find the cache empty simultaneously, they all queue on Lock(), and each will sequentially execute the full asset loading logic instead of just the first one doing the work and others getting the cached result.",
+      "code_evidence": "Lines 41-69: After RUnlock on line 43, multiple goroutines can pass the nil check (line 45-47) and queue on Lock() (line 48). Once each goroutine acquires the lock, they all execute readWebAssetsFromFile() because there's no second cache check after Lock(). Proper double-checked locking would add: if entryPointAssetsCache != nil { return entryPointAssetsCache, nil } immediately after line 49.",
+      "files_explored": [
+        "pkg/api/webassets/webassets.go"
+      ]
+    }
+  }
+]

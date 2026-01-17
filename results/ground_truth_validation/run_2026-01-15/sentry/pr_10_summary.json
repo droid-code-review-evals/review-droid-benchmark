@@ -1,0 +1,35 @@
+{
+  "pr_number": 10,
+  "pr_title": "Replays Self-Serve Bulk Delete System",
+  "ground_truth_bug_count": 2,
+  "droid_analysis": {
+    "total_comments": 3,
+    "true_positives": 1,
+    "false_positives": 2,
+    "precision": 0.333,
+    "recall": 0.5,
+    "f1": 0.4
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 2,
+    "false_positives": 1,
+    "precision": 0.667,
+    "recall": 1.0,
+    "f1": 0.8,
+    "avg_clarity_score": 3.67,
+    "avg_specificity_score": 2.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["Detector validator uses wrong key 'detector_type' instead of 'type'"],
+    "golden_missed": []
+  },
+  "validation_notes": {
+    "droid_false_positive_1": "The age/timestamp validation logic comment was incorrect - the code correctly enforces mutual exclusion",
+    "droid_false_positive_2": "The AnonymousUser concern is invalid because ProjectReleasePermission requires authentication",
+    "golden_false_positive_1": "Breaking changes in error response format is not a bug - it's an API improvement for a private endpoint"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "pr_number": 8,
+  "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+  "ground_truth_bug_count": 2,
+  "droid_analysis": {
+    "total_comments": 0,
+    "true_positives": 0,
+    "false_positives": 0,
+    "precision": null,
+    "recall": 0.0,
+    "f1": null
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 2,
+    "false_positives": 1,
+    "precision": 0.67,
+    "recall": 1.0,
+    "f1": 0.80,
+    "avg_clarity_score": 4.0,
+    "avg_specificity_score": 2.67
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 2,
+    "droid_missed": [
+      "Non-deterministic hash() in cache key",
+      "Upsampling eligibility uses outer dataset instead of scoped_dataset"
+    ],
+    "golden_missed": []
+  },
+  "notes": "Droid produced NO comments for this PR. Golden found 2 real bugs but also had 1 false positive (sample_rate = 0.0 falsy check which doesn't exist in PR code)."
+}

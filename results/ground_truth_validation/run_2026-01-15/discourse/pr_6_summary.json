@@ -1,0 +1,55 @@
+{
+  "pr_number": 6,
+  "pr_title": "UX: show complete URL path if website domain is same as instance domain",
+  "ground_truth_bug_count": 3,
+  "droid_analysis": {
+    "total_comments": 4,
+    "true_positives": 2,
+    "false_positives": 2,
+    "precision": 0.5,
+    "recall": 0.67,
+    "f1": 0.57
+  },
+  "golden_analysis": {
+    "total_comments": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "bugs_covered_by_comment": 2,
+    "precision": 1.0,
+    "recall": 0.67,
+    "f1": 0.80,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 4.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["String literal mutation with << operator"],
+    "golden_missed": ["Incorrect same-domain check using label count"]
+  },
+  "bugs_detail": [
+    {
+      "id": 1,
+      "description": "Missing ? suffix on include_website_name",
+      "severity": "high",
+      "found_by_droid": true,
+      "found_by_golden": true
+    },
+    {
+      "id": 2,
+      "description": "String literal mutation with << operator",
+      "severity": "medium",
+      "found_by_droid": false,
+      "found_by_golden": true
+    },
+    {
+      "id": 3,
+      "description": "Incorrect same-domain check using label count",
+      "severity": "medium",
+      "found_by_droid": true,
+      "found_by_golden": false
+    }
+  ],
+  "summary": "PR #6 adds server-side website_name computation for user profiles. Ground truth contains 3 bugs: (1) missing ? suffix on include_website_name method (high severity, caught by both), (2) string literal mutation with << operator (medium, golden only), (3) flawed domain comparison logic using label count (medium, droid only). Droid had 2 false positives (nil hostname concern and query string preservation). Golden comment was high quality - covered 2 bugs clearly with good specificity."
+}

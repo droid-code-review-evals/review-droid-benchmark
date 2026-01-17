@@ -1,0 +1,152 @@
+[
+  {
+    "golden_comment": "Case sensitivity bypass in email blacklist",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "line": 76
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "specific variable names"
+      ],
+      "vagueness_issues": [
+        "Doesn't specify where the blacklist check occurs"
+      ],
+      "code_evidence": "Lines 69-76: blacklistedGuestEmails is lowercased via .map((email) => email.toLowerCase()), but the comparison at line 76 uses !blacklistedGuestEmails.includes(guest) where 'guest' is NOT lowercased. A guest email 'BLACKLISTED@email.com' would bypass the check against 'blacklisted@email.com' in the blacklist.",
+      "reasoning": "Real bug confirmed. The blacklist emails are lowercased but guest emails are not normalized before comparison, allowing bypass with mixed-case emails.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The logic for checking team admin/owner permissions is incorrect. This condition uses AND (&&) which requires both isTeamAdmin AND isTeamOwner to be true, but it should use OR (||) since a user needs to be either an admin OR an owner to have permission.",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "line": 46
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699763876,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 46-48: (await isTeamAdmin(user.id, booking.eventType?.teamId ?? 0)) && (await isTeamOwner(user.id, booking.eventType?.teamId ?? 0)). Uses && requiring both conditions, but should use || for either admin OR owner.",
+      "reasoning": "Real bug confirmed. The && operator requires both isTeamAdmin AND isTeamOwner to be true. Since isTeamAdmin returns truthy for ADMIN or OWNER roles, but isTeamOwner only returns true for OWNER role, only OWNER users pass. Should be || to allow either.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "packages/lib/server/queries/teams/index.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "This calls the email sender with the original guests, so existing attendees included in the input will be treated as new when sending notifications, leading to incorrect emails.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "line": 168
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "function name"
+      ],
+      "vagueness_issues": [
+        "Uses 'this' without context"
+      ],
+      "code_evidence": "Line 168: sendAddGuestsEmails(evt, guests) passes 'guests' (original input) instead of 'uniqueGuests' (filtered list). If input contains emails of existing attendees, they'll be treated as new guests in email logic.",
+      "reasoning": "Real bug confirmed. The email sender receives the unfiltered 'guests' array which may include existing attendees or blacklisted emails that were filtered out by uniqueGuests. However, the sendAddGuestsEmails function checks newGuests.includes(attendee.email), so existing attendees in the original input would incorrectly receive the 'new guest' email type.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "packages/emails/email-manager.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "uniqueGuests filters out existing attendees and blacklisted emails but does not deduplicate duplicates within the input; createMany can insert duplicate attendee rows if the client submits repeated emails.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "line": 73
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 73-77: uniqueGuests = guests.filter(...) filters out existing attendees and blacklisted, but doesn't use Set or dedupe. If client sends ['a@b.com', 'a@b.com'], both pass the filter and createMany at line 87-95 would create duplicate attendee records.",
+      "reasoning": "Real bug confirmed. The filter checks against existing attendees but doesn't deduplicate the input array itself. If the client sends duplicate emails in the guests array, all duplicates will be inserted as separate attendee rows.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Starting with an array containing an empty string may cause validation issues. Consider starting with an empty array [] and handling the empty state in the MultiEmail component instead.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "medium",
+      "bug_location": {
+        "file": "apps/web/components/dialog/AddGuestsDialog.tsx",
+        "line": 31
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699763879,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [
+        "Doesn't specify exact impact"
+      ],
+      "code_evidence": "Line 31: useState<string[]>([\"\"]). The empty string fails Zod email validation, causing unnecessary error display if user clicks Add without entering emails.",
+      "reasoning": "Real bug confirmed but severity is low. The Zod validation catches the empty string and shows error UI. It's a UX issue more than a functional bug.",
+      "files_explored": [
+        "apps/web/components/dialog/AddGuestsDialog.tsx"
+      ]
+    }
+  }
+]

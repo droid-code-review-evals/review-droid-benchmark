@@ -1,0 +1,43 @@
+{
+  "pr_number": 8,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "deleteMany OR clause deletes non-SMS reminders with retryCount > 1",
+      "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "line": 40
+    },
+    {
+      "id": 2,
+      "description": "Race condition in retryCount increment (scheduleSMS failure path)",
+      "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "line": 188
+    },
+    {
+      "id": 3,
+      "description": "Race condition in retryCount increment (catch block path)",
+      "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "line": 197
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2, 3],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2, 3],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [],
+  "golden_missed": [],
+  "notes": "Both droid and golden comments covered the same two bug types. The retryCount race condition appears in two locations (lines 188 and 197), but both are covered by single comments that mention both occurrences. Bug 2 and 3 are the same bug pattern in different code paths but require the same fix approach. Droid comment 2699764229 covers both instances, as does the golden comment which explicitly mentions 'also applies to the similar update in the catch block'."
+}

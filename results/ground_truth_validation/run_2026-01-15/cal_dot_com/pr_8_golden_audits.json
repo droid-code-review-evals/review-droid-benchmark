@@ -1,0 +1,52 @@
+[
+  {
+    "golden_comment": "Using retryCount: reminder.retryCount + 1 reads a possibly stale value and can lose increments under concurrency; consider an atomic increment via Prisma (increment: 1) to avoid race conditions (also applies to the similar update in the catch block).",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+        "line": 188
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699764229,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 182-188 and 191-197 both use reminder.retryCount + 1 pattern. The golden comment correctly identifies this as a race condition issue and provides the correct fix (Prisma atomic increment).",
+      "reasoning": "The golden comment accurately describes the race condition bug. It mentions that the pattern appears in the catch block too, showing good analysis depth. The fix recommendation (atomic increment) is correct and specific. Droid caught the exact same bug with the same recommended fix.",
+      "files_explored": [
+        "packages/features/ee/workflows/api/scheduleSMSReminders.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The deletion logic in scheduleSMSReminders.ts incorrectly deletes non-SMS workflow reminders (e.g., Email, WhatsApp) that have retryCount > 1. This occurs because the retryCount condition within the OR clause for deletion lacks a method: WorkflowMethods.SMS filter, causing it to apply to all reminder types instead of only SMS reminders, which is the intended scope of this function.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+        "line": 40
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699764058,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 28-45 show the deleteMany with an OR clause. The second branch (lines 39-42) checks retryCount > 1 without filtering by method, which would delete Email and WhatsApp reminders incorrectly.",
+      "reasoning": "The golden comment provides an excellent, detailed explanation of the bug. It correctly identifies the file, explains the OR clause structure issue, and explains why it's wrong (should only target SMS since this is scheduleSMSReminders.ts). Droid caught this same bug with equally specific detail.",
+      "files_explored": [
+        "packages/features/ee/workflows/api/scheduleSMSReminders.ts"
+      ]
+    }
+  }
+]

@@ -1,0 +1,145 @@
+[
+  {
+    "golden_comment": "Potential null reference if mainHostDestinationCalendar is undefined if evt.destinationCalendar is null or an empty array",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/core/EventManager.ts",
+        "line": 118
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699762808,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 117-118: `const [mainHostDestinationCalendar] = evt.destinationCalendar ?? [];` then `mainHostDestinationCalendar.integration` accessed without null check",
+      "reasoning": "Valid bug. The golden comment correctly identifies that mainHostDestinationCalendar can be undefined when the array is empty, causing a null reference error. Droid caught the exact same bug with slightly more detail.",
+      "files_explored": [
+        "packages/core/EventManager.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The optional chaining on mainHostDestinationCalendar?.integration is redundant since you already check mainHostDestinationCalendar in the ternary condition.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": null,
+      "is_specific": false,
+      "is_clear": false,
+      "clarity_score": 2,
+      "specificity_score": 1,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which ternary condition"
+      ],
+      "vagueness_issues": [
+        "Does not specify which file or line",
+        "Unclear what ternary condition is being referenced",
+        "The actual code shows NO optional chaining on mainHostDestinationCalendar.integration in EventManager.ts line 118"
+      ],
+      "code_evidence": "EventManager.ts line 118: `mainHostDestinationCalendar.integration !== 'google_calendar'` - NO optional chaining present. This golden comment appears to be about code that doesn't exist or was already fixed.",
+      "reasoning": "False positive. The golden comment describes redundant optional chaining, but the actual code at line 118 does NOT use optional chaining - it accesses .integration directly, which is the bug droid identified. This golden comment seems to be analyzing different code than what exists in the PR.",
+      "files_explored": [
+        "packages/core/EventManager.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Logic error: when externalCalendarId is provided, you're searching for a calendar where externalId === externalCalendarId, but this will always fail since you're looking for a calendar that matches itself. Should likely find by credentialId or use different logic.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "line": 255
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699763347,
+      "missing_details": [
+        "file path",
+        "line number",
+        "doesn't mention the same bug appears in deleteEvent too"
+      ],
+      "vagueness_issues": [
+        "Says 'when externalCalendarId is provided' but the actual bug is when it's NOT provided (falsy case)"
+      ],
+      "code_evidence": "Line 253-255 in updateEvent: when externalCalendarId is falsy, the find condition looks for `cal.externalId === externalCalendarId` (undefined), which never matches. Same bug at line 315-316 in deleteEvent.",
+      "reasoning": "Partially valid bug identification. The golden comment has the right intuition about the logic error but slightly mischaracterizes it. The bug occurs when externalCalendarId is FALSY (not provided), not when it IS provided. When falsy, the find() searches for a calendar with externalId === undefined, which fails. Droid identified both occurrences (updateEvent and deleteEvent).",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Logic inversion in organization creation: The slug property is now conditionally set when IS_TEAM_BILLING_ENABLED is true, instead of when it's false as originally intended. This change, combined with requestedSlug still being set when IS_TEAM_BILLING_ENABLED is true, results in both properties being set when billing is enabled, and neither when disabled",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/organizations/create.handler.ts",
+        "line": 151
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Original: `...(!IS_TEAM_BILLING_ENABLED && { slug })` (sets slug when billing DISABLED). New: `...(IS_TEAM_BILLING_ENABLED ? { slug } : {})` (sets slug when billing ENABLED). This inverts the logic - now slug is set when billing is enabled instead of disabled.",
+      "reasoning": "Valid bug. The original code set `slug` directly when billing was DISABLED (meaning immediate activation), and only set `requestedSlug` when billing was ENABLED (requiring payment approval). The new code inverts this: it sets `slug` when billing IS enabled, which is incorrect. This could cause organizations to be immediately activated without payment when billing is enabled.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/organizations/create.handler.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The Calendar interface now requires createEvent(event, credentialId), but some implementations (e.g., Lark/Office365) still declare createEvent(event) only—this breaks the interface contract (also applies to other locations in the PR).",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/larkcalendar/lib/CalendarService.ts",
+        "line": 106
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Calendar interface: `createEvent(event: CalendarEvent, credentialId: number): Promise<NewCalendarEventType>`. But larkcalendar/CalendarService.ts line 106: `async createEvent(event: CalendarEvent)` - missing credentialId parameter. Same issue in many other calendar services including office365calendar, exchange calendars, etc.",
+      "reasoning": "Valid bug but low severity in practice. TypeScript would catch this at compile time as a type error. The PR modified the Calendar interface to require credentialId but didn't update all implementations. This would prevent successful TypeScript compilation. However, at runtime JavaScript would just ignore the extra parameter, so it's more of a type safety issue than a runtime bug.",
+      "files_explored": [
+        "packages/types/Calendar.d.ts",
+        "packages/app-store/larkcalendar/lib/CalendarService.ts",
+        "packages/app-store/office365calendar/lib/CalendarService.ts"
+      ]
+    }
+  }
+]

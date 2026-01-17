@@ -1,0 +1,62 @@
+{
+  "pr_number": 4,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Unreachable branches in getBaseConditions() - else if (filterConditions) and else branches can never execute",
+      "file": "packages/lib/server/service/insightsBooking.ts",
+      "line": 77,
+      "severity": "low",
+      "found_by": ["golden"]
+    },
+    {
+      "id": 2,
+      "description": "Org-level members excluded for orgs without child teams - teamsFromOrg.length guard prevents fetching org memberships",
+      "file": "packages/lib/server/service/insightsBooking.ts",
+      "line": 157,
+      "severity": "medium",
+      "found_by": ["golden"]
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 4,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_false_positives": [
+    {
+      "comment_id": 2699763744,
+      "droid_comment": "Test doesn't catch the ANY(${array}) runtime failure",
+      "reasoning": "The premise is incorrect - Prisma.sql handles array parameters correctly with ANY(). Pattern is used successfully elsewhere in codebase (PermissionRepository.ts)."
+    },
+    {
+      "comment_id": 2699763746,
+      "droid_comment": "Avoid ANY(${userIdsFromTeam}) when array can be empty - claims teamIds can be empty",
+      "reasoning": "teamIds can never be empty because it always includes options.orgId: `const teamIds = [options.orgId, ...teamsFromOrg]`"
+    },
+    {
+      "comment_id": 2699763752,
+      "droid_comment": "Fix invalid SQL from reduce() without initial accumulator",
+      "reasoning": "The reduce pattern is correct. TypeScript infers accumulator type from callback return type (Prisma.Sql). The length guard ensures reduce is never called on empty arrays."
+    },
+    {
+      "comment_id": 2699764201,
+      "droid_comment": "Fix ANY(${teamIds}) array binding runtime SQL error",
+      "reasoning": "Same as comment 2699763744 - Prisma.sql correctly handles arrays with ANY(). Pattern used successfully in PermissionRepository.ts."
+    }
+  ],
+  "droid_missed": [1, 2],
+  "golden_missed": []
+}

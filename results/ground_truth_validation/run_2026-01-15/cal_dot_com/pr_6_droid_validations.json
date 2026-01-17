@@ -1,0 +1,38 @@
+[
+  {
+    "comment_id": 2699763449,
+    "file": "packages/trpc/server/routers/viewer/slots.ts",
+    "line": 128,
+    "droid_comment": "**[P1] Fix date override equality check (Dayjs objects never equal)**\n\n`dayjs(...) === dayjs(...)` is always false because it compares object identity; this makes the \"start==end\" branch dead and can misclassify an all-day override. Use `isSame(..., \"minute\")`/`isSame(...)` instead.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "The check for start==end date override (for all-day overrides) is dead code because dayjs object comparison with === always returns false. This could cause all-day date overrides to be misclassified, potentially showing incorrect availability slots.",
+      "reasoning": "At line 114 in the new code: `if (dayjs(date.start).add(utcOffset, \"minutes\") === dayjs(date.end).add(utcOffset, \"minutes\"))` - this compares two distinct dayjs objects by reference. In JavaScript, `{} === {}` is always false. The code should use `dayjs(...).isSame(dayjs(...))` or similar method to compare the actual datetime values.",
+      "code_evidence": "Line 114: `if (dayjs(date.start).add(utcOffset, \"minutes\") === dayjs(date.end).add(utcOffset, \"minutes\"))` - Both sides create new dayjs objects, so === comparison is reference comparison, not value comparison.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/slots.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763669,
+    "file": "packages/trpc/server/routers/viewer/slots.ts",
+    "line": 151,
+    "droid_comment": "**[P0] Fix working-hours bounds check (end uses start minutes)**\n\n`const end = ...` repeats `slotStartTime` instead of using the slot end time, so slots that overrun `workingHour.endTime` won't be rejected. This lets availability leak past working hours (e.g. 60m event starting 16:30 with endTime 17:00).",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "logic_bug",
+      "impact": "The working hours bounds check fails to properly validate slot end times. A 60-minute event starting at 16:30 with working hours ending at 17:00 would be incorrectly allowed because 'end' is calculated using slotStartTime (16:30) instead of slotEndTime (17:30). This allows bookings that extend past working hours.",
+      "reasoning": "Lines 140-141 show a clear copy-paste error: `const start = slotStartTime.hour() * 60 + slotStartTime.minute();` and `const end = slotStartTime.hour() * 60 + slotStartTime.minute();` - both use slotStartTime. The second line should use slotEndTime to properly check if the slot end overruns working hours.",
+      "code_evidence": "Lines 140-141: `const start = slotStartTime.hour() * 60 + slotStartTime.minute();` and `const end = slotStartTime.hour() * 60 + slotStartTime.minute();` - The 'end' variable is incorrectly calculated using slotStartTime instead of slotEndTime.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/slots.ts"
+      ]
+    }
+  }
+]

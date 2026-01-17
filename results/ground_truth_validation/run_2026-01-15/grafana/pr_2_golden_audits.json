@@ -1,0 +1,54 @@
+[
+  {
+    "golden_comment": "The Check operation exhibits asymmetric cache trust logic: cached permission grants are trusted and returned immediately, but cached denials from the same permission cache are ignored, leading to a fresh database lookup. This allows stale cached grants to provide access to revoked resources, posing a security risk.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/services/authz/rbac/service.go",
+        "line": 127
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 116-139 in service.go show the asymmetric logic: (1) permDenialCache is checked first - if found, returns false immediately. (2) getCachedIdentityPermissions fetches permission map. (3) checkPermission checks if resource is in the map. (4) If allowed=true from cache, returns immediately (line 132-136). (5) If allowed=false (resource not in cached perms), falls through to DB lookup (line 141+). This means a stale cached grant persists even after permission revocation until cache expires.",
+      "reasoning": "This is a real security concern. The caching logic trusts cached grants but not cached denials. If user A has permission to resource X, and the permission is cached, then the admin revokes permission to X, user A still has access until the cache expires (30 seconds based on shortCacheTTL). The permDenialCache only caches explicit denial results AFTER a DB lookup confirms denial - it doesn't help with stale grants. The golden comment correctly identifies this asymmetric trust behavior.",
+      "files_explored": [
+        "pkg/services/authz/rbac/service.go",
+        "pkg/services/authz/rbac/cache.go"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The test comment says the cached permissions 'allow access', but the map stores false for dashboards:uid:dash1, so checkPermission will still treat this scope as not allowed.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/services/authz/rbac/service_test.go",
+        "line": 989
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 989: s.permCache.Set(ctx, userPermCacheKey(\"org-12\", \"test-uid\", \"dashboards:read\"), map[string]bool{\"dashboards:uid:dash1\": false}). The comment on line 987 says 'Allow access to the dashboard to prove this is not checked' but the value stored is false, not true.",
+      "reasoning": "This is NOT a bug but a misleading/confusing comment. The test's INTENT is to prove that permDenialCache takes precedence over permCache. Since permDenialCache is checked FIRST (lines 116-121 in service.go) and returns denial immediately, the permCache is never reached. Whether permCache stores true or false is irrelevant to the test outcome - the test still correctly proves that permDenialCache has higher priority. The comment should say 'Set permissions cache (value irrelevant since permDenialCache is checked first)' to be accurate. This is a code quality issue in test documentation, not a functional bug.",
+      "files_explored": [
+        "pkg/services/authz/rbac/service_test.go",
+        "pkg/services/authz/rbac/service.go"
+      ]
+    }
+  }
+]

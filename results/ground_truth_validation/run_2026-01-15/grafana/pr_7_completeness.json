@@ -1,0 +1,40 @@
+{
+  "pr_number": 7,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Error log level used for debugging/informational messages in cleanup code",
+      "file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+      "line": 534,
+      "additional_lines": [541, 555, 562, 573, 577],
+      "severity": "low"
+    },
+    {
+      "id": 2,
+      "description": "Cleanup ticker changed from 10m to 1m - increases DB load 10x",
+      "file": "pkg/services/cleanup/cleanup.go",
+      "line": 77,
+      "severity": "medium"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 1,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_false_positives": [],
+  "droid_missed": [],
+  "golden_missed": [2],
+  "notes": "Golden comment correctly identified the logging issue but missed the ticker frequency change which could significantly impact production DB load. Droid caught both issues and provided more specific details including line numbers and the raw ID logging concern."
+}

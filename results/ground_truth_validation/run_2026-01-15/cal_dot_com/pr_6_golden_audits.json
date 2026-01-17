@@ -1,0 +1,64 @@
+[
+  {
+    "golden_comment": "Incorrect end time calculation using slotStartTime instead of slotEndTime",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/slots.ts",
+        "line": 141
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699763669,
+      "missing_details": [
+        "file path",
+        "line number",
+        "variable name (end)"
+      ],
+      "vagueness_issues": [
+        "Does not specify which file or line",
+        "Does not explain the impact (working hours check failure)"
+      ],
+      "code_evidence": "Line 141: `const end = slotStartTime.hour() * 60 + slotStartTime.minute();` should use slotEndTime instead of slotStartTime.",
+      "reasoning": "Real bug confirmed. This is a copy-paste error where the 'end' variable is calculated using slotStartTime instead of slotEndTime, causing working hours bounds checking to fail. Golden comment correctly identifies the issue but lacks file path and line number. Droid caught the same bug with more detail about the impact.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/slots.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Using === for dayjs object comparison will always return false as it compares object references, not values. Use .isSame() method instead: dayjs(date.start).add(utcOffset, 'minutes').isSame(dayjs(date.end).add(utcOffset, minutes))",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/trpc/server/routers/viewer/slots.ts",
+        "line": 114
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699763449,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [
+        "Does not specify which file or line"
+      ],
+      "code_evidence": "Line 114: `if (dayjs(date.start).add(utcOffset, \"minutes\") === dayjs(date.end).add(utcOffset, \"minutes\"))` - This comparison will always be false since it compares object references.",
+      "reasoning": "Real bug confirmed. Golden comment clearly explains the issue with dayjs object comparison and provides a solution using .isSame(). Droid also caught this bug. The golden comment provides the correct code fix but lacks the specific file/line location.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/slots.ts"
+      ]
+    }
+  }
+]

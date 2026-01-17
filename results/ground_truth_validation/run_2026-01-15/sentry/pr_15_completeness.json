@@ -1,0 +1,40 @@
+{
+  "pr_number": 15,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "MetricAlertDetectorHandler missing abstract method implementations",
+      "file": "src/sentry/incidents/grouptype.py",
+      "line": 12,
+      "severity": "high",
+      "type": "runtime_error"
+    },
+    {
+      "id": 2,
+      "description": "Docstring says returns list but method returns dict",
+      "file": "src/sentry/workflow_engine/processors/detector.py",
+      "line": 201,
+      "severity": "low",
+      "type": "documentation"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 1,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [1, 2],
+  "golden_missed": []
+}

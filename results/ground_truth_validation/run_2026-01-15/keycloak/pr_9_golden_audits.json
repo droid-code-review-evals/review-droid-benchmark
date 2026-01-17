@@ -1,0 +1,58 @@
+[
+  {
+    "golden_comment": "Unsafe raw List deserialization without type safety. Calling Optional.get() directly on the Optional returned by RecoveryAuthnCodesUtils.getCredential(user) without checking isPresent() can lead to a NoSuchElementException if the Optional is empty.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+        "line": 20
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699750868,
+      "missing_details": [
+        "Exact line number (though the behavior is clear)"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 17-18: Optional<CredentialModel> credentialModelOpt = RecoveryAuthnCodesUtils.getCredential(user);\nLine 20: RecoveryAuthnCodesCredentialModel.createFromCredentialModel(credentialModelOpt.get()); - calls .get() without isPresent() check",
+      "reasoning": "The golden comment correctly identifies two issues: (1) raw List deserialization (used in JsonSerialization.readValue with raw List.class, though this is in BackwardsCompatibilityUserStorage not the bean), and (2) the Optional.get() without isPresent() check which is the main bug. Droid caught the same issue with the same severity assessment.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+        "server-spi/src/main/java/org/keycloak/models/utils/RecoveryAuthnCodesUtils.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "After creating the RecoveryAuthnCodesCredentialModel, consider setting its id from the stored credential (e.g., myUser.recoveryCodes.getId()); otherwise getId() will be null and downstream removal by id (e.g., removeStoredCredentialById in the authenticator flow) may not work.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "medium",
+      "bug_location": {
+        "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+        "line": 237
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "Exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "In getCredentials() at line 237-241, RecoveryAuthnCodesCredentialModel.createFromValues() is used, but examining this method in RecoveryAuthnCodesCredentialModel.java shows it does NOT call setId(). Compare with createFromCredentialModel() which does call newModel.setId(credentialModel.getId()) at line 91. The stored credential myUser.recoveryCodes has an id set (line 192: recoveryCodesModel.setId(KeycloakModelUtils.generateId())), but this id is not transferred to the returned model.",
+      "reasoning": "This is a valid bug. The id from myUser.recoveryCodes is not being set on the model returned by createFromValues(). This could cause issues with credential removal operations that expect a non-null id. However, the impact depends on how the returned credential is used downstream. The bug is more subtle than the NPE issues caught by droid.",
+      "files_explored": [
+        "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+        "server-spi/src/main/java/org/keycloak/models/credential/RecoveryAuthnCodesCredentialModel.java"
+      ]
+    }
+  }
+]

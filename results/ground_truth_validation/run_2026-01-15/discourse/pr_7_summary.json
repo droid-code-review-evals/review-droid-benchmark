@@ -1,0 +1,36 @@
+{
+  "pr_number": 7,
+  "pr_title": "scale-color $lightness must use $secondary for dark themes",
+  "ground_truth_bug_count": 4,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 2,
+    "false_positives": 1,
+    "precision": 0.667,
+    "recall": 0.75,
+    "f1": 0.706,
+    "avg_clarity_score": 3.67,
+    "avg_specificity_score": 3.33
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 2,
+    "droid_missed": [
+      ".name selector lightness changed from 30% to 50% in desktop/user.scss (inconsistent with PR pattern)",
+      ".name selector lightness changed from 30% to 50% in mobile/user.scss (mobile variant)"
+    ],
+    "golden_missed": [
+      "mobile modal .custom-message-length lightness changed from 70% to 30% (inconsistent with desktop)"
+    ]
+  },
+  "notes": "The PR modifies many SCSS files to add dark-light-choose() wrappers for dark theme support. Both droid and golden correctly identified that some changes inadvertently altered light theme values. Golden had one false positive where it claimed a 70%->30% change that actually went the opposite direction. Droid was precise but missed the user.scss .name changes. Golden caught the user.scss issue but missed the mobile modal inconsistency."
+}

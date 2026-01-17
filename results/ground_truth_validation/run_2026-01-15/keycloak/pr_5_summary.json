@@ -1,0 +1,61 @@
+{
+  "pr_number": 5,
+  "pr_title": "Add Client resource type and scopes to authorization schema",
+  "ground_truth_bug_count": 4,
+  "droid_analysis": {
+    "total_comments": 4,
+    "true_positives": 0,
+    "false_positives": 4,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "comment_breakdown": [
+      {
+        "comment_id": 2699749823,
+        "verdict": "false_positive",
+        "reason": "Incorrectly claimed V2 needs prefix stripping like V1; actual issue is findByType not finding per-client resources"
+      },
+      {
+        "comment_id": 2699750109,
+        "verdict": "false_positive",
+        "reason": "Incorrectly claimed all-clients lookup would fail; the lookup correctly finds resource named 'Clients'"
+      },
+      {
+        "comment_id": 2699750266,
+        "verdict": "false_positive",
+        "reason": "Pointed to wrong line (142 vs 218); the NPE risk exists but at different location"
+      },
+      {
+        "comment_id": 2699750420,
+        "verdict": "false_positive",
+        "reason": "Test assumption about client scopes is valid in Keycloak's controlled test environment"
+      }
+    ]
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 3,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.75,
+    "f1": 0.857,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 4.67
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 3,
+    "neither_found": 1,
+    "droid_missed": [
+      "Feature flag inconsistency (V1 vs V2) in AdminPermissions cleanup listener",
+      "Owner mismatch in hasPermission (server.getId() vs resourceServer.getClientId())",
+      "findByType only finds type-level resource, not per-client resources",
+      "Potential NPE when getResourceTypeResource returns null"
+    ],
+    "golden_missed": [
+      "Potential NPE when getResourceTypeResource returns null at line 218"
+    ]
+  },
+  "analysis_notes": "This PR has significant bugs that droid failed to identify. Droid made 4 comments but all were false positives - either misidentifying the actual issue or pointing to wrong locations. Golden comments were all accurate and specific, correctly identifying the feature flag inconsistency, owner mismatch, and findByType design flaw. One bug (potential NPE at line 218) was not explicitly caught by either, though droid comment #3 hinted at a related NPE concern but at the wrong line."
+}

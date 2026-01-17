@@ -1,0 +1,59 @@
+{
+  "pr_number": 1,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "forEach(async...) fire-and-forget in bookings.tsx reschedule flow",
+      "file": "packages/trpc/server/routers/viewer/bookings.tsx",
+      "line": 553
+    },
+    {
+      "id": 2,
+      "description": "forEach(async...) fire-and-forget in handleCancelBooking recurring booking deletion",
+      "file": "packages/features/bookings/lib/handleCancelBooking.ts",
+      "line": 459
+    },
+    {
+      "id": 3,
+      "description": "forEach(async...) fire-and-forget in vital reschedule",
+      "file": "packages/app-store/vital/lib/reschedule.ts",
+      "line": 125
+    },
+    {
+      "id": 4,
+      "description": "forEach(async...) fire-and-forget in wipemycalother reschedule",
+      "file": "packages/app-store/wipemycalother/lib/reschedule.ts",
+      "line": 125
+    },
+    {
+      "id": 5,
+      "description": "getCalendarCredentials stores Promise<Calendar> without await, breaking type contract",
+      "file": "packages/core/CalendarManager.ts",
+      "line": 28
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 5,
+    "valid_comments": 5,
+    "bugs_found": [1, 2, 3, 4, 5],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "bugs_found": [1, 2, 3, 4],
+    "precision": 0.5,
+    "recall": 0.8,
+    "f1": 0.615
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "Consider adding try-catch around the await to handle import failures gracefully",
+      "reasoning": "The code already handles missing/invalid app lookups gracefully with null checks and log.warn. The await on appStore[key] won't throw - it returns undefined for missing keys. This is a speculative/defensive suggestion without a concrete bug."
+    }
+  ],
+  "droid_missed": [],
+  "golden_missed": [5]
+}

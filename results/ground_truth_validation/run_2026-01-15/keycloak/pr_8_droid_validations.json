@@ -1,0 +1,39 @@
+[
+  {
+    "comment_id": 2699750395,
+    "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+    "line": 485,
+    "droid_comment": "[P0] Fix inverted grant-shortcut check in `isAccessTokenId`\n\n`matchesSafely` currently returns `false` when the grant shortcut *matches* (`equals(expectedGrantShortcut)`), which makes all callers expecting a specific grant fail. The check should be negated (or the return values swapped) so it fails only when the shortcut differs.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "All test assertions using isAccessTokenId() will fail to properly validate token IDs because the logic is inverted - returning false on match instead of true. This would cause tests to pass when they should fail and vice versa.",
+      "reasoning": "The code at line 483 reads: `if (items[0].substring(3, 5).equals(expectedGrantShortcut)) return false;` - this returns false when the shortcut MATCHES, but it should return false when it DOESN'T match. The correct logic should be `if (!items[0].substring(4, 6).equals(expectedGrantShortcut)) return false;` (also note the indices should be 4,6 not 3,5). Droid caught the inverted logic but missed the incorrect indices.",
+      "code_evidence": "Line 483: `if (items[0].substring(3, 5).equals(expectedGrantShortcut)) return false;` - The equals() check is not negated, causing inverse behavior.",
+      "files_explored": [
+        "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/DefaultTokenContextEncoderProvider.java"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699750616,
+    "file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+    "line": 60,
+    "droid_comment": "[P1] Fix null-check for `rawTokenId` in constructor\n\nThe constructor calls `Objects.requireNonNull(grantType, \"Null rawTokenId not allowed\")` instead of checking `rawTokenId`, so a null raw ID would slip through and potentially NPE later (e.g., during encoding).",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "A null rawTokenId would pass the constructor validation (since grantType is checked twice) and cause NullPointerException later when encoding or accessing the token ID.",
+      "reasoning": "The constructor has: `Objects.requireNonNull(grantType, \"Null grantType not allowed\");` followed by `Objects.requireNonNull(grantType, \"Null rawTokenId not allowed\");` - the second line should check rawTokenId, not grantType again. This allows null rawTokenId to slip through.",
+      "code_evidence": "Lines 67-68 in constructor:\nObjects.requireNonNull(grantType, \"Null grantType not allowed\");\nObjects.requireNonNull(grantType, \"Null rawTokenId not allowed\");\nThe second should be: Objects.requireNonNull(rawTokenId, \"Null rawTokenId not allowed\");",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java"
+      ]
+    }
+  }
+]

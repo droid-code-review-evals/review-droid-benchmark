@@ -1,0 +1,169 @@
+[
+  {
+    "golden_comment": "SSRF vulnerability using open(url) without validation",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/models/topic_embed.rb",
+        "line": 48,
+        "additional_locations": [
+          {"file": "app/jobs/scheduled/poll_feed.rb", "line": 28}
+        ]
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_ids": [2699755529, 2699755725],
+      "missing_details": [
+        "file path",
+        "line number",
+        "which of the two open() calls (poll_feed.rb or topic_embed.rb)"
+      ],
+      "vagueness_issues": [
+        "Could apply to multiple locations in the PR - both poll_feed.rb and topic_embed.rb use open(url)"
+      ],
+      "code_evidence": "Found in two locations:\n1. app/jobs/scheduled/poll_feed.rb line 28: SimpleRSS.parse open(SiteSetting.feed_polling_url)\n2. app/models/topic_embed.rb line 48: Readability::Document.new(open(url).read, ...)",
+      "reasoning": "Real SSRF bug confirmed in both poll_feed.rb and topic_embed.rb. The golden comment is vague but correctly identifies the issue. Both droid comments caught these bugs with more specific file/line info. Since these are separate code paths requiring separate fixes, they count as 2 bugs.",
+      "files_explored": [
+        "app/models/topic_embed.rb",
+        "app/jobs/scheduled/poll_feed.rb",
+        "lib/tasks/disqus.thor"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The current origin validation using indexOf is insufficient and can be bypassed. An attacker could use a malicious domain like evil-discourseUrl.com to pass this check.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/assets/javascripts/embed.js",
+        "line": 17
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_ids": [2699755111],
+      "missing_details": [
+        "exact file path",
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 17: if (discourseUrl.indexOf(e.origin) === -1) { return; }",
+      "reasoning": "Real bug confirmed. The indexOf check can be bypassed with prefix attacks. For example, if discourseUrl is 'http://discourse.com/' and attacker origin is 'http://discourse.co', indexOf would return 0 (match found). Golden comment clearly explains the issue and provides an example attack vector. Droid caught the exact same bug with more specific file/line info.",
+      "files_explored": [
+        "app/assets/javascripts/embed.js"
+      ]
+    }
+  },
+  {
+    "golden_comment": "postMessage targetOrigin should be the origin (scheme+host+port), not the full referrer URL; using the full URL will cause the message to be dropped and prevent resizing.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "medium",
+      "bug_location": {
+        "file": "app/views/layouts/embed.html.erb",
+        "line": 11
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_ids": [],
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 11: parent.postMessage({type: 'discourse-resize', height: document['body'].offsetHeight}, '<%= request.referer %>');",
+      "reasoning": "This is technically incorrect - per the HTML spec, postMessage targetOrigin can be a full URL and the browser will extract the origin. The message will NOT be dropped if the origin matches, regardless of path/query in targetOrigin. However, the claim about 'will cause the message to be dropped' is wrong. The real issue is that request.referer could be nil/empty (if referrer-policy blocks it), which would cause postMessage to an empty string targetOrigin, but that's a different bug. Marking as false positive because the stated impact ('message will be dropped') is incorrect.",
+      "files_explored": [
+        "app/views/layouts/embed.html.erb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The code sets X-Frame-Options: ALLOWALL which completely disables clickjacking protection. The referer validation can be bypassed (referer headers are easily spoofed), and the fallback to empty string for nil referer masks validation failures.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/controllers/embed_controller.rb",
+        "line": 28
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_ids": [],
+      "missing_details": [],
+      "vagueness_issues": [
+        "Conflates multiple issues: X-Frame-Options, referer spoofing, and nil fallback"
+      ],
+      "code_evidence": "Line 28: response.headers['X-Frame-Options'] = 'ALLOWALL'\nLine 26: URI(request.referer || '').host != SiteSetting.embeddable_host",
+      "reasoning": "This is a false positive. The purpose of this controller IS to be embedded in an iframe on external sites - that's the entire feature. X-Frame-Options: ALLOWALL is intentional and correct for an embed endpoint. The referer 'spoofing' claim is misleading - browsers don't allow JavaScript to spoof Referer headers, and the only way to suppress them is via referrer-policy which would cause the validation to fail (correct security behavior). The nil fallback to '' results in empty string host which won't match embeddable_host, so validation still fails. This is working as intended.",
+      "files_explored": [
+        "app/controllers/embed_controller.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The TopicEmbed.import method is susceptible to a NoMethodError if the contents parameter is nil when attempting to append a string, and an XSS vulnerability due to unescaped url interpolation in the generated HTML.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/models/topic_embed.rb",
+        "line": 13
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_ids": [],
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 13: contents << \"\\n<hr>\\n<small>#{I18n.t('embed.imported_from', link: \"<a href='#{url}'>#{url}</a>\")}</small>\\n\"",
+      "reasoning": "Two valid bugs identified: 1) NoMethodError: Line 13 does `contents << string` but if contents is nil, this raises NoMethodError: undefined method `<<' for nil:NilClass. Looking at callers: poll_feed.rb line 33 passes `CGI.unescapeHTML(i.content.scrub)` which could be nil if item has no content field. 2) XSS: The url is interpolated directly into HTML without escaping. If url contains quotes or script tags, it could break out of the href attribute or inject scripts. This is a real vulnerability since url comes from external RSS feeds.",
+      "files_explored": [
+        "app/models/topic_embed.rb",
+        "app/jobs/scheduled/poll_feed.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The ERB block closes with end if, which is invalid Ruby/ERB and will raise at render; it should just be end to close the if block.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/views/embed/best.html.erb",
+        "line": 6
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_ids": [],
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 6: <%- end if %>",
+      "reasoning": "Real bug confirmed. Line 6 has `<%- end if %>` which is syntactically invalid in ERB. Ruby does have a `statement if condition` (postfix if) but `end if` with a space makes no sense - `end` is a keyword to close blocks, and `if` without a following condition is invalid. This will cause a SyntaxError when the view is rendered. Should be `<% end %>`.",
+      "files_explored": [
+        "app/views/embed/best.html.erb"
+      ]
+    }
+  }
+]

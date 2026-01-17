@@ -1,0 +1,60 @@
+[
+  {
+    "comment_id": 2699750204,
+    "file": "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/compatibility/CompatibilityResult.java",
+    "line": 34,
+    "droid_comment": "[P1] Avoid changing existing exit code value (breaking CLI contract)\n\n`RECREATE_UPGRADE_EXIT_CODE` was changed from `4` to `3`, which can break scripts/tests that already interpret `4` as \"recreate required\"; consider keeping the existing value and introducing a separate constant for the new \"feature disabled\" case.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "This is a documentation/design concern, not a bug. The PR is adding a new feature (rolling-updates feature flag) and the exit codes are being reorganized appropriately.",
+      "reasoning": "The change from 4 to 3 for RECREATE_UPGRADE_EXIT_CODE is intentional because the PR adds FEATURE_DISABLED=4 as a new exit code. The base branch (feature-rolling-updates-baseline) already has the rolling-updates feature being developed, so this is an internal API change during feature development, not breaking an existing stable contract. The documentation is updated to reflect the new exit codes (3 for recreate, 4 for feature disabled). This is part of the feature design, not a bug.",
+      "code_evidence": "The diff shows docs/guides/server/update-compatibility.adoc is updated to document exit code 3 for 'recreate required' and exit code 4 for 'feature disabled'. This is a coordinated change, not an accidental breaking change.",
+      "files_explored": [
+        "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/compatibility/CompatibilityResult.java",
+        "docs/guides/server/update-compatibility.adoc"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699750206,
+    "file": "docs/guides/templates/kc.adoc",
+    "line": 53,
+    "droid_comment": "[P2] Don't force-enable rolling-updates in the update-compatibility template\n\nThis macro now always appends `--features=rolling-updates`, which can unexpectedly enable a preview feature for users following docs; it also prevents testing the \"feature disabled\" failure path documented elsewhere.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "This is intentional behavior during the preview period. The documentation explicitly warns that the feature must be enabled while on preview stage.",
+      "reasoning": "The PR adds a CAUTION box in docs/guides/server/update-compatibility.adoc that says 'While on preview stage, the feature `rolling-updates` must be enabled. Otherwise, the commands will fail.' The template macro is updated to include the required flag so that documentation examples actually work. This is correct behavior during preview - users need the feature enabled to use the command at all. The 'feature disabled' error path is for users who don't enable the feature, not a testing scenario.",
+      "code_evidence": "docs/guides/server/update-compatibility.adoc shows: '[CAUTION] While on preview stage, the feature `rolling-updates` must be enabled. Otherwise, the commands will fail.' This aligns with the template change.",
+      "files_explored": [
+        "docs/guides/templates/kc.adoc",
+        "docs/guides/server/update-compatibility.adoc"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699750209,
+    "file": "operator/src/test/java/org/keycloak/operator/testsuite/integration/UpgradeTest.java",
+    "line": 111,
+    "droid_comment": "[P2] Ensure FeatureSpec exists on all code paths before dereferencing\n\n`kc.getSpec().getFeatureSpec().setEnabledFeatures(...)` will throw if `kc.getSpec()` is null; if `getDefaultKeycloak()` ever returns a Keycloak without `spec`, this becomes an NPE in tests.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "The code already checks for null FeatureSpec and creates a new one if needed. The spec itself is always non-null from getTestKeycloakDeployment().",
+      "reasoning": "Looking at the code: (1) getTestKeycloakDeployment(true) calls K8sUtils.getDefaultKeycloakDeployment() which loads from 'example-keycloak.yaml' - this YAML always has a spec. (2) The code has a null-check: 'if (kc.getSpec().getFeatureSpec() == null) { kc.getSpec().setFeatureSpec(new FeatureSpec()); }' before calling setEnabledFeatures(). (3) The droid's comment mentions 'getDefaultKeycloak()' but the code actually uses 'getTestKeycloakDeployment()' which wraps getDefaultKeycloakDeployment() and ensures proper initialization. The null-check pattern is correct.",
+      "code_evidence": "Lines 112-114 show: 'if (kc.getSpec().getFeatureSpec() == null) { kc.getSpec().setFeatureSpec(new FeatureSpec()); }' followed by 'kc.getSpec().getFeatureSpec().setEnabledFeatures(...)'. The null-check is present.",
+      "files_explored": [
+        "operator/src/test/java/org/keycloak/operator/testsuite/integration/UpgradeTest.java",
+        "operator/src/test/java/org/keycloak/operator/testsuite/integration/BaseOperatorTest.java",
+        "operator/src/test/java/org/keycloak/operator/testsuite/utils/K8sUtils.java"
+      ]
+    }
+  }
+]

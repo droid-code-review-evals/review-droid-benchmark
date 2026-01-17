@@ -1,0 +1,91 @@
+[
+  {
+    "golden_comment": "The findMembers() call is now asynchronous and unhandled. The controller may not have member data immediately available, creating a race condition.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/assets/javascripts/discourse/routes/group-members.js.es6",
+        "line": 11
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699756307,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which specific callers are affected"
+      ],
+      "vagueness_issues": [
+        "Doesn't specify which route/controller is affected",
+        "Doesn't mention the root cause (return ; returns undefined)"
+      ],
+      "code_evidence": "group-members.js.es6 setupController calls model.findMembers() without awaiting/chaining. admin_group_route.js also calls model.findMembers() without handling. The findMembers method returns undefined when name is empty.",
+      "reasoning": "Real bug. The golden comment correctly identifies that findMembers is async and unhandled. However, it doesn't pinpoint the exact issue: findMembers returns undefined (not a promise) when name is empty, which could break callers that expect a promise. Droid's comment is more precise about the root cause.",
+      "files_explored": [
+        "app/assets/javascripts/discourse/routes/group-members.js.es6",
+        "app/assets/javascripts/admin/routes/admin_group_route.js",
+        "app/assets/javascripts/discourse/models/group.js"
+      ]
+    }
+  },
+  {
+    "golden_comment": "In the next action, capping the next offset at user_count can produce an empty page (e.g., total equal to limit results in offset == total, showing 2/2 with no members). This can cause confusing UX on the last page.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/assets/javascripts/admin/controllers/admin-group.js.es6",
+        "line": 32
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 32: 'offset = Math.min(group.get(\"offset\") + group.get(\"limit\"), group.get(\"user_count\"))'. If user_count=50 and limit=50, starting at offset=0, the next action would set offset=min(50,50)=50, which would fetch 0 results since users are at indices 0-49. The UI would show page 2/2 with no members.",
+      "reasoning": "Real bug. The golden comment accurately describes the edge case: when offset+limit reaches user_count, the capping to user_count results in fetching beyond the last item. Should cap to (user_count - limit) or use < instead of <=. Droid did NOT catch this bug.",
+      "files_explored": [
+        "app/assets/javascripts/admin/controllers/admin-group.js.es6"
+      ]
+    }
+  },
+  {
+    "golden_comment": "HTTP method mismatch in .remove_member - test uses PUT but remove_member action expects DELETE",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "spec/controllers/admin/groups_controller_spec.rb",
+        "line": 113
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699756662,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "routes.rb line 48: 'delete \"members\" => \"groups#remove_member\"'. Spec line 113: 'xhr :put, :remove_member, group_id: 1, user_id: 42' - should use :delete.",
+      "reasoning": "Real bug. Golden comment and droid comment both identified this exact issue. The test uses PUT but the route expects DELETE.",
+      "files_explored": [
+        "spec/controllers/admin/groups_controller_spec.rb",
+        "config/routes.rb"
+      ]
+    }
+  }
+]

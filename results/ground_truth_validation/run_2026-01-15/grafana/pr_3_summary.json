@@ -1,0 +1,36 @@
+{
+  "pr_number": 3,
+  "pr_title": "Plugins: Chore: Renamed instrumentation middleware to metrics middleware",
+  "ground_truth_bug_count": 4,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 4.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 2,
+    "bugs_found_only_by_golden": 2,
+    "droid_missed": [
+      "ContextualLoggerMiddleware methods panic on nil request",
+      "traceID no longer logged for plugin requests"
+    ],
+    "golden_missed": [
+      "TestLogger.FromContext returns new logger instead of preserving original",
+      "grafanaInfraLogWrapper.FromContext type assertion may fail, dropping context"
+    ]
+  }
+}

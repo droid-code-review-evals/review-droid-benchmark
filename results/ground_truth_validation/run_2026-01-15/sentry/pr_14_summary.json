@@ -1,0 +1,31 @@
+{
+  "pr_number": 14,
+  "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+  "ground_truth_bug_count": 1,
+  "droid_analysis": {
+    "total_comments": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 0,
+    "false_positives": 3,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "avg_clarity_score": 4.33,
+    "avg_specificity_score": 2.67
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": ["Offset tracking assumes contiguous offsets - gaps cause commit stall"]
+  },
+  "notes": "Droid performed perfectly on this PR (1.0 precision, 1.0 recall). All 3 golden comments were false positives: (1) queue.shutdown() is valid in Python 3.13+ which Sentry requires, (2) 'max_wait=50' doesn't exist in the test file, (3) test_thread_queue_parallel_error_handling doesn't exist. The droid correctly identified the only real bug: the offset tracking logic assumes contiguous Kafka offsets, but Kafka can have gaps due to compaction/retention, causing infinite stalls."
+}

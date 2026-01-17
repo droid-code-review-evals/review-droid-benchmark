@@ -1,0 +1,95 @@
+[
+  {
+    "comment_id": 2699750807,
+    "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+    "line": 98,
+    "droid_comment": "**[P1] Fix context/log propagation in Delete**\n\n`ctx = klog.NewContext(ctx, d.Log)` drops the per-request `log` (with `name/kind/method`) you just built; use `log` so downstream storage calls/metrics include the right fields.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Log context values (name, kind, method) are lost in downstream storage calls because the code uses d.Log (the base logger) instead of the enriched log variable. This affects debugging/tracing.",
+      "reasoning": "Verified at line 96-97: `log := d.Log.WithValues(\"name\", name, \"kind\", options.Kind, \"method\", method)` creates enriched logger, but line 98 `ctx = klog.NewContext(ctx, d.Log)` uses the base logger without those values. Compare to other methods (Get, List, Update, DeleteCollection) which correctly use `ctx = klog.NewContext(ctx, log)`.",
+      "code_evidence": "Line 96-98 shows: log is enriched with WithValues but ctx is set with d.Log. Other methods like Get (line 66), List (line 82), Update (line 124), DeleteCollection (line 150) all correctly use `ctx = klog.NewContext(ctx, log)`.",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751049,
+    "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+    "line": 166,
+    "droid_comment": "**[P1] Record legacy metrics with recordLegacyDuration (not storage)**\n\nIn the legacy `DeleteCollection` goroutine you're calling `recordStorageDuration(...)` even though it's measuring the legacy delete; this will mislabel metrics and break dashboards/alerts.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "Metrics for legacy DeleteCollection operations are recorded under storage metrics instead of legacy metrics, causing incorrect metrics/dashboards and inability to monitor legacy storage performance.",
+      "reasoning": "Verified at line 165-166: Inside the goroutine that calls `d.Legacy.DeleteCollection(...)`, the code records the duration using `d.recordStorageDuration(...)` instead of `d.recordLegacyDuration(...)`. This is clearly wrong as it mislabels which backend performed the operation.",
+      "code_evidence": "Line 165: `_, err := d.Legacy.DeleteCollection(...)` - this is a legacy operation. Line 166: `d.recordStorageDuration(err != nil, mode3Str, options.Kind, method, startLegacy)` - incorrectly uses recordStorageDuration. Compare to Delete goroutine (line 113) which correctly uses `d.recordLegacyDuration(...)`.",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go",
+        "pkg/apiserver/rest/metrics.go"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751215,
+    "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+    "line": 45,
+    "droid_comment": "**[P2] Record create failure with recordStorageDuration, not legacy**\n\nOn storage `Create` failure you call `recordLegacyDuration(...)` even though legacy hasn't run; this produces incorrect error attribution in metrics.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When Storage.Create fails, the error is incorrectly attributed to legacy storage in metrics. This corrupts error tracking and makes debugging production issues difficult.",
+      "reasoning": "Verified at line 42-45: `d.Storage.Create(...)` is called, and on error, line 45 calls `d.recordLegacyDuration(true, ...)`. But this is a storage error, not legacy - legacy hasn't even run yet. Should be `d.recordStorageDuration(true, ...)`.",
+      "code_evidence": "Line 42: `created, err := d.Storage.Create(...)` - storage operation. Line 45: `d.recordLegacyDuration(true, ...)` - incorrectly records as legacy. Compare to Delete (line 103) which correctly uses `d.recordStorageDuration(true, ...)` on storage error.",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751484,
+    "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+    "line": 106,
+    "droid_comment": "**[P2] Use kind (not name) for storage metric label on delete success**\n\n`recordStorageDuration(false, ..., name, ...)` labels the metric with the object name, which will explode cardinality; it should use `options.Kind` like the other calls.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "performance",
+      "impact": "Using object name instead of kind in metrics labels causes metric cardinality explosion. Each unique object name creates a new time series, which can overwhelm Prometheus/monitoring systems.",
+      "reasoning": "Verified at line 106: `d.recordStorageDuration(false, mode3Str, name, method, startStorage)` uses `name` (the object's name like 'my-playlist-123') instead of `options.Kind` (the resource type like 'Playlist'). The metrics signature (line 59 in metrics.go) shows the 3rd parameter is used as a label.",
+      "code_evidence": "Line 106: uses `name` (object name). Line 103: correctly uses `options.Kind` for error case. Compare to other methods - Get (line 73), List (line 89), Update (line 132) all use `options.Kind`. Even mode1's Delete (line 155) has this same bug pattern.",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go",
+        "pkg/apiserver/rest/metrics.go",
+        "pkg/apiserver/rest/dualwriter_mode1.go"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751702,
+    "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+    "line": 129,
+    "droid_comment": "**[P2] Record update failure with recordStorageDuration, not legacy**\n\nOn storage `Update` error you call `recordLegacyDuration(...)` using the storage timing; legacy hasn't executed yet, so this misreports which backend failed.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When Storage.Update fails, the error is incorrectly attributed to legacy storage in metrics. This corrupts error tracking and monitoring dashboards.",
+      "reasoning": "Verified at line 126-129: `d.Storage.Update(...)` is called, and on error, line 129 calls `d.recordLegacyDuration(true, ...)`. But this is a storage error - legacy hasn't run yet. Should be `d.recordStorageDuration(true, ...)`.",
+      "code_evidence": "Line 126: `res, async, err := d.Storage.Update(...)` - storage operation. Line 129: `d.recordLegacyDuration(true, ...)` - incorrectly records as legacy. This is the same pattern as the Create bug (line 45).",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go"
+      ]
+    }
+  }
+]

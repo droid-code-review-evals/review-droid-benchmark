@@ -1,0 +1,80 @@
+{
+  "pr_number": 10,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Migration crashes when embed_category site setting is unset - accessing [0]['id'] on empty result",
+      "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+      "line": 11,
+      "found_by": "droid"
+    },
+    {
+      "id": 2,
+      "description": "SQL injection/breakage in migration INSERT - unquoted string interpolation",
+      "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+      "line": 25,
+      "found_by": "droid"
+    },
+    {
+      "id": 3,
+      "description": "Fabricator files swapped - category_fabricator.rb defines embeddable_host, breaking all category specs",
+      "file": "spec/fabricators/category_fabricator.rb",
+      "line": 1,
+      "found_by": "droid"
+    },
+    {
+      "id": 4,
+      "description": "_ids hydration deletes original IDs even when lookups return null, inconsistent with singular behavior",
+      "file": "app/assets/javascripts/discourse/models/store.js.es6",
+      "line": 198,
+      "found_by": "droid"
+    },
+    {
+      "id": 5,
+      "description": "NoMethodError in before_validation - host.sub! called when host is nil",
+      "file": "app/models/embeddable_host.rb",
+      "line": 6,
+      "found_by": "golden"
+    },
+    {
+      "id": 6,
+      "description": "Update and destroy methods don't check for nil after .first, causing NoMethodError on missing record",
+      "file": "app/controllers/admin/embeddable_hosts_controller.rb",
+      "line": 10,
+      "found_by": "golden"
+    },
+    {
+      "id": 7,
+      "description": "record_for_host case sensitivity bug - SQL lower() on column but not on parameter",
+      "file": "app/models/embeddable_host.rb",
+      "line": 17,
+      "found_by": "golden"
+    },
+    {
+      "id": 8,
+      "description": "Migration doesn't normalize hosts - migrated data with http:// or paths won't match lookups",
+      "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+      "line": 25,
+      "found_by": "golden"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 4,
+    "valid_comments": 4,
+    "bugs_found": [1, 2, 3, 4],
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_metrics": {
+    "total_comments": 4,
+    "valid_comments": 4,
+    "bugs_found": [5, 6, 7, 8],
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_false_positives": [],
+  "droid_missed": [5, 6, 7, 8],
+  "golden_missed": [1, 2, 3, 4]
+}

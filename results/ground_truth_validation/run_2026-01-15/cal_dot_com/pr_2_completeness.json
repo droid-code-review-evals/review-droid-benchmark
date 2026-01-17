@@ -1,0 +1,79 @@
+{
+  "pr_number": 2,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "TwoFactorAuthAPI.disable() signature breaking change - security/DisableTwoFactorModal.tsx still uses 2 args",
+      "file": "apps/web/components/security/DisableTwoFactorModal.tsx",
+      "line": 38,
+      "severity": "high",
+      "found_by": ["droid"]
+    },
+    {
+      "id": 2,
+      "description": "Inconsistent naming: BackupCode.tsx exports function named TwoFactor",
+      "file": "apps/web/components/auth/BackupCode.tsx",
+      "line": 7,
+      "severity": "low",
+      "found_by": ["golden"]
+    },
+    {
+      "id": 3,
+      "description": "Misleading error message says 'login' in disable endpoint",
+      "file": "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+      "line": 48,
+      "severity": "low",
+      "found_by": ["golden"]
+    },
+    {
+      "id": 4,
+      "description": "Case-sensitive backup code validation (login flow)",
+      "file": "packages/features/auth/lib/next-auth-options.ts",
+      "line": 130,
+      "severity": "medium",
+      "found_by": ["golden"]
+    },
+    {
+      "id": 5,
+      "description": "Case-sensitive backup code validation (disable flow)",
+      "file": "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+      "line": 57,
+      "severity": "medium",
+      "found_by": ["golden"]
+    },
+    {
+      "id": 6,
+      "description": "Race condition: concurrent backup code use can bypass one-time-use semantics",
+      "file": "packages/features/auth/lib/next-auth-options.ts",
+      "line": 127,
+      "severity": "high",
+      "found_by": ["golden"]
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 0.5,
+    "recall": 0.167,
+    "f1": 0.25
+  },
+  "golden_metrics": {
+    "total_comments": 4,
+    "valid_comments": 4,
+    "bugs_found": [2, 3, 4, 5, 6],
+    "precision": 1.0,
+    "recall": 0.833,
+    "f1": 0.909
+  },
+  "golden_false_positives": [],
+  "droid_false_positives": [
+    {
+      "comment_id": 2699764230,
+      "comment": "formatBackupCode temporal dead zone claim",
+      "reasoning": "formatBackupCode is a const defined within the component. By the time handleSetup can be called (via user interaction), the entire component function has executed and all const declarations are initialized. This is not a temporal dead zone issue - the function reference is valid when accessed at runtime."
+    }
+  ],
+  "droid_missed": [2, 3, 4, 5, 6],
+  "golden_missed": [1]
+}

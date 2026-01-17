@@ -1,0 +1,68 @@
+[
+  {
+    "golden_comment": "Returns wrong provider (default keystore instead of BouncyCastle)",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+        "line": 57
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "explanation of why this is problematic in practice"
+      ],
+      "vagueness_issues": [
+        "Does not explain if this causes actual runtime failures",
+        "Does not mention that WildFlyElytronProvider returns null which has similar effect"
+      ],
+      "code_evidence": "getBouncyCastleProvider() returns KeyStore.getInstance(KeyStore.getDefaultType()).getProvider() which returns the default JKS keystore provider (typically SUN), not BouncyCastle. However, BouncyIntegration.loadProvider() handles null by falling back to Security.getProviders()[0].getName(). WildFlyElytronProvider also returns null. This is intentional design for lightweight clients without BC dependency.",
+      "reasoning": "While the method name suggests returning BouncyCastle provider, returning a different provider (or null) is an accepted pattern in the codebase - WildFlyElytronProvider returns null. The AuthzClientCryptoProvider has order 100 (lower than DefaultCryptoProvider's 200), so it's only used when BC isn't available. The fallback behavior in BouncyIntegration handles non-BC providers gracefully. This is a design choice for lightweight authz-client use, not a bug. The implementation could be cleaner by returning null instead, but it's not causing functional issues.",
+      "files_explored": [
+        "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+        "common/src/main/java/org/keycloak/common/crypto/CryptoProvider.java",
+        "common/src/main/java/org/keycloak/common/util/BouncyIntegration.java",
+        "crypto/default/src/main/java/org/keycloak/crypto/def/DefaultCryptoProvider.java",
+        "crypto/elytron/src/main/java/org/keycloak/crypto/elytron/WildFlyElytronProvider.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Dead code exists where ASN1Encoder instances are created and written to, but their results are immediately discarded. The actual encoding is performed by new ASN1Encoder instances created in the subsequent return statement, rendering the earlier operations useless.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+        "line": 107
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699749978,
+      "missing_details": [
+        "file path",
+        "exact line numbers (107-108)"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 107-108: ASN1Encoder.create().write(rBigInteger); ASN1Encoder.create().write(sBigInteger); - These create encoder instances and write to them but the results are never used. Lines 110-114 create fresh encoders for the actual return value.",
+      "reasoning": "Confirmed dead code. The two encoder instances created at lines 107-108 are written to but immediately discarded. The actual work is done by new encoder instances in the return statement. This is a code quality issue - misleading and could cause confusion in future maintenance. The test suite proves the function works correctly despite the dead code.",
+      "files_explored": [
+        "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+        "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/ASN1Encoder.java",
+        "authz/client/src/test/java/org/keycloak/authorization/client/test/ECDSAAlgorithmTest.java"
+      ]
+    }
+  }
+]

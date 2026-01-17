@@ -1,0 +1,38 @@
+[
+  {
+    "comment_id": 2699750410,
+    "file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+    "line": 534,
+    "droid_comment": "**[P1] Remove error-level logging of annotation IDs in cleanup**\n\nThis logs full `ids` arrays at `Error` level during normal cleanup runs, which can flood logs and potentially leak internal IDs; these should be debug-level and/or omit the raw ID list.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logging_issue",
+      "impact": "Production logs will be flooded with error-level messages during normal cleanup operations. The logs include full ID arrays which is unnecessary noise and could leak internal database IDs. This is clearly debugging code that was accidentally left in (evidenced by variable names like 'x, y' instead of meaningful names).",
+      "reasoning": "Explored the code in xorm_store.go. Lines 534, 541, 555, 562, 573, 577 all use r.log.Error() for what is clearly debugging/informational output during normal cleanup operations. The messages like 'Annotations to clean by time', 'cleaned annotations by time', etc. are informational, not errors. Additionally, the code logs full ID arrays which could be very large in production. This is clearly debugging code that should be removed or changed to Debug level.",
+      "code_evidence": "Line 534: r.log.Error(\"Annotations to clean by time\", \"count\", len(ids), \"ids\", ids, \"cond\", cond, \"err\", err) - uses Error level for normal operations and logs raw IDs. Similar patterns at lines 541, 555, 562, 573, 577.",
+      "files_explored": [
+        "pkg/services/annotations/annotationsimpl/xorm_store.go"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699750610,
+    "file": "pkg/services/cleanup/cleanup.go",
+    "line": 77,
+    "droid_comment": "**[P1] Revert cleanup ticker from 10m to 1m**\n\nThis changes the cleanup loop to run 10x more frequently, which can materially increase DB/filesystem load in production and looks unrelated to the deadlock fix in this PR.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "configuration_change",
+      "impact": "The cleanup service will run 10x more frequently (every 1 minute instead of every 10 minutes), which increases database load significantly in production. This change appears to be for testing purposes and was accidentally included in the PR. The PR is about fixing deadlocks in annotation cleanup, not changing cleanup frequency.",
+      "reasoning": "Explored cleanup.go. Line 77 changes `time.NewTicker(time.Minute * 10)` to `time.NewTicker(time.Minute * 1)`. This makes the cleanup job run every minute instead of every 10 minutes. Looking at the clean() function, it runs multiple database operations including snapshot deletion, dashboard version cleanup, annotation cleanup, etc. Running these 10x more often would significantly increase database load. This change is unrelated to the stated PR purpose (avoiding deadlocks on MySQL) and appears to be debugging/testing code that was accidentally committed.",
+      "code_evidence": "Line 77: ticker := time.NewTicker(time.Minute * 1) - changed from 10 minutes to 1 minute. The clean() function at line 82-112 runs 8 different cleanup jobs including database operations.",
+      "files_explored": [
+        "pkg/services/cleanup/cleanup.go"
+      ]
+    }
+  }
+]

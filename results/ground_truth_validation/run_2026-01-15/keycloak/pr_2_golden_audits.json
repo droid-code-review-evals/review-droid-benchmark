@@ -1,0 +1,65 @@
+[
+  {
+    "golden_comment": "Recursive caching call using session instead of delegate",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/idp/InfinispanIdentityProviderStorageProvider.java",
+        "line": 246
+      },
+      "is_specific": false,
+      "is_clear": false,
+      "clarity_score": 2,
+      "specificity_score": 1,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "method name",
+        "what the actual problem is",
+        "what the expected behavior should be"
+      ],
+      "vagueness_issues": [
+        "Does not explain what the 'recursive caching call' issue actually causes",
+        "Does not clarify if this is a performance concern, correctness issue, or potential infinite loop",
+        "The pattern is actually intentional - leveraging individual IDP cache when returning results"
+      ],
+      "code_evidence": "In getForLogin() at line 246: 'IdentityProviderModel idp = session.identityProviders().getById(id)' - This calls through the caching layer rather than idpDelegate. However, this is a design choice, not a bug. The getById() method correctly uses idpDelegate for uncached lookups. This pattern allows individual IDP results to benefit from the cache.",
+      "reasoning": "Not a real bug. The code uses session.identityProviders().getById() which goes through the caching layer. This is intentional - it leverages the individual IDP cache for the returned results. The getById() method correctly falls back to idpDelegate when the cache misses. While this could be seen as slightly inefficient (since getForLogin just fetched from delegate), it's not a correctness bug. Marking as Critical is overstated - this is at most a minor code style concern.",
+      "files_explored": [
+        "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/idp/InfinispanIdentityProviderStorageProvider.java",
+        "model/storage-private/src/main/java/org/keycloak/storage/datastore/DefaultDatastoreProvider.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Cleanup reference uses incorrect alias - should be 'idp-alias-' + i instead of 'alias'.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+        "line": 381
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 381: getCleanup().addCleanup(testRealm().identityProviders().get(\"alias\")::remove); - This uses literal 'alias' but the IDPs were created with aliases 'idp-alias-0' through 'idp-alias-19'. The cleanup will fail to remove the test IDPs because no IDP with alias 'alias' exists.",
+      "reasoning": "Real bug confirmed. The test creates IDPs with aliases 'idp-alias-' + i (lines 372-373), but the cleanup code on line 381 tries to remove an IDP with alias 'alias' which doesn't exist. This means the test's cleanup will silently fail (or throw an error if remove() doesn't handle missing IDPs gracefully), leaving test IDPs in the system. This is a test code bug affecting test isolation.",
+      "files_explored": [
+        "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java"
+      ]
+    }
+  }
+]

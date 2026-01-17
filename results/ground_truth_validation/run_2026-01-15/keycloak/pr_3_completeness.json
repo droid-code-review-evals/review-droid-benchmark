@@ -1,0 +1,51 @@
+{
+  "pr_number": 3,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Dead code in concatenatedRSToASN1DER - ASN1Encoder instances created and discarded",
+      "file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+      "line": 107,
+      "severity": "low",
+      "bug_type": "dead_code"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 3,
+    "valid_comments": 1,
+    "false_positives": 2,
+    "bugs_found": [1],
+    "precision": 0.333,
+    "recall": 1.0,
+    "f1": 0.5
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "false_positives": 1,
+    "bugs_found": [1],
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "Returns wrong provider (default keystore instead of BouncyCastle)",
+      "reasoning": "This is intentional design for a lightweight crypto provider. WildFlyElytronProvider returns null for the same method. The fallback behavior in BouncyIntegration handles non-BC providers gracefully. AuthzClientCryptoProvider has order 100, so it's only selected when BC providers aren't available. This is a design choice, not a bug."
+    }
+  ],
+  "droid_false_positives": [
+    {
+      "comment_id": 2699749979,
+      "droid_comment": "getKeyStore missing provider/exception handling",
+      "reasoning": "KeyStore.getInstance(String) only throws KeyStoreException, not NoSuchAlgorithmException. The code compiles and works correctly."
+    },
+    {
+      "comment_id": 2699749982,
+      "droid_comment": "Avoid repeated global CryptoIntegration.init on every create()",
+      "reasoning": "CryptoIntegration.init() already uses double-checked locking pattern. Repeated calls are safe and efficient - only the first call does work."
+    }
+  ],
+  "droid_missed": [],
+  "golden_missed": []
+}

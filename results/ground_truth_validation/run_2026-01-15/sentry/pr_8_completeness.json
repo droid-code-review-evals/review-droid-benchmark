@@ -1,0 +1,46 @@
+{
+  "pr_number": 8,
+  "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Non-deterministic hash() in cache key causes cross-process inconsistency",
+      "file": "src/sentry/api/helpers/error_upsampling.py",
+      "line": 26,
+      "severity": "low",
+      "bug_type": "logic_bug"
+    },
+    {
+      "id": 2,
+      "description": "Upsampling eligibility check uses outer dataset instead of scoped_dataset",
+      "file": "src/sentry/api/endpoints/organization_events_stats.py",
+      "line": 218,
+      "severity": "medium",
+      "bug_type": "logic_bug"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 0,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": null,
+    "recall": 0.0,
+    "f1": null
+  },
+  "golden_metrics": {
+    "total_comments": 3,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 0.67,
+    "recall": 1.0,
+    "f1": 0.80
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "sample_rate = 0.0 is falsy and skipped",
+      "reasoning": "No code in the PR's changed files checks sample_rate with a falsy comparison. The sample_rate handling in event_manager.py (which uses strict inequality) is not part of this PR."
+    }
+  ],
+  "droid_missed": [1, 2],
+  "golden_missed": []
+}

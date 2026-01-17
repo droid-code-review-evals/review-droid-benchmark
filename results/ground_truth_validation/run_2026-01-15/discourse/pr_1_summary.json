@@ -1,0 +1,45 @@
+{
+  "pr_number": 1,
+  "pr_title": "FEATURE: automatically downsize large images",
+  "ground_truth_bug_count": 3,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 3,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 3.67
+  },
+  "coverage": {
+    "bugs_found_by_both": 2,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": [
+      "Hardcoded 10MB client-side limit ignores site settings, causing client/server divergence"
+    ],
+    "golden_missed": []
+  },
+  "validation_summary": {
+    "files_changed": [
+      "app/assets/javascripts/discourse/lib/utilities.js",
+      "app/controllers/uploads_controller.rb",
+      "app/models/optimized_image.rb"
+    ],
+    "key_findings": [
+      "Bug 1 (duplicate downsize method): Both droid and golden caught this. Ruby method redefinition causes 4-arg callers to fail with ArgumentError.",
+      "Bug 2 (hardcoded 10MB limit): Only golden caught this. Changes from dynamic SiteSettings lookup to hardcoded value, breaking admin configurability.",
+      "Bug 3 (gifsicle percentage syntax): Both caught this. Droid attributed it to wrong cause (method signature) while golden correctly identified gifsicle --resize-fit needing WxH geometry."
+    ],
+    "droid_quality_notes": "Droid achieved perfect precision (no false positives) but missed one bug. The bug it caught about the downsize call was valid but the reasoning was slightly off."
+  }
+}

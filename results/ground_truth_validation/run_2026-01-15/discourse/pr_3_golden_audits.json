@@ -1,0 +1,60 @@
+[
+  {
+    "golden_comment": "BlockedEmail.should_block_email? method has side effects during a read operation - it updates statistics even when just checking if an email should be blocked. This could cause race conditions in concurrent environments and makes the method name misleading.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/models/blocked_email.rb",
+        "line": 11
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699761373,
+      "missing_details": [
+        "file path",
+        "line number",
+        "specific fix recommendation"
+      ],
+      "vagueness_issues": [
+        "Method name is actually should_block? not should_block_email?"
+      ],
+      "code_evidence": "Lines 11-17 in blocked_email.rb show the should_block? method that reads a record, increments match_count, updates last_match_at, and saves - all side effects during what should be a read/query operation.",
+      "reasoning": "This is a real design issue. The method name 'should_block?' implies a query/read operation but performs writes (updating statistics). This creates race conditions when multiple concurrent signup attempts check the same email. Droid caught this same bug with more specific technical details (atomic updates recommendation).",
+      "files_explored": [
+        "app/models/blocked_email.rb",
+        "lib/validators/email_validator.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Regex pattern @(#{domains}) only matches domain suffixes, not full domains. evil.example.com would match whitelist entry example.com.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "lib/validators/email_validator.rb",
+        "line": 18
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "The regex pattern @(example\\.com) does NOT match evil.example.com because the @ must immediately precede the domain. Verified by running: ruby -e \"regexp = Regexp.new('@(example\\.com)', true); puts 'user@evil.example.com' =~ regexp\" which returns nil (no match).",
+      "reasoning": "This is a FALSE POSITIVE. The golden comment misunderstands how the regex works. The pattern @(#{domains}) requires the @ symbol to immediately precede the domain, so evil.example.com would NOT match because the email would be user@evil.example.com and the pattern @example.com is not found (evil. intervenes). The existing test 'should not reject partial matches' at spec/models/user_spec.rb:507 confirms this behavior works correctly.",
+      "files_explored": [
+        "lib/validators/email_validator.rb",
+        "spec/models/user_spec.rb"
+      ]
+    }
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "golden_comment": "Incorrect method call for exit codes. The picocli.exit() method calls System.exit() directly, which is problematic:",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/command/UpdateCompatibilityCheck.java",
+        "line": 48
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 3,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "explanation of why System.exit() is problematic in this context"
+      ],
+      "vagueness_issues": [
+        "Comment is truncated/incomplete (ends with colon)",
+        "Does not specify which file(s) have the issue",
+        "Does not explain the specific impact or failure scenario"
+      ],
+      "code_evidence": "In UpdateCompatibilityCheck.java line 48 and UpdateCompatibilityMetadata.java line 48, `picocli.exit(CompatibilityResult.FEATURE_DISABLED)` is called. Examining Picocli.java's exit() method: `public void exit(int exitCode) { if (exitCode != CommandLine.ExitCode.OK && (!Environment.isTestLaunchMode() || isRebuildCheck())) { System.exit(exitCode); } }`. This calls System.exit() for non-zero exit codes when NOT in test mode. This IS problematic because it terminates the JVM immediately after the run() method, potentially before the command returns cleanly. However, for CLI tools this is often intentional - the command explicitly wants to signal failure via exit code.",
+      "reasoning": "The golden comment correctly identifies that picocli.exit() calls System.exit(). This is a valid concern but needs context: for CLI applications, hard exits with specific exit codes are often intentional for scripting purposes. The Picocli class has logic to only hard-exit when NOT in test mode (!Environment.isTestLaunchMode()). However, the concern is valid that calling System.exit() directly (especially before return) can be problematic for embedded usage or testing. The test 'testFeatureNotEnabled' in UpdateCommandDistTest.java expects an error message, suggesting the exit is handled. This is a valid design concern, though whether it's a 'bug' depends on intended usage.",
+      "files_explored": [
+        "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/command/UpdateCompatibilityCheck.java",
+        "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/command/UpdateCompatibilityMetadata.java",
+        "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/Picocli.java",
+        "quarkus/tests/integration/src/test/java/org/keycloak/it/cli/dist/UpdateCommandDistTest.java"
+      ]
+    }
+  }
+]

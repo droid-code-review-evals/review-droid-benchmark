@@ -1,0 +1,44 @@
+[
+  {
+    "comment_id": 2699756138,
+    "file": "lib/freedom_patches/translate_accelerator.rb",
+    "line": 62,
+    "droid_comment": "[P0] Fix `ensure_loaded!` method scope in I18n backend patch - `ensure_loaded!` is defined at `module Backend` level, but it uses `@loaded_locales` and calls `load_locale`, which are instance state/methods of `I18n::Backend::Simple`. When called as `I18n.ensure_loaded!(l)` (via `FallbackLocaleList#ensure_loaded!`), this will raise (no `load_locale` method / wrong receiver), breaking locale loading at runtime.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the code is correctly structured",
+      "reasoning": "The droid misread the code structure. Looking at lines 34-81 of translate_accelerator.rb, the `ensure_loaded!` method (lines 62-65) is defined inside `class << self` (line 34) which is inside `module I18n` (line 11). This means `ensure_loaded!` is a singleton/class method on `I18n` itself, NOT on `I18n::Backend`. The method correctly accesses `@loaded_locales` (an instance variable of the I18n singleton) and calls `load_locale` (another singleton method defined at line 46). When FallbackLocaleList#ensure_loaded! calls `I18n.ensure_loaded! l`, it correctly invokes this singleton method. The droid confused the module namespace `I18n::Backend` (lines 12-31) with the singleton class of `I18n` (lines 34-80).",
+      "code_evidence": "Line 34: `class << self` opens I18n's singleton class. Lines 62-65 define ensure_loaded! within this singleton class, making it callable as I18n.ensure_loaded!(locale). This is verified by line 46's load_locale and line 39's reload! also being in the same singleton class scope.",
+      "files_explored": [
+        "lib/freedom_patches/translate_accelerator.rb",
+        "config/initializers/i18n.rb",
+        "config/initializers/02-freedom_patches.rb"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699756325,
+    "file": "app/controllers/application_controller.rb",
+    "line": 159,
+    "droid_comment": "[P0] Avoid calling `ensure_loaded!` on non-boolean `I18n.fallbacks` - Previously `I18n.fallbacks` is `false` on the client and may be unset/boolean in some server contexts; this PR sets it to a custom object, but if initializers don't run or fallbacks are disabled, `I18n.fallbacks.ensure_loaded!` will raise `NoMethodError`. Guard this or ensure `I18n.fallbacks` is always the custom list before `set_locale` runs.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the concern is not valid in the server-side context",
+      "reasoning": "The droid's concern is misplaced: (1) The JavaScript file app/assets/javascripts/locales/i18n.js sets `I18n.fallbacks = false` for CLIENT-SIDE only - this is irrelevant to the Ruby server-side ApplicationController. (2) On the server side, the initializer config/initializers/i18n.rb ALWAYS runs before any controller action and sets `I18n.fallbacks = FallbackLocaleList.new`. (3) The PR removes `config.i18n.fallbacks = true` from production.rb, replacing the boolean with the custom FallbackLocaleList object. (4) Rails initializers run during application boot, always before any HTTP request reaches a controller. There is no scenario where `set_locale` runs before the i18n.rb initializer. The droid conflated client-side JavaScript with server-side Ruby.",
+      "code_evidence": "config/initializers/i18n.rb unconditionally sets `I18n.fallbacks = FallbackLocaleList.new` at boot. Rails guarantees all initializers complete before processing requests. The production.rb changes (removing `config.i18n.fallbacks = true`) are intentional - the new initializer replaces this configuration.",
+      "files_explored": [
+        "app/controllers/application_controller.rb",
+        "config/initializers/i18n.rb",
+        "config/environments/production.rb",
+        "config/cloud/cloud66/files/production.rb",
+        "app/assets/javascripts/locales/i18n.js"
+      ]
+    }
+  }
+]

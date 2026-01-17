@@ -1,0 +1,42 @@
+{
+  "pr_number": 9,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "KeyError/TypeError when accessing integration.metadata['sender']['login'] - sender key may not exist",
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 501
+    },
+    {
+      "id": 2,
+      "description": "Null reference if github_authenticated_user state is missing from pipeline",
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 500
+    },
+    {
+      "id": 3,
+      "description": "OAuth state uses static pipeline.signature instead of per-request random value (CSRF vulnerability)",
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 401
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 1,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 1.0,
+    "recall": 0.333,
+    "f1": 0.5
+  },
+  "golden_metrics": {
+    "total_comments": 3,
+    "valid_comments": 3,
+    "bugs_found": [1, 2, 3],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [2, 3],
+  "golden_missed": []
+}

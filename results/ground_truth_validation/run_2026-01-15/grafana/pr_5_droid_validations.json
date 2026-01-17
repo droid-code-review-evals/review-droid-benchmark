@@ -1,0 +1,57 @@
+[
+  {
+    "comment_id": 2699750997,
+    "file": "public/app/features/alerting/unified/hooks/useAbilities.ts",
+    "line": 346,
+    "droid_comment": "[P0] Define or import `ctx` in `useIsGrafanaPromRuleEditable`\n\n`useIsGrafanaPromRuleEditable` calls `ctx.hasPermissionInMetadata(...)`, but `ctx` isn't defined in this module scope, which will throw at runtime. Use the same context source used elsewhere in this file (e.g. whatever provides `ctx`) or pass it in.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the comment is incorrect",
+      "reasoning": "The `ctx` variable IS imported at line 3 of the file: `import { contextSrv as ctx } from 'app/core/services/context_srv';`. The droid incorrectly claimed ctx wasn't defined when it clearly is imported at the top of the file. This is used correctly in the useIsGrafanaPromRuleEditable function.",
+      "code_evidence": "Line 3: `import { contextSrv as ctx } from 'app/core/services/context_srv';` - ctx is properly imported and available throughout the module",
+      "files_explored": [
+        "public/app/features/alerting/unified/hooks/useAbilities.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699750998,
+    "file": "public/app/features/alerting/unified/rule-list/GrafanaRuleListItem.tsx",
+    "line": 31,
+    "droid_comment": "[P1] Use rule title instead of `name` for Grafana-managed rules\n\n`GrafanaPromRuleDTO`'s display name is typically in `rule.annotations?.title` (the old path used `rulerRule.grafana_alert.title`), but this component uses `rule.name`, which can differ and will change UI text and selectors unexpectedly.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "medium",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - this is a design choice, not a bug",
+      "reasoning": "For GrafanaPromRuleDTO (Prometheus rule format), `rule.name` is the appropriate field to use. The `name` field comes from PromRuleDTOBase which is the standard Prometheus rule format. The old code used `rulerRule.grafana_alert.title` because it was working with RulerGrafanaRuleDTO format. This PR intentionally migrated from Ruler API to Prometheus API, so using `name` is correct for the new data format. The comment suggests using annotations?.title but that's optional metadata, not the canonical rule name.",
+      "code_evidence": "GrafanaPromRuleDTOBase extends PromRuleDTOBase which defines `name: string`. The name field is the canonical identifier for Prometheus rules.",
+      "files_explored": [
+        "public/app/features/alerting/unified/rule-list/GrafanaRuleListItem.tsx",
+        "public/app/types/unified-alerting-dto.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751804,
+    "file": "public/app/features/alerting/unified/rule-list/GrafanaGroupLoader.tsx",
+    "line": 43,
+    "droid_comment": "[P0] Fix missing `t` import (will crash at runtime)\n\nThis file calls `t(...)` in the error `Alert` but no longer imports it, so the component will throw when the error branch renders.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the comment is incorrect",
+      "reasoning": "The `t` function IS imported at line 1 of the file: `import { t } from '@grafana/i18n';`. The droid incorrectly claimed t wasn't imported when it clearly is. The import is present at the top of the file and the function will work correctly.",
+      "code_evidence": "Line 1: `import { t } from '@grafana/i18n';` - t is properly imported",
+      "files_explored": [
+        "public/app/features/alerting/unified/rule-list/GrafanaGroupLoader.tsx"
+      ]
+    }
+  }
+]

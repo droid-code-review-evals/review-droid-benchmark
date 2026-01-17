@@ -1,0 +1,39 @@
+[
+  {
+    "comment_id": 2699758266,
+    "file": "pkg/expr/reader.go",
+    "line": 199,
+    "droid_comment": "[P0] Fix sqlExpressions gate to reflect the flag state\n\n`enableSqlExpressions` currently returns `false` on every path (and inverts the flag into a misleading `enabled` variable), so `QueryTypeSQL` will always error and make SQL expressions unusable even when the feature is enabled.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "logic_bug",
+      "impact": "SQL expressions feature will always be disabled regardless of feature flag state, completely breaking the feature even when explicitly enabled via FlagSqlExpressions",
+      "reasoning": "Analyzed enableSqlExpressions function at lines 193-200. The logic is doubly broken: 1) Line 194 inverts the flag (enabled := !h.features.IsEnabledGlobally(...)) so 'enabled' is true when flag is OFF and false when flag is ON. 2) Both branches return false (lines 196 and 198), making the function always return false. This causes the QueryTypeSQL case at line 128 to always return error 'sqlExpressions is not implemented'.",
+      "code_evidence": "func enableSqlExpressions(h *ExpressionQueryReader) bool {\n\tenabled := !h.features.IsEnabledGlobally(featuremgmt.FlagSqlExpressions)\n\tif enabled {\n\t\treturn false\n\t}\n\treturn false\n}",
+      "files_explored": [
+        "pkg/expr/reader.go"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699758294,
+    "file": "pkg/expr/sql_command.go",
+    "line": 103,
+    "droid_comment": "[P0] Avoid swapping in a stub DB that always errors\n\n`sql.NewInMemoryDB()` currently returns a DB whose methods return `not implemented`, so SQL command execution will now always fail at runtime (`QueryFramesInto` returns an error) where it previously executed via go-duck.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "SQL expression execution will always fail with 'not implemented' error. The PR replaced a working go-duck implementation with a stub that does nothing. Even if the enableSqlExpressions bug was fixed, SQL queries would still fail.",
+      "reasoning": "The PR diff shows duck.NewInMemoryDB() was replaced with sql.NewInMemoryDB(). Examining pkg/expr/sql/db.go reveals this is a stub implementation where QueryFramesInto returns errors.New('not implemented'). This means db.QueryFramesInto at line 103 will always return an error, which gets assigned to rsp.Error at line 106.",
+      "code_evidence": "In pkg/expr/sql/db.go:\nfunc (db *DB) QueryFramesInto(name string, query string, frames []*data.Frame, f *data.Frame) error {\n\treturn errors.New(\"not implemented\")\n}\n\nIn sql_command.go:\nerr := db.QueryFramesInto(gr.refID, gr.query, allFrames, frame)\nif err != nil {\n\trsp.Error = err\n\treturn rsp, nil\n}",
+      "files_explored": [
+        "pkg/expr/sql_command.go",
+        "pkg/expr/sql/db.go"
+      ]
+    }
+  }
+]

@@ -1,0 +1,75 @@
+[
+  {
+    "golden_comment": "Consider adding try-catch around the await to handle import failures gracefully",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": null,
+      "is_specific": false,
+      "is_clear": false,
+      "clarity_score": 2,
+      "specificity_score": 1,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which await specifically",
+        "what kind of import failures are expected"
+      ],
+      "vagueness_issues": [
+        "No file or line specified",
+        "Multiple files in PR have await for appStore imports",
+        "The existing code already handles missing apps gracefully with checks and log.warn"
+      ],
+      "code_evidence": "Examined all 'await appStore[...]' calls in the diff. In getCalendar.ts, handleCancelBooking.ts, deletePayment.ts, handlePayment.ts, bookings.tsx, and videoClient.ts - all have null/undefined checks after the await that log warnings and return gracefully. The import itself won't throw for missing keys (returns undefined).",
+      "reasoning": "This is a false positive. The code already handles missing/invalid app lookups by checking if the result is valid (calendarApp && 'lib' in calendarApp) and logging warnings. The await on appStore[key] won't throw - it returns a promise that resolves to the module or undefined. This is a speculative/defensive suggestion without a concrete bug.",
+      "files_explored": [
+        "packages/app-store/_utils/getCalendar.ts",
+        "packages/features/bookings/lib/handleCancelBooking.ts",
+        "packages/lib/payment/deletePayment.ts",
+        "packages/lib/payment/handlePayment.ts",
+        "packages/trpc/server/routers/viewer/bookings.tsx",
+        "packages/core/videoClient.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The code uses forEach with async callbacks, which causes asynchronous operations (e.g., calendar/video event deletions, payment refunds) to run concurrently without being awaited. This 'fire-and-forget' behavior leads to unhandled promise rejections, race conditions, and incomplete cleanup, as surrounding try-catch blocks cannot properly handle errors from these unawaited promises. Replace forEach with for...of loops or Promise.all() with map() to ensure proper sequential execution and error handling.",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": [
+        {"file": "packages/trpc/server/routers/viewer/bookings.tsx", "line": 553},
+        {"file": "packages/features/bookings/lib/handleCancelBooking.ts", "line": 459},
+        {"file": "packages/app-store/vital/lib/reschedule.ts", "line": 125},
+        {"file": "packages/app-store/wipemycalother/lib/reschedule.ts", "line": 125}
+      ],
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_ids": [2699763440, 2699763441, 2699763446, 2699763464],
+      "missing_details": [
+        "exact file paths",
+        "exact line numbers",
+        "which specific forEach calls are affected"
+      ],
+      "vagueness_issues": [
+        "Describes the pattern generically without pointing to specific locations",
+        "There are 4 distinct forEach(async...) occurrences but comment doesn't enumerate them"
+      ],
+      "code_evidence": "Found 4 instances of forEach(async ...) in the PR diff: (1) bookings.tsx:553 - bookingRefsFiltered.forEach(async (bookingRef)), (2) handleCancelBooking.ts:459 - .forEach(async (credential)), (3) vital/lib/reschedule.ts:125 - bookingRefsFiltered.forEach(async (bookingRef)), (4) wipemycalother/lib/reschedule.ts:125 - identical to vital.",
+      "reasoning": "Real bug, correctly identified by golden. The golden comment is clear and accurate about the problem and its consequences. However, it lacks specificity - doesn't tell you WHERE in the codebase to look. Droid found all 4 instances with specific file:line references.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings.tsx",
+        "packages/features/bookings/lib/handleCancelBooking.ts",
+        "packages/app-store/vital/lib/reschedule.ts",
+        "packages/app-store/wipemycalother/lib/reschedule.ts"
+      ]
+    }
+  }
+]

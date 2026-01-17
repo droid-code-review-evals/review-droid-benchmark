@@ -1,0 +1,57 @@
+{
+  "pr_number": 5,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Feature flag inconsistency - V1 flag (ADMIN_FINE_GRAINED_AUTHZ) used in cleanup listener instead of V2 (ADMIN_FINE_GRAINED_AUTHZ_V2)",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/AdminPermissions.java",
+      "line": 77,
+      "severity": "high",
+      "type": "logic_bug"
+    },
+    {
+      "id": 2,
+      "description": "Owner mismatch in hasPermission - findByName uses server.getId() but resources are created with resourceServer.getClientId()",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "line": 213,
+      "severity": "high",
+      "type": "logic_bug"
+    },
+    {
+      "id": 3,
+      "description": "getClientsWithPermission uses findByType which only finds type-level 'Clients' resource; per-client resources have no type set",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "line": 137,
+      "severity": "high",
+      "type": "logic_bug"
+    },
+    {
+      "id": 4,
+      "description": "Potential NPE in hasPermission - getResourceTypeResource can return null, causing NPE in findByResource and resource.getScopes()",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "line": 218,
+      "severity": "medium",
+      "type": "runtime_error"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 4,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_metrics": {
+    "total_comments": 3,
+    "valid_comments": 3,
+    "bugs_found": [1, 2, 3],
+    "precision": 1.0,
+    "recall": 0.75,
+    "f1": 0.857
+  },
+  "golden_false_positives": [],
+  "droid_missed": [1, 2, 3, 4],
+  "golden_missed": [4],
+  "notes": "Droid made 4 comments but all were either false positives or pointed to wrong lines. Comment 1 misidentified the issue in getClientsWithPermission (claimed prefix stripping needed, but actual issue is findByType not finding per-client resources). Comment 2 incorrectly claimed the all-clients lookup would fail (it's correct). Comment 3 pointed to line 142 but the NPE risk is at line 218. Comment 4 about test assumptions is overly defensive - Keycloak's test framework ensures adequate default client scopes. Golden comments correctly identified 3 of 4 bugs with high specificity. Bug #4 (potential NPE) was partially hinted at by droid comment 3 but with wrong line number, so neither gets credit for it."
+}

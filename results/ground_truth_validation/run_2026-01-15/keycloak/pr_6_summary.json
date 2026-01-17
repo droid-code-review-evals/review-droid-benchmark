@@ -1,0 +1,33 @@
+{
+  "pr_number": 6,
+  "pr_title": "Add Groups resource type and scopes to authorization schema",
+  "ground_truth_bug_count": 2,
+  "droid_analysis": {
+    "total_comments": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "avg_clarity_score": 4.5,
+    "avg_specificity_score": 3.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": [
+      "getGroupIdsWithViewPermission uses resource ID instead of group ID (resource name), causing permission filtering to fail"
+    ],
+    "golden_missed": []
+  },
+  "summary": "Droid found 1 of 2 bugs with 100% precision. It correctly identified the canManage() privilege escalation bug where VIEW permission incorrectly allows manage operations. However, Droid missed the subtle bug in getGroupIdsWithViewPermission() where resource IDs are used instead of group IDs (resource names), causing a mismatch that would break permission-based user filtering. The golden comments caught both bugs, with the second golden comment being highly detailed and specific about the ID/name mismatch issue."
+}

@@ -1,0 +1,56 @@
+{
+  "pr_number": 5,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Async forEach pattern - remindersToUpdate.forEach(async...) doesn't await delete operations",
+      "file": "packages/trpc/server/routers/viewer/workflows.tsx",
+      "line": 575,
+      "severity": "medium",
+      "found_by": ["droid", "golden"]
+    },
+    {
+      "id": 2,
+      "description": "NULL referenceId sent to SendGrid API in cron job - query doesn't filter out null referenceIds",
+      "file": "packages/features/ee/workflows/api/scheduleEmailReminders.ts",
+      "line": 43,
+      "severity": "high",
+      "found_by": ["droid"]
+    },
+    {
+      "id": 3,
+      "description": "immediateDelete=true path doesn't delete WorkflowReminder record from database",
+      "file": "packages/features/ee/workflows/lib/reminders/emailReminderManager.ts",
+      "line": 213,
+      "severity": "high",
+      "found_by": ["golden"]
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 3],
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8
+  },
+  "golden_false_positives": [],
+  "droid_missed": [3],
+  "golden_missed": [2],
+  "analysis_notes": [
+    "Both droid and golden have 100% precision - all comments point to real bugs",
+    "Both miss one bug that the other caught - complementary coverage",
+    "Droid's comment on NULL referenceId is more specific (exact file/line)",
+    "Golden's async forEach comment is broader and covers multiple instances beyond what droid pointed to",
+    "The async forEach pattern actually exists in 7+ locations but droid only pointed to one specific instance",
+    "Golden's immediateDelete bug is a significant omission by droid - clear code path that doesn't clean up DB"
+  ]
+}

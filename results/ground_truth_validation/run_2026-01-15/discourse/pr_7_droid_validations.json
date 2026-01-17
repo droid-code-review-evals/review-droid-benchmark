@@ -1,0 +1,38 @@
+[
+  {
+    "comment_id": 2699756113,
+    "file": "app/assets/stylesheets/desktop/topic-post.scss",
+    "line": 288,
+    "droid_comment": "[P2] Fix reply author color regression\n\nThis changes `.topic-meta-data h5 a` from `scale-color($primary, $lightness: 30%)` to `...$lightness: 70%`, which will noticeably reduce contrast in light themes and doesn't match the likely intent of only adjusting for dark themes.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "visual_regression",
+      "impact": "In light themes, the reply author link color will be significantly lighter (70% vs 30% lightness), reducing contrast and readability. The intent of the PR was to fix dark theme colors, but this change also affects light theme by inverting the lightness value.",
+      "reasoning": "Verified by examining the diff: original was `color: scale-color($primary, $lightness: 30%)`, now changed to `dark-light-choose(scale-color($primary, $lightness: 70%), scale-color($secondary, $lightness: 30%))`. The light theme value went from 30% to 70% - a dramatic inversion that makes text much lighter and harder to read.",
+      "code_evidence": "git diff shows line 291: original `color: scale-color($primary, $lightness: 30%)` changed to `color: dark-light-choose(scale-color($primary, $lightness: 70%), scale-color($secondary, $lightness: 30%))`",
+      "files_explored": [
+        "app/assets/stylesheets/desktop/topic-post.scss"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699756115,
+    "file": "app/assets/stylesheets/mobile/modal.scss",
+    "line": 103,
+    "droid_comment": "[P2] Keep mobile modal hint lightness consistent with desktop\n\nDesktop keeps `.custom-message-length` at `$lightness: 70%` for `$primary`, but mobile now uses `$lightness: 30%` for `$primary`, making the hint much darker than intended in light themes.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "visual_regression",
+      "impact": "Mobile .custom-message-length hint text will be much darker than desktop in light themes (30% vs 70% lightness), creating an inconsistent experience across platforms.",
+      "reasoning": "Original code was `color: scale-color($primary, $lightness: 70%)`. New code uses `dark-light-choose(scale-color($primary, $lightness: 30%), scale-color($secondary, $lightness: 70%))`. The light theme value dropped from 70% to 30%, making text significantly darker. Desktop likely keeps 70% for consistency, but mobile now diverges.",
+      "code_evidence": "git show origin/theme-color-scheme-pre:app/assets/stylesheets/mobile/modal.scss shows original value was 70%. Current PR code shows 30% for light theme.",
+      "files_explored": [
+        "app/assets/stylesheets/mobile/modal.scss"
+      ]
+    }
+  }
+]

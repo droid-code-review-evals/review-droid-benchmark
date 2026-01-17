@@ -1,0 +1,35 @@
+{
+  "pr_number": 3,
+  "pr_title": "Add comprehensive email validation for blocked users",
+  "ground_truth_bug_count": 1,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.50,
+    "recall": 1.0,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.50,
+    "recall": 1.0,
+    "f1": 0.667,
+    "avg_clarity_score": 4.5,
+    "avg_specificity_score": 3.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": []
+  },
+  "notes": {
+    "droid_false_positive": "Droid flagged user.attributes.slice() as leaking data, but only user-submitted values (name, username, email) are returned for form repopulation - standard practice.",
+    "golden_false_positive": "Golden claimed regex would match subdomains (evil.example.com matching example.com whitelist) but this is incorrect - the @ anchor prevents this. Verified via Ruby regex testing.",
+    "both_caught": "Both correctly identified the race condition in should_block? where read-modify-write on match_count can lose increments under concurrent signups."
+  }
+}

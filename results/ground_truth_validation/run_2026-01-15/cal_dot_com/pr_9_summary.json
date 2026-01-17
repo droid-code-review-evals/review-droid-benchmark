@@ -1,0 +1,36 @@
+{
+  "pr_number": 9,
+  "pr_title": "Add guest management functionality to existing bookings",
+  "ground_truth_bug_count": 6,
+  "droid_analysis": {
+    "total_comments": 3,
+    "true_positives": 3,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 5,
+    "true_positives": 5,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.833,
+    "f1": 0.909,
+    "avg_clarity_score": 4.4,
+    "avg_specificity_score": 2.4
+  },
+  "coverage": {
+    "bugs_found_by_both": 2,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 3,
+    "droid_missed": [
+      "Case sensitivity bypass in email blacklist check",
+      "Email sender receives original guests instead of uniqueGuests",
+      "No deduplication of duplicate emails within input array"
+    ],
+    "golden_missed": [
+      "Email types swapped - new guests get AttendeeScheduledEmail instead of proper notification"
+    ]
+  }
+}

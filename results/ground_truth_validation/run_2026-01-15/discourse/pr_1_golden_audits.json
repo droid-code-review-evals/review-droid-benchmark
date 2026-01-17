@@ -1,0 +1,85 @@
+[
+  {
+    "golden_comment": "The downsize method is defined twice. The second definition, which expects a single dimensions string parameter, overrides the first, which expected separate max_width and max_height parameters. This makes the original method unreachable and breaks existing code that calls it with separate width and height arguments.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/models/optimized_image.rb",
+        "line": 147
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699755507,
+      "missing_details": [
+        "Exact line numbers"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 143-150 of optimized_image.rb show two consecutive def self.downsize methods. Ruby's method semantics mean the second completely replaces the first.",
+      "reasoning": "Real bug confirmed. Golden describes the issue accurately and clearly. The severity should arguably be High since this causes runtime ArgumentError. Droid caught this same bug with slightly more detail about the ArgumentError.",
+      "files_explored": [
+        "app/models/optimized_image.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Hardcoding maxSizeKB = 10 * 1024 ignores Discourse.SiteSettings['max_' + type + '_size_kb'], so the client-side limit can diverge from server-side and per-type settings (also applies to the 413 handler below).",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "medium",
+      "bug_location": {
+        "file": "app/assets/javascripts/discourse/lib/utilities.js",
+        "line": 182
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "Exact line numbers"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "utilities.js line 182 changes from: var maxSizeKB = Discourse.SiteSettings['max_' + type + '_size_kb']; to: var maxSizeKB = 10 * 1024; // 10MB. This hardcodes 10MB instead of using the configurable site setting. Same pattern at line 246 for the 413 error handler.",
+      "reasoning": "Real bug. The original code dynamically read the site setting for max file size per type, allowing admins to configure different limits. The change hardcodes 10MB, which means: 1) Client-side validation will always use 10MB regardless of server settings. 2) If server is configured for smaller limits, files will be accepted client-side but rejected server-side, causing confusing errors. 3) Per-type settings (image vs attachment) are ignored. This is a valid configuration/UX bug, though not a crash.",
+      "files_explored": [
+        "app/assets/javascripts/discourse/lib/utilities.js",
+        "app/controllers/uploads_controller.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Passing 80% as the dimensions can fail for animated GIFs when allow_animated_thumbnails is true, since the animated path uses gifsicle --resize-fit which expects WxH geometry, not a percentage; downsizing would then silently fail.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/controllers/uploads_controller.rb",
+        "line": 67
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699755513,
+      "missing_details": [
+        "Exact line number in uploads_controller.rb"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "uploads_controller.rb line 67: OptimizedImage.downsize(tempfile.path, tempfile.path, \"80%\", allow_animation: SiteSetting.allow_animated_thumbnails). When allow_animation is true and file is .GIF, optimize() calls downsize_instructions_animated() which delegates to resize_instructions_animated(). That generates: gifsicle --resize-fit 80% which is invalid syntax for gifsicle.",
+      "reasoning": "Real bug confirmed. The gifsicle --resize-fit option expects WxH geometry (e.g., 800x600), not a percentage string. Passing \"80%\" will cause gifsicle to fail or behave unexpectedly. The convert command for non-animated images does support percentage syntax with -resize 80%, but the animated GIF path breaks. Droid partially caught this but attributed it to the wrong cause (method signature mismatch).",
+      "files_explored": [
+        "app/controllers/uploads_controller.rb",
+        "app/models/optimized_image.rb"
+      ]
+    }
+  }
+]

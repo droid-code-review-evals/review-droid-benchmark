@@ -1,0 +1,117 @@
+[
+  {
+    "golden_comment": "Importing non-existent OptimizedCursorPaginator",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": null,
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path"
+      ],
+      "vagueness_issues": [
+        "Claim is factually incorrect - OptimizedCursorPaginator exists in paginator.py"
+      ],
+      "code_evidence": "File src/sentry/api/paginator.py defines OptimizedCursorPaginator at line 819. The import in organization_auditlogs.py is valid.",
+      "reasoning": "This is a FALSE POSITIVE in the golden set. OptimizedCursorPaginator is defined at line 819 of src/sentry/api/paginator.py. The import 'from sentry.api.paginator import DateTimePaginator, OptimizedCursorPaginator' is valid.",
+      "files_explored": [
+        "src/sentry/api/endpoints/organization_auditlogs.py",
+        "src/sentry/api/paginator.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Django querysets do not support negative slicing",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/paginator.py",
+        "line": 186
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2695944394,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which paginator class (there are 2 affected: BasePaginator and OptimizedCursorPaginator)"
+      ],
+      "vagueness_issues": [
+        "Could apply to multiple locations in the PR"
+      ],
+      "code_evidence": "Found in BasePaginator.get_result() at line 186 and OptimizedCursorPaginator.get_result() at line 881. Both allow negative slicing when cursor.is_prev=True or enable_advanced_features=True.",
+      "reasoning": "Real bug confirmed. Golden comment is clear about the issue (negative slicing) but lacks file/line specificity. Droid caught both instances of this bug with specific file/line info.",
+      "files_explored": [
+        "src/sentry/api/paginator.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "When requests are authenticated with API keys or org auth tokens (which have user_id=None), organization_context.member is None. Line 71 attempts to access organization_context.member.has_global_access without checking if member is None, causing an AttributeError crash when optimized_pagination=true is used, even though the request passed all permission checks with valid org:write scope.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/endpoints/organization_auditlogs.py",
+        "line": 71
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": true,
+      "droid_comment_id": 2695944051,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 71: 'enable_advanced = request.user.is_superuser or organization_context.member.has_global_access' accesses member without None check.",
+      "reasoning": "Real bug confirmed. Golden comment is highly specific with file reference, line number, exact variable names, and explains the authentication context that triggers the bug. Droid also caught this exact same bug.",
+      "files_explored": [
+        "src/sentry/api/endpoints/organization_auditlogs.py",
+        "src/sentry/auth/access.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "get_item_key assumes a numeric key, but the paginator is used with order_by=-datetime in the audit logs endpoint; calling math.floor/ceil on a datetime will raise a TypeError.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/paginator.py",
+        "line": 838
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which paginator class"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "OptimizedCursorPaginator.get_item_key (line 837-839) does: 'value = getattr(item, self.key); return int(math.floor(value) if self._is_asc(for_prev) else math.ceil(value))'. For datetime values, math.floor() will raise TypeError. DateTimePaginator handles this by converting datetime to float first.",
+      "reasoning": "Real bug confirmed. OptimizedCursorPaginator is used with order_by='-datetime' in the audit logs endpoint, but its get_item_key doesn't convert datetime to numeric like DateTimePaginator does. Calling math.floor on a datetime raises TypeError. Droid did NOT catch this bug.",
+      "files_explored": [
+        "src/sentry/api/paginator.py",
+        "src/sentry/api/endpoints/organization_auditlogs.py",
+        "src/sentry/models/auditlogentry.py"
+      ]
+    }
+  }
+]

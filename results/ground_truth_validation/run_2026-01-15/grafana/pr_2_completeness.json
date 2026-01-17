@@ -1,0 +1,37 @@
+{
+  "pr_number": 2,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Asymmetric cache trust logic: cached grants trusted immediately but cached denials fall through to DB, allowing stale grants to persist after permission revocation",
+      "file": "pkg/services/authz/rbac/service.go",
+      "line": 127,
+      "severity": "high",
+      "type": "security"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 0,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": null,
+    "recall": 0.0,
+    "f1": null
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "The test comment says the cached permissions 'allow access', but the map stores false for dashboards:uid:dash1, so checkPermission will still treat this scope as not allowed.",
+      "reasoning": "This is a misleading test comment, not a functional bug. The test's intent is to prove permDenialCache takes precedence over permCache. Since permDenialCache is checked first and returns denial immediately, the permCache is never reached - whether it stores true or false is irrelevant to the test outcome. The test logic is correct; only the explanatory comment is confusing."
+    }
+  ],
+  "droid_missed": [1],
+  "golden_missed": []
+}

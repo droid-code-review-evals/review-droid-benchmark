@@ -1,0 +1,52 @@
+{
+  "pr_number": 4,
+  "pr_title": "Add rolling-updates feature flag and compatibility framework",
+  "ground_truth_bug_count": 1,
+  "droid_analysis": {
+    "total_comments": 3,
+    "true_positives": 0,
+    "false_positives": 3,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_analysis": {
+    "total_comments": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "avg_clarity_score": 3.0,
+    "avg_specificity_score": 2.0
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["picocli.exit() calls System.exit() directly"],
+    "golden_missed": []
+  },
+  "validation_summary": {
+    "droid_comment_1": {
+      "comment": "Exit code change from 4 to 3",
+      "verdict": "FALSE_POSITIVE",
+      "reason": "Intentional API change during feature development, properly documented"
+    },
+    "droid_comment_2": {
+      "comment": "Force-enable rolling-updates in template",
+      "verdict": "FALSE_POSITIVE", 
+      "reason": "Correct behavior - feature must be enabled during preview, documented in CAUTION box"
+    },
+    "droid_comment_3": {
+      "comment": "FeatureSpec null check missing",
+      "verdict": "FALSE_POSITIVE",
+      "reason": "Null check already exists in code at lines 112-113"
+    },
+    "golden_comment_1": {
+      "comment": "picocli.exit() calls System.exit() directly",
+      "verdict": "TRUE_POSITIVE",
+      "reason": "Valid design concern - System.exit() terminates JVM which is problematic for embedded/programmatic usage"
+    }
+  }
+}

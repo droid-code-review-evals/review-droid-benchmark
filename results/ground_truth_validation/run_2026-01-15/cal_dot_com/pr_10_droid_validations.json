@@ -1,0 +1,40 @@
+[
+  {
+    "comment_id": 2699764085,
+    "file": "scripts/test-gcal-webhooks.sh",
+    "line": 55,
+    "droid_comment": "**[P1] Fix GNU sed incompatibility (`sed -i ''`)**\n\nOn Linux (CI/devcontainers), `sed -i ''` fails (BSD/macOS-only syntax) and the script won't update `GOOGLE_WEBHOOK_URL`; use a portable form like `sed -i -E ...` (or detect OS) to avoid immediate runtime failure.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "Script fails on Linux systems (CI, Docker containers, Linux dev machines) when trying to update GOOGLE_WEBHOOK_URL in the .env file",
+      "reasoning": "Verified in test-gcal-webhooks.sh line 68: `sed -i '' -E \"s|^GOOGLE_WEBHOOK_URL=.*|GOOGLE_WEBHOOK_URL=$TUNNEL_URL|\" \"$ENV_FILE\"`. The `-i ''` syntax is BSD/macOS specific. On GNU sed (Linux), this would be interpreted as the backup suffix being '' (empty), and the following `-E` would be treated as the file to edit, causing the command to fail.",
+      "code_evidence": "Line 68: sed -i '' -E \"s|^GOOGLE_WEBHOOK_URL=.*|GOOGLE_WEBHOOK_URL=$TUNNEL_URL|\" \"$ENV_FILE\"",
+      "files_explored": [
+        "scripts/test-gcal-webhooks.sh"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699764273,
+    "file": "packages/features/apps/components/CredentialActionsDropdown.tsx",
+    "line": 56,
+    "droid_comment": "**[P2] Treat `cacheUpdatedAt` as string if it comes over tRPC**\n\n`tRPC` serializes `Date` to string unless a transformer is configured; if `cacheUpdatedAt` arrives as a string, `new Date(cacheUpdatedAt)` is fine but the prop type `Date | null` is incorrect and can mask real issues—use `Date | string | null` (or ensure a Date transformer) to prevent type/usage mismatches.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No impact - tRPC is properly configured with superjson transformer",
+      "reasoning": "Explored packages/trpc/server/trpc.ts and packages/trpc/react/trpc.ts - both configure superjson as the transformer. superjson properly handles Date serialization/deserialization. The prop type `Date | null` is correct because superjson transforms dates back to Date objects on the client. The code at line 89 `new Date(cacheUpdatedAt)` works correctly whether cacheUpdatedAt is a Date or string, making this defensive coding rather than a bug.",
+      "code_evidence": "packages/trpc/server/trpc.ts line 8: `import superjson from \"superjson\";` and line 13: `transformer: superjson`. Same in packages/trpc/react/trpc.ts.",
+      "files_explored": [
+        "packages/features/apps/components/CredentialActionsDropdown.tsx",
+        "packages/trpc/server/trpc.ts",
+        "packages/trpc/react/trpc.ts"
+      ]
+    }
+  }
+]

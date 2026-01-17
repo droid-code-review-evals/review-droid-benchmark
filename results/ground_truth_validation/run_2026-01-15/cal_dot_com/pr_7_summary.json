@@ -1,0 +1,60 @@
+{
+  "pr_number": 7,
+  "pr_title": "feat: Sync app credentials between Cal.com & self-hosted platforms (#11059)",
+  "ground_truth_bug_count": 9,
+  "droid_analysis": {
+    "total_comments": 5,
+    "true_positives": 5,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.778,
+    "f1": 0.875,
+    "bugs_found_summary": [
+      "Webhook header case sensitivity issue",
+      "Invalid Zod schema syntax in parseRefreshTokenResponse",
+      "Hardcoded 'refresh_token' string corruption",
+      "parseRefreshTokenResponse returns safeParse wrapper not data",
+      "Missing prisma import in Salesforce CalendarService",
+      "Stale access_token used in jsforce connection",
+      "credentialId passed instead of userId to refreshOAuthTokens"
+    ]
+  },
+  "golden_analysis": {
+    "total_comments": 5,
+    "true_positives": 5,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.556,
+    "f1": 0.714,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 4.4,
+    "bugs_found_summary": [
+      "Hardcoded 'refresh_token' string corruption",
+      "Invalid Zod schema syntax",
+      "parseRefreshTokenResponse returns safeParse wrapper",
+      "refreshOAuthTokens returns Response when sync enabled (multiple callers affected)",
+      "res?.data undefined in GoogleCalendarService sync path"
+    ]
+  },
+  "coverage": {
+    "bugs_found_by_both": 3,
+    "bugs_found_only_by_droid": 4,
+    "bugs_found_only_by_golden": 2,
+    "droid_missed": [
+      "refreshOAuthTokens returns fetch Response when sync enabled",
+      "GoogleCalendarService res?.data undefined in sync path"
+    ],
+    "golden_missed": [
+      "Webhook header case sensitivity",
+      "Missing prisma import in Salesforce",
+      "Stale access_token in jsforce connection",
+      "credentialId vs userId mismatch in zoho-bigin"
+    ]
+  },
+  "validation_notes": {
+    "shared_bugs": "Both correctly identified issues in parseRefreshTokenResponse: invalid Zod syntax, hardcoded refresh_token, and safeParse result return type",
+    "droid_unique_finds": "Droid found 4 bugs golden missed: header case sensitivity, missing import, stale token usage, and parameter type mismatch. These are all real, critical bugs.",
+    "golden_unique_finds": "Golden identified the refreshOAuthTokens Response/token mismatch affecting callers when credential sync is enabled. This is a real architectural issue Droid missed.",
+    "quality_assessment": "Both sets of comments are high quality with no false positives. Droid has better recall (7/9 vs 5/9 bugs) and found more diverse bug types. Golden comments had excellent clarity and specificity scores."
+  }
+}

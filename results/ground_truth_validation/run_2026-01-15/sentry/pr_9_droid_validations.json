@@ -1,0 +1,20 @@
+[
+  {
+    "comment_id": 2696000415,
+    "file": "src/sentry/integrations/github/integration.py",
+    "line": 455,
+    "droid_comment": "[P0] Guard integration metadata access to avoid KeyError/TypeError\n\n`integration.metadata[\"sender\"][\"login\"]` will raise if `metadata` is missing `sender`/`login` (or `metadata[\"sender\"]` is `None`), which is a realistic state for older rows or unexpected webhook payload shapes; use `.get()` and fail closed (render error) instead of crashing.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Would raise KeyError when integration.metadata does not contain 'sender' key, or TypeError if sender is None. This could occur for older integration rows or unexpected webhook payloads.",
+      "reasoning": "Verified in code: build_integration() only sets metadata['sender'] if state.get('sender') is truthy. The sender data comes from webhook events, so older integrations created before this code change wouldn't have sender metadata. Line 500-502 directly accesses integration.metadata['sender']['login'] without checking existence, which will crash.",
+      "code_evidence": "Line 500-502: `if (pipeline.fetch_state('github_authenticated_user') != integration.metadata['sender']['login']):`. The sender is conditionally set at line 378: `if state.get('sender'): integration['metadata']['sender'] = state['sender']`",
+      "files_explored": [
+        "src/sentry/integrations/github/integration.py"
+      ]
+    }
+  }
+]

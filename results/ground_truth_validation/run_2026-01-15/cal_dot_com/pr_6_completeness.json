@@ -1,0 +1,36 @@
+{
+  "pr_number": 6,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Dayjs object comparison with === always returns false (dead code for all-day override check)",
+      "file": "packages/trpc/server/routers/viewer/slots.ts",
+      "line": 114
+    },
+    {
+      "id": 2,
+      "description": "Working hours end time calculated using slotStartTime instead of slotEndTime (allows bookings past working hours)",
+      "file": "packages/trpc/server/routers/viewer/slots.ts",
+      "line": 141
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [],
+  "golden_missed": []
+}

@@ -1,0 +1,39 @@
+[
+  {
+    "comment_id": 2699761373,
+    "file": "app/models/blocked_email.rb",
+    "line": 15,
+    "droid_comment": "**[P1] Make `should_block?` update stats atomically**\n\n`record.match_count += 1; record.save` is a read-modify-write that can lose increments under concurrent signups, and `save` failures are silently ignored while still returning `record.action_type == :block`; use an atomic `update_all(\"match_count = match_count + 1, last_match_at = ?\", Time.zone.now)` (or `increment_counter`) and handle save/update failure explicitly.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "race_condition",
+      "impact": "Under concurrent signups, match_count increments can be lost due to read-modify-write race. Additionally, if save fails, the method still returns true for blocked emails, silently losing statistics but not blocking functionality.",
+      "reasoning": "The code reads the record, modifies match_count in memory, then saves. If two concurrent requests both read match_count=5, increment to 6, and save, the final value will be 6 instead of 7. This is a classic race condition in concurrent environments. The `save` return value is not checked, so failures are silent. This matches the golden comment about 'side effects during a read operation' and race conditions.",
+      "code_evidence": "Lines 12-17 in blocked_email.rb show: record = BlockedEmail.where(email: email).first; if record; record.match_count += 1; record.last_match_at = Time.zone.now; record.save; end. The save is not atomic.",
+      "files_explored": [
+        "app/models/blocked_email.rb",
+        "lib/validators/email_validator.rb"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699761586,
+    "file": "app/controllers/users_controller.rb",
+    "line": 194,
+    "droid_comment": "**[P2] Avoid leaking user attributes in failed signup response**\n\nReturning `values: user.attributes.slice(...)` echoes back whatever was assigned to the model (including potentially unpermitted/normalized data) on validation failure; use `params.slice(...)` (or the sanitized inputs you actually accept) so the response can't expose unexpected model attributes.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "false_positive",
+      "impact": "Very minimal. The slice explicitly limits to 'name', 'username', 'email' - values the user themselves submitted. No sensitive data is leaked.",
+      "reasoning": "The code returns `user.attributes.slice('name', 'username', 'email')` which only includes the three values the user submitted in the form. These are not sensitive - they were provided by the user. The concern about 'normalized data' is theoretical at best since these fields don't undergo security-sensitive normalization. Using params vs attributes would return essentially the same values. This is an overly defensive concern, not a real security bug.",
+      "code_evidence": "Line 197 shows: values: user.attributes.slice('name', 'username', 'email'). These are user-provided values being echoed back to help repopulate the form on failure.",
+      "files_explored": [
+        "app/controllers/users_controller.rb"
+      ]
+    }
+  }
+]

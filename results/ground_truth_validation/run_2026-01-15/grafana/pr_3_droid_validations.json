@@ -1,0 +1,42 @@
+[
+  {
+    "comment_id": 2699751662,
+    "file": "pkg/plugins/log/fake.go",
+    "line": 46,
+    "droid_comment": "[P2] Preserve logger instance in TestLogger.FromContext\n\n`FromContext` currently returns a new logger, so callers logging via `logger.FromContext(ctx)` won't record into the original `TestLogger` and tests may miss logs. Returning `f` (or a child tied to `f`) keeps log capture consistent.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Tests that use TestLogger and expect to capture logs from code paths using FromContext will fail to capture those logs, leading to false test passes or incorrect test assertions",
+      "reasoning": "The TestLogger.FromContext implementation creates a brand new TestLogger instance instead of returning `f` or a child logger. This means any logs recorded via the contextual logger are lost to the test framework. In production code that calls logger.FromContext(ctx).Info(...), the test would never see those log entries.",
+      "code_evidence": "Line 46: `return NewTestLogger()` - creates a completely new instance disconnected from the original TestLogger's DebugLogs, InfoLogs, WarnLogs, ErrorLogs fields",
+      "files_explored": [
+        "pkg/plugins/log/fake.go",
+        "pkg/plugins/log/ifaces.go",
+        "pkg/plugins/log/logger.go"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751663,
+    "file": "pkg/plugins/log/logger.go",
+    "line": 48,
+    "droid_comment": "[P1] Avoid type assertion on infra logger FromContext result\n\n`d.l.FromContext(ctx)` returns an `infra/log.Logger` interface, so asserting it to `*log.ConcreteLogger` is not guaranteed and will silently drop contextual attributes via `return d.New()`. Prefer wrapping the returned logger interface directly (or store `log.Logger` instead of `*log.ConcreteLogger`) so context-enriched loggers aren't lost.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "When the type assertion fails (possible if infra/log implementation changes), the fallback `d.New()` returns a logger without the contextual attributes that were supposed to be extracted from the context, losing valuable debugging information",
+      "reasoning": "The infra/log.Logger.FromContext returns Logger interface. While currently ConcreteLogger.FromContext returns *ConcreteLogger (via cl.New()), relying on this internal behavior is fragile. The type assertion `d.l.FromContext(ctx).(*log.ConcreteLogger)` will fail if the underlying implementation changes. The fallback creates a new logger without context, silently dropping the contextual attributes.",
+      "code_evidence": "Lines 48-54: `concreteInfraLogger, ok := d.l.FromContext(ctx).(*log.ConcreteLogger); if !ok { return d.New() }` - the fallback loses contextual attributes. In pkg/infra/log/interface.go, FromContext returns Logger interface not *ConcreteLogger.",
+      "files_explored": [
+        "pkg/plugins/log/logger.go",
+        "pkg/infra/log/log.go",
+        "pkg/infra/log/interface.go"
+      ]
+    }
+  }
+]

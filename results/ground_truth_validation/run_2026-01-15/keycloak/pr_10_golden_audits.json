@@ -1,0 +1,54 @@
+[
+  {
+    "golden_comment": "Returning null from getSubGroupsCount() violates the GroupModel contract (Javadoc says it never returns null) and may lead to NPEs in callers that expect a non-null count.",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+        "line": 275
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699750677,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "GroupModel interface line 258-261 explicitly states 'Never returns {@code null}'. The PR code at line 275 returns null when model is null. GroupUtils.populateSubGroupCount() would throw NPE when calling setSubGroupCount with null.",
+      "reasoning": "Real bug confirmed. Golden comment accurately describes the contract violation and its consequences. The issue is specific about what the problem is (returning null) and references the Javadoc contract. Droid caught the exact same bug with similar specificity.",
+      "files_explored": [
+        "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+        "server-spi/src/main/java/org/keycloak/models/GroupModel.java",
+        "services/src/main/java/org/keycloak/utils/GroupUtils.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The reader thread isn't waited for; flipping deletedAll to true and asserting immediately can race and miss exceptions added just after the flag change, making this test flaky.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+        "line": 138
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699750912,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Test at lines 134-157: Thread created without any Thread.join() call. After deletedAll.set(true) on line 155, the assertion at line 157 executes immediately without waiting for thread termination.",
+      "reasoning": "Real bug confirmed. The golden comment accurately describes the race condition - the reader thread is not joined before the assertion. This means exceptions could be added after the assertion, or the assertion could pass incorrectly. Classic test flakiness issue.",
+      "files_explored": [
+        "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java"
+      ]
+    }
+  }
+]

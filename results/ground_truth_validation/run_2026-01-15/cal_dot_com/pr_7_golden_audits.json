@@ -1,0 +1,131 @@
+[
+  {
+    "golden_comment": "The parseRefreshTokenResponse function incorrectly sets refresh_token to the hardcoded string 'refresh_token' when it's missing from the OAuth refresh token response. This invalidates the token, breaking subsequent token refreshes and causing authentication failures.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+        "line": 26
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699764747,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 26: refreshTokenResponse.data.refresh_token = 'refresh_token' - sets literal string 'refresh_token' instead of preserving original or handling missing value properly",
+      "reasoning": "Real bug confirmed. When a token refresh response doesn't include a refresh_token (which is normal for many OAuth providers that don't rotate refresh tokens), this code replaces it with the literal string 'refresh_token' which would fail on subsequent refresh attempts.",
+      "files_explored": [
+        "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Invalid Zod schema syntax. Computed property keys like [z.string().toString()] are not valid in Zod object schemas and will cause runtime errors.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+        "line": 7
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699764747,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Lines 7-10: [z.string().toString()]: z.number() and [z.string().optional().toString()]: z.unknown().optional() - these are invalid Zod object schema syntax, computed keys don't work this way in z.object()",
+      "reasoning": "Real bug confirmed. z.object() requires literal string keys or uses z.record() for dynamic keys. The code [z.string().toString()] evaluates to the string '[object Object]' or similar, not a dynamic key pattern. This doesn't accomplish the intended validation of 'any number property'.",
+      "files_explored": [
+        "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "parseRefreshTokenResponse returns a Zod safeParse result ({ success, data, error }), not the credential key object. Persisting that as key stores the wrapper instead of the token payload; we should store the parsed data or use schema parse.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+        "line": 29
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699764747,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 29: return refreshTokenResponse - returns safeParse result {success, data, error}. GoogleCalendarService line 96: data: { key } - stores the full safeParse result instead of .data",
+      "reasoning": "Real bug confirmed. parseRefreshTokenResponse returns the full safeParse result object. In GoogleCalendarService line 96, this is stored directly as 'key', meaning the credential will contain {success: true, data: {...}, error: undefined} instead of just the token data. This corrupts the credential structure.",
+      "files_explored": [
+        "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+        "packages/app-store/googlecalendar/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "When APP_CREDENTIAL_SHARING_ENABLED and CALCOM_CREDENTIAL_SYNC_ENDPOINT are set, the refreshFunction helper returns the fetch Response, but several callers (for example GoogleCalendarService.refreshAccessToken expecting res.data, and HubspotCalendarService.refreshAccessToken expecting a HubspotToken) assume it returns the integration-specific token object. That mismatch will cause runtime errors in the sync-enabled path unless the return type or those call sites are adjusted.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/_utils/oauth/refreshOAuthTokens.ts",
+        "line": 12
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "refreshOAuthTokens.ts line 12: return response (fetch Response). GoogleCalendarService line 92: const token = res?.data - fetch Response has no .data property. HubspotCalendarService line 176: typed as HubspotToken but is actually fetch Response",
+      "reasoning": "Real bug confirmed. When APP_CREDENTIAL_SHARING_ENABLED is true and CALCOM_CREDENTIAL_SYNC_ENDPOINT is configured, refreshOAuthTokens returns a raw fetch Response object. But callers expect the parsed token data. GoogleCalendarService accesses .data (undefined on Response), HubspotCalendarService types it as HubspotToken but receives Response.",
+      "files_explored": [
+        "packages/app-store/_utils/oauth/refreshOAuthTokens.ts",
+        "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "packages/app-store/hubspot/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "golden_comment": "When the sync endpoint path is used, res is a fetch Response and has no .data; res?.data will be undefined and token.access_token will throw at runtime. This relies on a consistent return shape from refreshOAuthTokens, which isn't guaranteed currently.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "line": 92
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "GoogleCalendarService.ts line 92: const token = res?.data - when sync endpoint is used, res is a fetch Response which has no .data property. Line 93: token.access_token would throw 'Cannot read property access_token of undefined'",
+      "reasoning": "Real bug confirmed. This is a specific manifestation of the previous bug. When the credential sync endpoint path is taken in refreshOAuthTokens, the return value is a fetch Response. Accessing .data on Response returns undefined, then accessing .access_token on undefined throws TypeError. This is a duplicate/related to golden comment #4 but more specific to GoogleCalendarService.",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "packages/app-store/_utils/oauth/refreshOAuthTokens.ts"
+      ]
+    }
+  }
+]

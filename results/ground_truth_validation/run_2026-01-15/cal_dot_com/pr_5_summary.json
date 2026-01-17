@@ -1,0 +1,62 @@
+{
+  "pr_number": 5,
+  "pr_title": "Fixes that workflow reminders of cancelled and rescheduled bookings are still sent (#7232)",
+  "ground_truth_bug_count": 3,
+  "droid_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.667,
+    "f1": 0.8,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 3.5
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["immediateDelete=true path doesn't delete WorkflowReminder DB record (emailReminderManager.ts:213)"],
+    "golden_missed": ["NULL referenceId sent to SendGrid in cron job (scheduleEmailReminders.ts:43)"]
+  },
+  "key_findings": {
+    "droid_strengths": [
+      "High precision - both comments were valid bugs",
+      "Caught the NULL referenceId bug that golden missed",
+      "Provided exact file and line number references"
+    ],
+    "droid_weaknesses": [
+      "Missed the immediateDelete database orphan bug which is clearly visible in the code",
+      "Only caught one instance of async forEach pattern when there are 7+ instances"
+    ],
+    "golden_strengths": [
+      "Caught the critical immediateDelete bug that droid missed",
+      "More comprehensive description of async forEach - covers multiple locations conceptually"
+    ],
+    "golden_weaknesses": [
+      "Missed the NULL referenceId bug in the cron job",
+      "Less specific about file/line locations (specificity score 3.5 vs droid's precise locations)"
+    ]
+  },
+  "pr_context": {
+    "purpose": "Fix workflow reminders still being sent for cancelled/rescheduled bookings",
+    "approach": "Added 'cancelled' field to WorkflowReminder, modified delete functions to mark as cancelled or immediate delete, updated cron job to handle cancellations",
+    "files_changed": 10,
+    "key_changes": [
+      "Added 'cancelled' boolean field to WorkflowReminder schema",
+      "Modified deleteScheduledEmailReminder to accept reminderId, referenceId, and immediateDelete params",
+      "Modified deleteScheduledSMSReminder to accept reminderId and referenceId params",
+      "Added cancellation logic to scheduleEmailReminders cron job",
+      "Updated handleNewBooking to cancel reminders when rescheduling",
+      "Updated handleCancelBooking to cancel reminders"
+    ]
+  }
+}

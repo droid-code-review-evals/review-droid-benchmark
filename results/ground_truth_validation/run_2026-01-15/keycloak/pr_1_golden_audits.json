@@ -1,0 +1,60 @@
+[
+  {
+    "golden_comment": "ConditionalPasskeysEnabled() called without UserModel parameter",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": null,
+      "is_specific": false,
+      "is_clear": false,
+      "clarity_score": 2,
+      "specificity_score": 1,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "what the actual issue is",
+        "why this is a problem"
+      ],
+      "vagueness_issues": [
+        "Comment is extremely vague - there is no method called 'ConditionalPasskeysEnabled()' in the code",
+        "The actual method is 'isConditionalPasskeysEnabled(UserModel user)' which DOES take a UserModel parameter",
+        "Unclear what 'called without UserModel parameter' means - the method signature requires it"
+      ],
+      "code_evidence": "The PR adds 'protected boolean isConditionalPasskeysEnabled(UserModel user)' at line 157. It IS called with a UserModel parameter at lines 115 and 137: 'isConditionalPasskeysEnabled(context.getUser())'. The user parameter could be null when context.getUser() is null, but that's handled by the method's implementation.",
+      "reasoning": "This golden comment appears to be either misworded or based on a misunderstanding of the code. The method isConditionalPasskeysEnabled() takes a UserModel parameter and is always called with context.getUser() as the argument. The method handles null user correctly by returning false (user != null check). There's no bug here - just a confusing comment.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "With isConditionalPasskeysEnabled(UserModel user) requiring user != null, authenticate(...) will not call webauthnAuth.fillContextForm(context) on the initial login page where context.getUser() is still null, so conditional passkey UI will not be set up for first-time passkey login. Consider whether this should also be enabled when no user has been selected yet so ID-less passkey authentication on the initial login form continues to work.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+        "line": 115
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "exact line number (but method name is given)"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "BEFORE (base branch): In authenticate(), the code was 'if (webauthnAuth != null && webauthnAuth.isPasskeysEnabled()) { webauthnAuth.fillContextForm(context); }' inside the else branch (when user is null). This enabled conditional passkey UI on initial login.\n\nAFTER (PR): The code changed to 'if (isConditionalPasskeysEnabled(context.getUser())) { webauthnAuth.fillContextForm(context); }' OUTSIDE the if/else blocks. Since isConditionalPasskeysEnabled requires user != null, and context.getUser() is null on initial login, fillContextForm() is never called for first-time visitors.\n\nThis is a REGRESSION - the original code correctly handled the case where user is null (initial login page), but the new code requires a user to be set first.",
+      "reasoning": "This is a real functional regression. The PR moves the passkey setup call outside the if/else blocks but adds a user != null requirement. On the initial login page, there's no user selected yet, so context.getUser() returns null. With the new isConditionalPasskeysEnabled() requiring user != null, the conditional passkey UI won't be set up for ID-less passkey authentication (where users authenticate without first providing a username). This breaks the discoverable credential flow for WebAuthn.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java"
+      ]
+    }
+  }
+]

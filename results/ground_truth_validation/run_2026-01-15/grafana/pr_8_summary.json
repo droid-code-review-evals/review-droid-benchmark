@@ -1,0 +1,30 @@
+{
+  "pr_number": 8,
+  "pr_title": "Frontend Asset Optimization",
+  "ground_truth_bug_count": 2,
+  "droid_analysis": {
+    "total_comments": 1,
+    "true_positives": 1,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 2,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "avg_clarity_score": 5.0,
+    "avg_specificity_score": 4.5
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": ["Cache corruption on error - nil result overwrites valid cached entry when fetch fails"],
+    "golden_missed": []
+  }
+}

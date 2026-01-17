@@ -1,0 +1,39 @@
+[
+  {
+    "comment_id": 2699764058,
+    "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+    "line": 40,
+    "droid_comment": "[P1] Restrict deleteMany retryCount clause to SMS reminders - As written, the `OR` deletes *any* `WorkflowReminder` with `retryCount > 1` regardless of method, which can wipe out email/whatsapp reminders once they gain retries. Make the second branch include `method: WorkflowMethods.SMS` (or move `method` outside the `OR`) so this cleanup only targets SMS.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "The deleteMany query has an OR clause where the second condition (retryCount > 1) has no method filter. This means ANY WorkflowReminder (EMAIL, SMS, or WHATSAPP) with retryCount > 1 will be deleted during the SMS scheduler cron job. This could wipe out email and WhatsApp reminders that have nothing to do with SMS processing.",
+      "reasoning": "Examined the code at lines 28-45. The Prisma deleteMany uses an OR with two conditions: (1) method=SMS AND scheduledDate<=now, (2) retryCount > 1. The second condition lacks a method filter. Since WorkflowMethods enum has EMAIL, SMS, and WHATSAPP values (confirmed in schema.prisma), reminders of any type with retryCount > 1 would be incorrectly deleted. The file is scheduleSMSReminders.ts, so clearly only SMS reminders should be affected.",
+      "code_evidence": "Lines 30-45 show the deleteMany with OR clause. The second branch at lines 39-42 only checks retryCount without filtering by method. The WorkflowMethods enum (schema.prisma) confirms EMAIL, SMS, WHATSAPP exist as method types.",
+      "files_explored": [
+        "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+        "packages/prisma/schema.prisma"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699764229,
+    "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+    "line": 188,
+    "droid_comment": "[P1] Avoid lost updates when incrementing retryCount - `retryCount: reminder.retryCount + 1` can undercount retries when multiple cron runs/processes handle the same reminder concurrently (both read the same value then write back the same increment). Prefer an atomic increment: `retryCount: { increment: 1 }`",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "race_condition",
+      "impact": "When multiple cron jobs or processes run concurrently (which is common in distributed systems), they could both read the same retryCount value, say 0, then both write back 1 instead of one writing 1 and the other writing 2. This causes undercounting of retries, potentially allowing more retry attempts than intended before cleanup.",
+      "reasoning": "The code reads reminder.retryCount from the database query result earlier, then uses that stale value to compute the new value. If two processes both fetch retryCount=0 at T0, then both write retryCount=1 at T1, the count should be 2 but ends up as 1. Prisma supports atomic increments via { increment: 1 } syntax which performs the increment in the database, avoiding this race condition. The same pattern appears in two places: lines 182-188 (on scheduleSMS failure) and lines 191-197 (in catch block).",
+      "code_evidence": "Line 188: retryCount: reminder.retryCount + 1, and line 197: same pattern. Both use the stale in-memory value instead of atomic increment.",
+      "files_explored": [
+        "packages/features/ee/workflows/api/scheduleSMSReminders.ts"
+      ]
+    }
+  }
+]

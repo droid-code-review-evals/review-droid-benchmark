@@ -1,0 +1,66 @@
+{
+  "pr_number": 2,
+  "pr_title": "FEATURE: per-topic unsubscribe option in emails",
+  "ground_truth_bug_count": 1,
+  "droid_analysis": {
+    "total_comments": 3,
+    "true_positives": 1,
+    "false_positives": 2,
+    "precision": 0.333,
+    "recall": 1.0,
+    "f1": 0.5,
+    "comments_summary": [
+      {
+        "comment_id": 2699755962,
+        "verdict": "FALSE_POSITIVE",
+        "summary": "XSS via triple-stash claim - invalid because fancy_title is HTML-escaped server-side"
+      },
+      {
+        "comment_id": 2699755963,
+        "verdict": "TRUE_POSITIVE",
+        "summary": "TopicUser nil bug - valid, tu.notification_level will crash when TopicUser record doesn't exist"
+      },
+      {
+        "comment_id": 2699756145,
+        "verdict": "FALSE_POSITIVE",
+        "summary": "Typo in property name - not a bug since typo is consistent across files"
+      }
+    ]
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667,
+    "avg_clarity_score": 4.5,
+    "avg_specificity_score": 2.0,
+    "comments_summary": [
+      {
+        "comment": "Potential nil pointer exception",
+        "verdict": "TRUE_POSITIVE",
+        "summary": "Correctly identifies TopicUser nil bug but lacks file/line specificity"
+      },
+      {
+        "comment": "Typo in property name",
+        "verdict": "FALSE_POSITIVE",
+        "summary": "Not a functional bug - typo is consistent. Also incorrectly describes the typo."
+      }
+    ]
+  },
+  "coverage": {
+    "bugs_found_by_both": 1,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": []
+  },
+  "validation_notes": [
+    "Only 1 real bug exists in this PR: TopicUser can be nil in unsubscribe action",
+    "Both droid and golden correctly identified the TopicUser nil bug",
+    "The XSS concern raised by droid is a false positive due to server-side HTML escaping",
+    "The typo issue raised by both is not a functional bug since the misspelling is consistent",
+    "Droid comment about current_user being nil is incorrect - unsubscribe action has ensure_logged_in filter"
+  ]
+}

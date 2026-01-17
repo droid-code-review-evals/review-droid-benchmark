@@ -1,0 +1,31 @@
+{
+  "pr_number": 1,
+  "pr_title": "Async import of the appStore packages (#8087)",
+  "ground_truth_bug_count": 5,
+  "droid_analysis": {
+    "total_comments": 5,
+    "true_positives": 5,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_analysis": {
+    "total_comments": 2,
+    "true_positives": 1,
+    "false_positives": 1,
+    "precision": 0.5,
+    "recall": 0.8,
+    "f1": 0.615,
+    "avg_clarity_score": 3.5,
+    "avg_specificity_score": 1.5
+  },
+  "coverage": {
+    "bugs_found_by_both": 4,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": ["getCalendarCredentials stores Promise<Calendar> without await (CalendarManager.ts:28)"]
+  },
+  "validation_notes": "Droid outperformed golden on this PR. All 5 droid comments were valid bugs with specific file:line references. Droid identified the critical P0 bug in getCalendarCredentials where getCalendar() was changed to async but the function still stores the result without await, causing a type mismatch (Promise<Calendar> stored where Calendar expected). Golden correctly identified the forEach(async...) pattern but as a single generic comment covering 4 instances, and had 1 false positive about adding try-catch for import failures that already have graceful handling."
+}

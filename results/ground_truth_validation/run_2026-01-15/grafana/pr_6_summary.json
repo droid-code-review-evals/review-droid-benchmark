@@ -1,0 +1,75 @@
+{
+  "pr_number": 6,
+  "pr_title": "Dual writer: mode 3 (#90045)",
+  "ground_truth_bug_count": 5,
+  "droid_analysis": {
+    "total_comments": 5,
+    "true_positives": 5,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_analysis": {
+    "total_comments": 3,
+    "true_positives": 3,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.8,
+    "f1": 0.889,
+    "avg_clarity_score": 4.33,
+    "avg_specificity_score": 2.33
+  },
+  "coverage": {
+    "bugs_found_by_both": 4,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 0,
+    "droid_missed": [],
+    "golden_missed": ["DeleteCollection goroutine uses recordStorageDuration instead of recordLegacyDuration"]
+  },
+  "bug_details": {
+    "all_bugs": [
+      {
+        "id": 1,
+        "description": "Context/log propagation bug in Delete",
+        "severity": "medium",
+        "found_by": "both",
+        "droid_comment_id": 2699750807,
+        "golden_matched": true
+      },
+      {
+        "id": 2,
+        "description": "DeleteCollection uses recordStorageDuration for legacy operation",
+        "severity": "high",
+        "found_by": "droid_only",
+        "droid_comment_id": 2699751049,
+        "golden_matched": false
+      },
+      {
+        "id": 3,
+        "description": "Create failure records with recordLegacyDuration",
+        "severity": "high",
+        "found_by": "both",
+        "droid_comment_id": 2699751215,
+        "golden_matched": true
+      },
+      {
+        "id": 4,
+        "description": "Update failure records with recordLegacyDuration",
+        "severity": "high",
+        "found_by": "both",
+        "droid_comment_id": 2699751702,
+        "golden_matched": true
+      },
+      {
+        "id": 5,
+        "description": "Delete uses name instead of kind in metrics",
+        "severity": "high",
+        "found_by": "both",
+        "droid_comment_id": 2699751484,
+        "golden_matched": true
+      }
+    ]
+  },
+  "analysis_notes": "All 5 droid comments were valid bugs. Golden had 3 comments covering 4 of the 5 bugs (one golden comment was vague enough to cover both Create and Update recordLegacyDuration bugs). Droid found one bug that golden missed: the DeleteCollection goroutine incorrectly using recordStorageDuration for a legacy operation. Droid showed higher precision and recall, with more specific file/line details."
+}

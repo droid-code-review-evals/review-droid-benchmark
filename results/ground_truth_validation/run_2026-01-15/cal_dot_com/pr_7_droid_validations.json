@@ -1,0 +1,95 @@
+[
+  {
+    "comment_id": 2699764746,
+    "file": "apps/web/pages/api/webhook/app-credential.ts",
+    "line": 18,
+    "droid_comment": "[P1] Normalize webhook header lookup (Node lowercases header keys)\n\n`req.headers[...]` keys are lowercased in Node; if `CALCOM_WEBHOOK_HEADER_NAME` is provided with any uppercase characters, this lookup will miss and always 403. Consider lowercasing the env var (and/or using `req.headers[String(name).toLowerCase()]`).",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Webhook authentication will fail (403) if CALCOM_WEBHOOK_HEADER_NAME env var contains uppercase letters, since Node.js lowercases all incoming HTTP header names in req.headers",
+      "reasoning": "Node.js normalizes all incoming HTTP header names to lowercase in the IncomingMessage.headers object. If CALCOM_WEBHOOK_HEADER_NAME is set to 'X-Calcom-Secret' or any value with uppercase chars, req.headers['X-Calcom-Secret'] will return undefined since the actual key is 'x-calcom-secret'. This causes all webhook requests to be rejected with 403.",
+      "code_evidence": "Line 24-25: req.headers[process.env.CALCOM_WEBHOOK_HEADER_NAME || 'calcom-webhook-secret'] - if env var contains uppercase, lookup fails",
+      "files_explored": [
+        "apps/web/pages/api/webhook/app-credential.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699764747,
+    "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+    "line": 6,
+    "droid_comment": "[P0] Fix invalid Zod schema and return type in token parsing\n\n`minimumTokenResponseSchema` uses computed keys (`[z.string().toString()]`) which isn't valid in `z.object()`, and this helper returns the full `safeParse` result but several callers treat it as the parsed data (e.g. spreading `.data`). This will either fail at runtime or corrupt the stored credential shape.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Multiple issues: (1) z.object() with computed keys [z.string().toString()] is invalid syntax - this evaluates to string literals, not dynamic keys. (2) The function returns safeParse result {success, data, error} but callers like GoogleCalendarService line 90 spread .data directly. (3) Line 26 sets data.refresh_token to hardcoded string 'refresh_token' if missing, which corrupts credentials.",
+      "reasoning": "The Zod schema uses [z.string().toString()] which evaluates to literal string keys, not valid computed property syntax for dynamic keys. The safeParse result wrapper is returned but callers expect raw data. The hardcoded 'refresh_token' string on line 26 is clearly wrong - should preserve original refresh_token, not replace with literal string.",
+      "code_evidence": "Lines 7-10: [z.string().toString()]: z.number() - invalid computed key. Line 26: refreshTokenResponse.data.refresh_token = 'refresh_token' - hardcoded string corruption. Return value is safeParse result, not .data",
+      "files_explored": [
+        "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+        "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "packages/app-store/salesforce/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699764748,
+    "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+    "line": 99,
+    "droid_comment": "[P1] Use refreshed token values for the jsforce connection\n\nYou refresh and persist new tokens, but `jsforce.Connection` is still constructed with `credentialKey.access_token` (stale) rather than the refreshed `accessTokenParsed.data.access_token`. This can cause immediate auth failures after refresh.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "After token refresh, Salesforce API calls will fail with auth errors because the jsforce.Connection is initialized with the old/stale access_token from credentialKey instead of the newly refreshed accessTokenParsed.data.access_token",
+      "reasoning": "Lines 89-97 refresh the token and persist it to the database. But lines 100-106 create jsforce.Connection using credentialKey.access_token (the old value) and credentialKey.instance_url (potentially stale). The refreshed values in accessTokenParsed.data should be used instead.",
+      "code_evidence": "Line 97: await prisma.credential.update({ data: { key: { ...accessTokenParsed.data, ... } }}) - saves new token. Lines 103-105: accessToken: credentialKey.access_token, instanceUrl: credentialKey.instance_url - uses OLD values",
+      "files_explored": [
+        "packages/app-store/salesforce/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699764753,
+    "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+    "line": 93,
+    "droid_comment": "[P0] Import missing `prisma` before updating credentials\n\nThis file calls `prisma.credential.update(...)` but `prisma` is not imported, which will crash on the first token refresh path with `ReferenceError: prisma is not defined`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "The file will crash with 'ReferenceError: prisma is not defined' on any token refresh attempt since prisma is used at line 96 but never imported",
+      "reasoning": "Verified by checking imports at top of file (lines 1-20) - there is no 'import prisma' statement. Yet line 96 calls 'await prisma.credential.update(...)'. This will cause immediate ReferenceError at runtime when this code path is executed.",
+      "code_evidence": "Lines 1-20 show imports - no prisma import. Line 96: await prisma.credential.update({ where: { id: credential.id }, ... })",
+      "files_explored": [
+        "packages/app-store/salesforce/lib/CalendarService.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699764755,
+    "file": "packages/app-store/zoho-bigin/lib/CalendarService.ts",
+    "line": 87,
+    "droid_comment": "[P1] Pass userId (not credentialId) into refreshOAuthTokens\n\n`refreshOAuthTokens` expects a Cal.com `userId` to decide whether to call the sync endpoint, but this passes `credentialId`. That can incorrectly trigger syncing with the wrong identifier and return the wrong tokens for a different user.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When APP_CREDENTIAL_SHARING_ENABLED is true, the sync endpoint will receive credentialId instead of userId as 'calcomUserId', potentially returning tokens for wrong user or failing the sync entirely",
+      "reasoning": "refreshOAuthTokens third parameter is named 'userId' and used as 'calcomUserId: userId.toString()' when calling the sync endpoint. But zoho-bigin passes 'credentialId' (line 93) which is the credential's database ID, not the user ID. This is a semantic mismatch that will cause wrong behavior when credential syncing is enabled.",
+      "code_evidence": "refreshOAuthTokens.ts line 3: 'async (refreshFunction, appSlug, userId)' and line 10: 'calcomUserId: userId.toString()'. zoho-bigin CalendarService.ts line 93: passes 'credentialId' not userId",
+      "files_explored": [
+        "packages/app-store/zoho-bigin/lib/CalendarService.ts",
+        "packages/app-store/_utils/oauth/refreshOAuthTokens.ts"
+      ]
+    }
+  }
+]

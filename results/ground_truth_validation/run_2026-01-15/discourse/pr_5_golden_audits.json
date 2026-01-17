@@ -1,0 +1,56 @@
+[
+  {
+    "golden_comment": "Mixing float: left with flexbox causes layout issues. Further this PR removes the float-based right alignment for .d-header .panel, which may cause the login panel in the non-Ember/noscript header (where .panel is nested inside .row and not a flex item) to stack under the title instead of remaining right-aligned.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/assets/stylesheets/common/base/header.scss",
+        "line": 35
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "The PR removes 'float: right' from .d-header .panel (line 35 in original, now lines 35-40). In app/views/application/_header.html.erb, the noscript header has .panel nested inside .row (not directly in .contents), so flexbox styling on .contents won't position it. The panel relied on float: right for positioning.",
+      "reasoning": "Real bug confirmed. The noscript header at app/views/application/_header.html.erb shows .panel inside .row inside .contents. Since flexbox is applied to .contents but .panel is not a direct child (it's inside .row), the margin-left: auto and order(3) won't affect it. Without float: right, the panel will not be right-aligned.",
+      "files_explored": [
+        "app/assets/stylesheets/common/base/header.scss",
+        "app/views/application/_header.html.erb",
+        "app/assets/stylesheets/vendor/bootstrap.scss"
+      ]
+    }
+  },
+  {
+    "golden_comment": "-ms-align-items never existed in any version of IE/Edge; the correct legacy property is -ms-flex-align.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/assets/stylesheets/common/foundation/mixins.scss",
+        "line": 122
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699756343,
+      "missing_details": [
+        "Line number (though property name is specific)"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 122 in mixins.scss shows -ms-align-items: $alignment which is an invalid property. IE10 uses 2012 flexbox syntax with -ms-flex-align, not -ms-align-items.",
+      "reasoning": "Real bug confirmed. Both droid and golden correctly identify that -ms-align-items is not a valid CSS property. The correct IE10/11 property is -ms-flex-align (which is already present at line 121).",
+      "files_explored": [
+        "app/assets/stylesheets/common/foundation/mixins.scss"
+      ]
+    }
+  }
+]

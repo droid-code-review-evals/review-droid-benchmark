@@ -1,0 +1,21 @@
+[
+  {
+    "comment_id": 2696000612,
+    "file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+    "line": 86,
+    "droid_comment": "[P0] Don't assume contiguous offsets; current commit logic can stall forever\n\n`OffsetTracker.get_committable_offsets()` iterates `range(start, max_offset + 1)` and breaks on the first missing offset, so if Kafka delivers 100 then 102 (or compaction/retention skips 101), you will never commit 102+ even after processing everything; you need to advance based on \"next expected\" (last committed + 1) only when that exact offset is present/complete, rather than treating gaps as permanent blockers.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "If Kafka skips offsets due to compaction, retention, or transactional messages, the consumer will never commit past the gap and will stall forever. This would cause the consumer to reprocess the same messages after restart indefinitely.",
+      "reasoning": "The loop in get_committable_offsets() iterates range(start, max_offset + 1) and breaks immediately when offset not in all_offsets. Since all_offsets only contains offsets the consumer has seen, any gap (e.g., 100, 102 with 101 missing) causes the loop to break at 101, never committing 102+ even after they're processed. Kafka can legitimately have gaps due to compaction, retention, or transactional markers.",
+      "code_evidence": "Lines 82-88: for offset in range(start, max_offset + 1): if offset in all_offsets and offset not in outstanding: highest_committable = offset else: break",
+      "files_explored": [
+        "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+        "tests/sentry/remote_subscriptions/consumers/test_queue_consumer.py"
+      ]
+    }
+  }
+]

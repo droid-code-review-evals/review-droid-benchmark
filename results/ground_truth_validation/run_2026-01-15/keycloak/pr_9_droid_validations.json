@@ -1,0 +1,39 @@
+[
+  {
+    "comment_id": 2699750868,
+    "file": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+    "line": 18,
+    "droid_comment": "[P0] Avoid Optional.get() crash when no recovery codes exist\n\n`RecoveryAuthnCodesUtils.getCredential(user)` can return `Optional.empty()`, and `credentialModelOpt.get()` will throw `NoSuchElementException` (e.g., user hits the recovery-code login page without having codes configured or stored via user storage).",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "NoSuchElementException thrown when a user reaches the recovery code login page without having recovery codes configured. This could happen if the authentication flow is misconfigured or if user navigates directly to this page.",
+      "reasoning": "The code at line 17-18 retrieves an Optional<CredentialModel> via RecoveryAuthnCodesUtils.getCredential(user), but line 20 directly calls .get() without checking isPresent(). The RecoveryAuthnCodesUtils.getCredential() method searches both federated and stored credentials, and returns Optional.empty() if no recovery codes are found. This is a clear bug that would cause a runtime exception.",
+      "code_evidence": "Line 17-18: Optional<CredentialModel> credentialModelOpt = RecoveryAuthnCodesUtils.getCredential(user);\nLine 20: RecoveryAuthnCodesCredentialModel.createFromCredentialModel(credentialModelOpt.get());",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+        "server-spi/src/main/java/org/keycloak/models/utils/RecoveryAuthnCodesUtils.java"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699751079,
+    "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+    "line": 250,
+    "droid_comment": "[P0] Prevent NPE in getCredentials() for unknown users\n\n`getMyUser(user)` can return null (e.g., user not present in this provider), but `myUser.recoveryCodes` / `myUser.otp` are dereferenced unconditionally, causing an immediate `NullPointerException`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "NullPointerException when getCredentials() is called for a user not present in this storage provider. The method getMyUser() returns users.get(...) which returns null if the user doesn't exist in the map.",
+      "reasoning": "The getMyUser() method at line 226-227 returns users.get(translateUserName(user.getUsername())) which can be null. In getCredentials() at line 232, myUser is assigned without null check, then line 235 accesses myUser.recoveryCodes causing NPE. Other methods in the same class (getDisableableCredentialTypesStream at line 258-260, isConfiguredFor at line 270-271) properly check for myUser == null before accessing fields, demonstrating the expected pattern.",
+      "code_evidence": "Line 226-227: private MyUser getMyUser(UserModel user) { return users.get(translateUserName(user.getUsername())); }\nLine 232-235: var myUser = getMyUser(user); ... if (myUser.recoveryCodes != null)\nContrast with line 258-260: MyUser myUser = getMyUser(user); if (myUser != null && myUser.otp != null)",
+      "files_explored": [
+        "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java"
+      ]
+    }
+  }
+]

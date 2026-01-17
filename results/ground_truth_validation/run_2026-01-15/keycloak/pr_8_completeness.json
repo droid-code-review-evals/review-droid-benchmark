@@ -1,0 +1,55 @@
+{
+  "pr_number": 8,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Wrong null check parameter in AccessTokenContext constructor (grantType checked twice, rawTokenId not checked)",
+      "file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+      "line": 68
+    },
+    {
+      "id": 2,
+      "description": "Inverted logic AND wrong substring indices in isAccessTokenId matcher",
+      "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+      "line": 483
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "bugs_found_descriptions": [
+      "rawTokenId null check (caught fully)",
+      "isAccessTokenId inverted logic (caught the inverted check, missed wrong indices)"
+    ],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "notes": "Droid caught both bugs. For bug #2, droid identified the inverted logic but missed that the substring indices are also wrong (3,5 should be 4,6)."
+  },
+  "golden_metrics": {
+    "total_comments": 4,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "bugs_found_descriptions": [
+      "Wrong parameter in null check (caught)",
+      "isAccessTokenId inverted logic AND wrong indices (caught both aspects)"
+    ],
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "Javadoc mentions \"usually like 3-letters shortcut\" but some implementations use 2-letter shortcuts",
+      "reasoning": "Documentation inconsistency, not a functional bug. Does not cause runtime errors or incorrect behavior."
+    },
+    {
+      "golden_comment": "Catching generic RuntimeException is too broad",
+      "reasoning": "Code quality suggestion for test code. Test still works correctly as IllegalArgumentException extends RuntimeException."
+    }
+  ],
+  "droid_missed": [],
+  "golden_missed": [],
+  "analysis_notes": "Both droid and golden identified the 2 real bugs in this PR. Golden had 2 additional comments that were code quality suggestions rather than bugs (Javadoc wording, exception type specificity). Golden was more thorough on bug #2, identifying both the inverted logic AND the wrong substring indices, while droid only caught the inverted logic."
+}

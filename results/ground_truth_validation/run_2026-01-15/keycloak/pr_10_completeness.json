@@ -1,0 +1,36 @@
+{
+  "pr_number": 10,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "getSubGroupsCount() returns null violating GroupModel contract",
+      "file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+      "line": 275
+    },
+    {
+      "id": 2,
+      "description": "Reader thread not joined causing test flakiness",
+      "file": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+      "line": 138
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [],
+  "golden_missed": []
+}

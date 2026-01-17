@@ -1,0 +1,48 @@
+{
+  "pr_number": 3,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "TestLogger.FromContext returns new logger instead of preserving original, breaking test log capture",
+      "file": "pkg/plugins/log/fake.go",
+      "line": 46
+    },
+    {
+      "id": 2,
+      "description": "grafanaInfraLogWrapper.FromContext type assertion may fail, silently dropping contextual attributes",
+      "file": "pkg/plugins/log/logger.go",
+      "line": 48
+    },
+    {
+      "id": 3,
+      "description": "ContextualLoggerMiddleware methods panic on nil request (nil pointer dereference)",
+      "file": "pkg/services/pluginsintegration/clientmiddleware/contextual_logger_middleware.go",
+      "line": 40
+    },
+    {
+      "id": 4,
+      "description": "traceID no longer logged for plugin requests, breaking request tracing",
+      "file": "pkg/services/pluginsintegration/clientmiddleware/logger_middleware.go",
+      "line": 49
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [3, 4],
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_false_positives": [],
+  "droid_missed": [3, 4],
+  "golden_missed": [1, 2]
+}

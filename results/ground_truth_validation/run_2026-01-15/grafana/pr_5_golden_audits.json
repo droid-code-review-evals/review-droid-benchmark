@@ -1,0 +1,56 @@
+[
+  {
+    "golden_comment": "The rendered GrafanaRuleListItem is missing the required key prop for React list items. This can cause rendering issues when the list order changes.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": null,
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [
+        "Doesn't specify which file or component"
+      ],
+      "code_evidence": "In GrafanaGroupLoader.tsx, GrafanaRuleListItem is rendered with `key={promRule.uid}` at line ~69. The key prop IS present.",
+      "reasoning": "This is a FALSE POSITIVE. The GrafanaRuleListItem component IS rendered with a key prop: `key={promRule.uid}`. The golden comment incorrectly claims the key is missing.",
+      "files_explored": [
+        "public/app/features/alerting/unified/rule-list/GrafanaGroupLoader.tsx"
+      ]
+    }
+  },
+  {
+    "golden_comment": "RuleActionsButtons is invoked with only promRule, but SilenceGrafanaRuleDrawer inside RuleActionsButtons still depends on a Grafana Ruler rule being present, so for Grafana rules coming from list views the 'Silence notifications' menu entry (now driven by Grafana Prom abilities) will toggle showSilenceDrawer without ever rendering the drawer. This means clicking 'Silence notifications' for these rules has no visible effect, even when abilities indicate silencing is allowed.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "public/app/features/alerting/unified/rule-list/components/RuleActionsButtons.V2.tsx",
+        "line": 103
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 103: `{rulerRuleType.grafana.alertingRule(rule) && showSilenceDrawer && (` - This condition requires `rule` (RulerRuleDTO) to be present and be a Grafana alerting rule. But GrafanaRuleListItem.tsx line 44 passes only `promRule`: `actions: <RuleActionsButtons promRule={rule} groupIdentifier={groupIdentifier} compact />` - no `rule` prop is passed, so the condition is always false.",
+      "reasoning": "CONFIRMED BUG. The SilenceGrafanaRuleDrawer is conditionally rendered only when `rulerRuleType.grafana.alertingRule(rule)` is true. Since GrafanaRuleListItem only passes `promRule` (not `rule`), the `rule` parameter is undefined, making this condition always false. Users can click 'Silence notifications' (menu shows based on promRule abilities) but the drawer never renders (requires ruler rule). This is a functional regression from removing the Ruler API calls.",
+      "files_explored": [
+        "public/app/features/alerting/unified/rule-list/components/RuleActionsButtons.V2.tsx",
+        "public/app/features/alerting/unified/rule-list/GrafanaRuleListItem.tsx",
+        "public/app/features/alerting/unified/components/silences/SilenceGrafanaRuleDrawer.tsx"
+      ]
+    }
+  }
+]

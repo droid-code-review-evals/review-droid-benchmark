@@ -1,0 +1,90 @@
+[
+  {
+    "golden_comment": "Null reference if github_authenticated_user state is missing",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/integrations/github/integration.py",
+        "line": 500
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "specific variable/function name"
+      ],
+      "vagueness_issues": [
+        "Does not specify the exact location where the null reference occurs"
+      ],
+      "code_evidence": "Line 500: pipeline.fetch_state('github_authenticated_user') can return None if the OAuth flow was somehow bypassed or failed. This None value would then be compared to integration.metadata['sender']['login'], which would not immediately crash but could lead to a false mismatch.",
+      "reasoning": "Real bug confirmed. If github_authenticated_user is None (OAuth step skipped/failed), the comparison would fail even for legitimate users. The droid did not catch this specific issue - it focused on the metadata['sender'] access, not the github_authenticated_user fetch.",
+      "files_explored": [
+        "src/sentry/integrations/github/integration.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "OAuth state uses pipeline.signature (static) instead of a per-request random value",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/integrations/github/integration.py",
+        "line": 401
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 401: `state = pipeline.signature`. Verified that pipeline.signature is an MD5 hash of pipeline view class names (base.py line ~97), making it static/deterministic across all users. This is a CSRF vulnerability - the OAuth state parameter should be a per-request random value to prevent cross-site request forgery attacks.",
+      "reasoning": "Real security bug confirmed. The OAuth state parameter is meant to prevent CSRF attacks by being unpredictable and tied to the user's session. Using a static MD5 hash of class names means an attacker could potentially craft a malicious OAuth callback URL. Droid did not catch this security issue.",
+      "files_explored": [
+        "src/sentry/integrations/github/integration.py",
+        "src/sentry/pipeline/base.py",
+        "src/sentry/pipeline/store.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The code attempts to access integration.metadata[sender][login] without checking for the existence of the sender key. This causes a KeyError for integrations where the sender metadata was not set during creation",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/integrations/github/integration.py",
+        "line": 501
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2696000415,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 500-502: `if (pipeline.fetch_state('github_authenticated_user') != integration.metadata['sender']['login']):`. The sender metadata is conditionally set only when state.get('sender') is truthy during build_integration().",
+      "reasoning": "Real bug confirmed. This is the same bug identified by droid comment 2696000415. Golden comment is clear and accurate about the issue. Droid caught this with the same reasoning.",
+      "files_explored": [
+        "src/sentry/integrations/github/integration.py"
+      ]
+    }
+  }
+]

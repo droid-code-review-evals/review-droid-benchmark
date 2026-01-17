@@ -1,0 +1,93 @@
+[
+  {
+    "golden_comment": "The context is being created with d.Log instead of the log variable that was initialized with additional context values (name, kind, method). This means those values won't be propagated to the logging context.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+        "line": 98
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699750807,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 96-98: log is enriched with WithValues but ctx uses d.Log. Droid caught this exact bug.",
+      "reasoning": "Real bug confirmed. Golden describes the issue clearly - using d.Log instead of log drops the enriched context values. Droid comment 2699750807 catches the exact same bug with similar detail.",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Bug: calling recordLegacyDuration when storage operation fails should be recordStorageDuration.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+        "line": 45
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699751215,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which method (Create and Update both have this bug)"
+      ],
+      "vagueness_issues": [
+        "Does not specify which methods are affected - actually applies to both Create (line 45) and Update (line 129)"
+      ],
+      "code_evidence": "Found at line 45 (Create) and line 129 (Update). Both call recordLegacyDuration when Storage operation fails, but legacy hasn't run yet.",
+      "reasoning": "Real bug confirmed. Golden comment correctly identifies the pattern but lacks specificity. This bug occurs in TWO places (Create line 45, Update line 129). Droid caught both with separate comments (2699751215 for Create, 2699751702 for Update).",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Inconsistency: using name instead of options.Kind for metrics recording differs from other methods.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+        "line": 106
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699751484,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which method(s) affected",
+        "impact (metric cardinality explosion)"
+      ],
+      "vagueness_issues": [
+        "Golden describes as 'inconsistency' but understates the severity - this causes metric cardinality explosion"
+      ],
+      "code_evidence": "Line 106: d.recordStorageDuration(false, mode3Str, name, method, startStorage) uses object name instead of options.Kind.",
+      "reasoning": "Real bug confirmed. Golden identifies the pattern correctly but underrates the severity - using object names in metric labels causes cardinality explosion. Droid comment 2699751484 catches this with more specific impact analysis.",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go",
+        "pkg/apiserver/rest/metrics.go"
+      ]
+    }
+  }
+]

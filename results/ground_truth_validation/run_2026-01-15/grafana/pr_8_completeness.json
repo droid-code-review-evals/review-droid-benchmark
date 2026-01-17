@@ -1,0 +1,36 @@
+{
+  "pr_number": 8,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Incomplete double-checked locking - no re-check of cache after acquiring write lock",
+      "file": "pkg/api/webassets/webassets.go",
+      "line": 48
+    },
+    {
+      "id": 2,
+      "description": "Cache corruption on error - nil result overwrites valid cached entry when fetch fails",
+      "file": "pkg/api/webassets/webassets.go",
+      "line": 69
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 1,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [2],
+  "golden_missed": []
+}

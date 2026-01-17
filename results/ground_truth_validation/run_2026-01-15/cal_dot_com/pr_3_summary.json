@@ -1,0 +1,84 @@
+{
+  "pr_number": 3,
+  "pr_title": "fix: handle collective multiple host on destinationCalendar (#10967)",
+  "ground_truth_bug_count": 5,
+  "droid_analysis": {
+    "total_comments": 4,
+    "true_positives": 3,
+    "false_positives": 1,
+    "precision": 0.75,
+    "recall": 0.6,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 5,
+    "true_positives": 4,
+    "false_positives": 1,
+    "precision": 0.8,
+    "recall": 1.0,
+    "f1": 0.889,
+    "avg_clarity_score": 4.0,
+    "avg_specificity_score": 2.4
+  },
+  "coverage": {
+    "bugs_found_by_both": 3,
+    "bugs_found_only_by_droid": 0,
+    "bugs_found_only_by_golden": 2,
+    "droid_missed": [
+      "Logic inversion in organization creation - slug set when IS_TEAM_BILLING_ENABLED instead of when disabled",
+      "Calendar interface contract broken - createEvent signature mismatch across implementations"
+    ],
+    "golden_missed": []
+  },
+  "bug_details": {
+    "bug_1": {
+      "description": "Null reference error when accessing mainHostDestinationCalendar.integration",
+      "file": "packages/core/EventManager.ts",
+      "line": 118,
+      "found_by": ["droid", "golden"],
+      "severity": "high"
+    },
+    "bug_2": {
+      "description": "Logic error in updateEvent - find() with falsy externalCalendarId never matches",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 255,
+      "found_by": ["droid", "golden"],
+      "severity": "high"
+    },
+    "bug_3": {
+      "description": "Logic error in deleteEvent - same find() bug as updateEvent",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 315,
+      "found_by": ["droid", "golden"],
+      "severity": "high"
+    },
+    "bug_4": {
+      "description": "Logic inversion in organization creation",
+      "file": "packages/trpc/server/routers/viewer/organizations/create.handler.ts",
+      "line": 151,
+      "found_by": ["golden"],
+      "severity": "medium"
+    },
+    "bug_5": {
+      "description": "Calendar interface contract broken - missing credentialId parameter",
+      "file": "packages/app-store/larkcalendar/lib/CalendarService.ts",
+      "line": 106,
+      "found_by": ["golden"],
+      "severity": "low"
+    }
+  },
+  "false_positives_details": {
+    "droid": [
+      {
+        "comment": "Persisting only the first destination calendar drops other hosts",
+        "reason": "Not a bug - booking.destinationCalendar is a single Prisma relation by design"
+      }
+    ],
+    "golden": [
+      {
+        "comment": "Redundant optional chaining on mainHostDestinationCalendar?.integration",
+        "reason": "The code doesn't use optional chaining - it accesses .integration directly"
+      }
+    ]
+  }
+}

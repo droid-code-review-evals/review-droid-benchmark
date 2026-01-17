@@ -1,0 +1,58 @@
+[
+  {
+    "golden_comment": "The enableSqlExpressions function has flawed logic that always returns false, effectively disabling SQL expressions unconditionally:",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/expr/reader.go",
+        "line": 193
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699758266,
+      "missing_details": [
+        "exact line number",
+        "the specific logic flaw (inverted flag AND both branches return false)"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "func enableSqlExpressions(h *ExpressionQueryReader) bool {\n\tenabled := !h.features.IsEnabledGlobally(featuremgmt.FlagSqlExpressions)\n\tif enabled {\n\t\treturn false\n\t}\n\treturn false\n}",
+      "reasoning": "Real bug confirmed. The golden comment correctly identifies that the function always returns false. The issue is clear (always returns false) but lacks specific line numbers. Droid caught the same bug with more detail about the inverted variable name.",
+      "files_explored": [
+        "pkg/expr/reader.go"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Several methods such as NewInMemoryDB().RunCommands and db.QueryFramesInto return 'not implemented'.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "pkg/expr/sql/db.go",
+        "line": 23
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699758294,
+      "missing_details": [
+        "exact impact: that this replaces a working go-duck implementation"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "func (db *DB) QueryFramesInto(name string, query string, frames []*data.Frame, f *data.Frame) error {\n\treturn errors.New(\"not implemented\")\n}",
+      "reasoning": "Real bug confirmed. The golden comment correctly identifies that the DB methods return 'not implemented'. It mentions specific method names (RunCommands, QueryFramesInto). Droid caught this same bug and also explained that it replaced the working go-duck implementation.",
+      "files_explored": [
+        "pkg/expr/sql/db.go",
+        "pkg/expr/sql_command.go"
+      ]
+    }
+  }
+]

@@ -1,0 +1,63 @@
+[
+  {
+    "comment_id": 2699755962,
+    "file": "app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6",
+    "line": 5,
+    "droid_comment": "[P1] Avoid XSS by not triple-stashing translated HTML with user title - I18n.t(... { title: model.fancyTitle }) injects a user-controlled title into a translation that includes <strong>...</strong>, and the template renders it via {{{...}}}; if fancyTitle contains HTML, this becomes an XSS vector.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No actual XSS vulnerability - server-side sanitization prevents exploitation",
+      "reasoning": "The fancy_title is sanitized server-side using ERB::Util.html_escape(title) in app/models/topic.rb. The test suite confirms that '<script>alert()' becomes '&lt;script&gt;alert()' in fancy_title. The Emoji.unescape on client side only adds img tags for emoji codes, not arbitrary HTML. Since the raw title is HTML-escaped before being stored/returned, the triple-stash rendering is safe because any malicious HTML is already encoded as entities.",
+      "code_evidence": "In app/models/topic.rb: 'def fancy_title; sanitized_title = ERB::Util.html_escape(title)'. Test in spec/models/topic_spec.rb confirms: expect(topic_script.fancy_title).to eq('Topic with &lt;script&gt;alert(&lsquo;title&rsquo;)&lt;/script&gt; script in its title')",
+      "files_explored": [
+        "app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6",
+        "app/assets/javascripts/discourse/templates/topic/unsubscribe.hbs",
+        "app/models/topic.rb",
+        "app/assets/javascripts/discourse/models/topic.js.es6",
+        "config/locales/client.en.yml",
+        "spec/models/topic_spec.rb"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699755963,
+    "file": "app/controllers/topics_controller.rb",
+    "line": 102,
+    "droid_comment": "[P0] Guard against nil current_user/TopicUser in unsubscribe - TopicView.new(..., current_user) and TopicUser.find_by(user_id: current_user.id, ...) will crash for anonymous users (and tu can be nil), so hitting /t/:id/unsubscribe without being logged in currently raises NoMethodError.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "NoMethodError when a logged-in user clicks unsubscribe on a topic they have never interacted with. The TopicUser.find_by returns nil when no record exists, and tu.notification_level will crash.",
+      "reasoning": "The droid is partially correct: current_user is protected by ensure_logged_in filter (unsubscribe is in the list), so anonymous users cannot hit this endpoint. However, the TopicUser (tu) can absolutely be nil if the user has never visited/interacted with the topic. Line 106 accesses tu.notification_level without nil check, causing NoMethodError. This is a real bug that would crash when a user clicks unsubscribe link from an email for a topic they received notifications about but never actually visited in the UI (which creates TopicUser records).",
+      "code_evidence": "Line 104: tu = TopicUser.find_by(user_id: current_user.id, topic_id: params[:topic_id]) - find_by returns nil if no match. Line 106: if tu.notification_level > ... - will raise NoMethodError: undefined method 'notification_level' for nil:NilClass",
+      "files_explored": [
+        "app/controllers/topics_controller.rb",
+        "app/models/topic_user.rb"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699756145,
+    "file": "app/assets/javascripts/discourse/templates/topic/unsubscribe.hbs",
+    "line": 4,
+    "droid_comment": "[P2] Fix misspelled property name (notifications) - The controller/template property is spelled stopNotificiationsText (extra 'i'). This is easy to accidentally reference as stopNotificationsText elsewhere, causing the unsubscribe page to render blank text.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "false_positive",
+      "impact": "Currently no functional bug - the misspelling is consistent between controller and template so it works. However, it's a code quality issue that could cause problems if someone tries to 'fix' the spelling in one place.",
+      "reasoning": "The property 'stopNotificiationsText' (with extra 'i') is defined in the controller (topic-unsubscribe.js.es6 line 5) and used in the template (unsubscribe.hbs line 3). Since both use the same misspelled name, the code works correctly. This is not a current bug but a code smell/typo that could lead to future bugs if refactored incorrectly. The droid's claim that it could cause 'blank text' is hypothetical, not actual.",
+      "code_evidence": "Controller defines: stopNotificiationsText: function() { ... }. Template uses: {{{stopNotificiationsText}}}. Both match.",
+      "files_explored": [
+        "app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6",
+        "app/assets/javascripts/discourse/templates/topic/unsubscribe.hbs"
+      ]
+    }
+  }
+]

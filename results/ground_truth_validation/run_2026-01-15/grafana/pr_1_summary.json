@@ -1,0 +1,35 @@
+{
+  "pr_number": 1,
+  "pr_title": "Anonymous: Add configurable device limit (#79265)",
+  "ground_truth_bug_count": 4,
+  "droid_analysis": {
+    "total_comments": 3,
+    "true_positives": 3,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.75,
+    "f1": 0.857
+  },
+  "golden_analysis": {
+    "total_comments": 5,
+    "true_positives": 3,
+    "false_positives": 2,
+    "precision": 0.6,
+    "recall": 0.75,
+    "f1": 0.667,
+    "avg_clarity_score": 4.2,
+    "avg_specificity_score": 2.2
+  },
+  "coverage": {
+    "bugs_found_by_both": 2,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 1,
+    "droid_missed": [
+      "Race condition in device count check (TOCTOU) - no transaction/lock between CountDevices and INSERT"
+    ],
+    "golden_missed": [
+      "TagDevice now returns errors from tagDeviceUI, changing the auth contract for future callers"
+    ]
+  },
+  "notes": "Bug #2 (auth failure on device limit) and the design implications appear intentional based on PR title 'Add configurable device limit'. Both droid and golden flagged it as a concern, which is valid from a resilience perspective. The golden had 2 false positives: (1) the Exec compilation claim is incorrect (pattern already used in codebase), (2) the time window inconsistency concern is not a real issue."
+}

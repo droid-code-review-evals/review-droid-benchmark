@@ -1,0 +1,37 @@
+{
+  "pr_number": 1,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Conditional passkey UI not set up for initial login when user is null - breaks ID-less passkey authentication",
+      "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+      "line": 115,
+      "details": "The PR changes isConditionalPasskeysEnabled() to require user != null, but on initial login context.getUser() is null. The original code set up passkey UI when user was null; the new code doesn't."
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 3,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "ConditionalPasskeysEnabled() called without UserModel parameter",
+      "reasoning": "This comment is unclear and doesn't describe a real bug. The method isConditionalPasskeysEnabled(UserModel user) IS called with a parameter (context.getUser()). The comment seems to be a poorly worded version of the second golden comment about user being null."
+    }
+  ],
+  "droid_missed": [1],
+  "golden_missed": [],
+  "analysis_notes": "All 3 droid comments were false positives about potential NPE when webauthnAuth is null, but they failed to read the isConditionalPasskeysEnabled() method which already checks webauthnAuth != null. The droid completely missed the actual behavioral regression - that conditional passkey UI is no longer set up for initial login (when user is null), breaking ID-less passkey authentication. One golden comment (the detailed one) correctly identified this regression."
+}

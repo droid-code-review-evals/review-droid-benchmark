@@ -1,0 +1,124 @@
+{
+  "pr_number": 4,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "SSRF via open() in poll_feed.rb - arbitrary URL fetch from site setting",
+      "file": "app/jobs/scheduled/poll_feed.rb",
+      "line": 28,
+      "severity": "high"
+    },
+    {
+      "id": 2,
+      "description": "SSRF via open() in topic_embed.rb import_remote - arbitrary URL fetch without validation",
+      "file": "app/models/topic_embed.rb",
+      "line": 48,
+      "severity": "critical"
+    },
+    {
+      "id": 3,
+      "description": "Origin check bypass via indexOf substring match in postMessage handler",
+      "file": "app/assets/javascripts/embed.js",
+      "line": 17,
+      "severity": "medium"
+    },
+    {
+      "id": 4,
+      "description": "NoMethodError when contents parameter is nil in TopicEmbed.import",
+      "file": "app/models/topic_embed.rb",
+      "line": 13,
+      "severity": "medium"
+    },
+    {
+      "id": 5,
+      "description": "XSS vulnerability via unescaped URL interpolation in import HTML",
+      "file": "app/models/topic_embed.rb",
+      "line": 13,
+      "severity": "medium"
+    },
+    {
+      "id": 6,
+      "description": "ERB syntax error: 'end if' is invalid Ruby",
+      "file": "app/views/embed/best.html.erb",
+      "line": 6,
+      "severity": "medium"
+    },
+    {
+      "id": 7,
+      "description": "Spec mocks TopicRetriever but controller enqueues job - test may not verify real behavior",
+      "file": "spec/controllers/embed_controller_spec.rb",
+      "line": 40,
+      "severity": "low"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 7,
+    "valid_comments": 4,
+    "false_positives": 3,
+    "bugs_found": [1, 2, 3, 7],
+    "precision": 0.571,
+    "recall": 0.571,
+    "f1": 0.571
+  },
+  "golden_metrics": {
+    "total_comments": 6,
+    "valid_comments": 4,
+    "false_positives": 2,
+    "bugs_found": [1, 2, 3, 4, 5, 6],
+    "note": "Golden comment 1 (SSRF) covers bugs 1 and 2; Golden comment 5 (NoMethodError+XSS) covers bugs 4 and 5",
+    "precision": 0.667,
+    "recall": 0.857,
+    "f1": 0.750
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "postMessage targetOrigin should be the origin (scheme+host+port), not the full referrer URL; using the full URL will cause the message to be dropped and prevent resizing.",
+      "reasoning": "Technically incorrect - postMessage with full URL as targetOrigin still works; browser extracts origin. The message is NOT dropped if origin matches."
+    },
+    {
+      "golden_comment": "The code sets X-Frame-Options: ALLOWALL which completely disables clickjacking protection...",
+      "reasoning": "This is intentional for an embed endpoint. The purpose IS to be embedded in iframes. X-Frame-Options: ALLOWALL is correct. Referer cannot be spoofed by JavaScript."
+    }
+  ],
+  "droid_false_positives": [
+    {
+      "droid_comment": "Don't enforce referer host equality for embed_url requests",
+      "reasoning": "This is intentional security - validating the embedding page's origin is the purpose, not validating embed_url."
+    },
+    {
+      "droid_comment": "Crash when embeddable_host is nil",
+      "reasoning": "Misread the logic - when embeddable_host is nil, `nil != any_host` is true, so invalid_host? returns true, correctly blocking retrieval."
+    },
+    {
+      "droid_comment": "Unrelated require may break spec load",
+      "reasoning": "The file jobs/regular/process_post.rb exists. Unnecessary but not a bug."
+    }
+  ],
+  "droid_missed": [4, 5, 6],
+  "golden_missed": [7],
+  "analysis": {
+    "droid_strengths": [
+      "Caught both SSRF locations separately with precise file/line info",
+      "Found subtle spec/implementation mismatch (job vs direct call)",
+      "Good security focus on origin validation"
+    ],
+    "droid_weaknesses": [
+      "Misread invalid_host? logic flow",
+      "Overly defensive false positive on referer validation",
+      "Missed obvious ERB syntax error",
+      "Missed nil contents NoMethodError",
+      "Missed XSS in URL interpolation"
+    ],
+    "golden_strengths": [
+      "Caught more bugs overall (6 vs 4)",
+      "Found ERB syntax error that would crash view",
+      "Identified both NoMethodError and XSS in same comment"
+    ],
+    "golden_weaknesses": [
+      "SSRF comment lacked specificity (doesn't distinguish two locations)",
+      "postMessage targetOrigin claim was technically wrong",
+      "X-Frame-Options concern was misplaced for embed feature",
+      "Missed spec mocking issue"
+    ]
+  }
+}

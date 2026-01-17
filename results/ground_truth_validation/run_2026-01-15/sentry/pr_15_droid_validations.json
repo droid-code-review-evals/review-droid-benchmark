@@ -1,0 +1,21 @@
+[
+  {
+    "comment_id": 2696001806,
+    "file": "src/sentry/workflow_engine/processors/detector.py",
+    "line": 62,
+    "droid_comment": "**[P0] Don't treat `None` result as a status-change message**\n\n`create_issue_occurrence_from_result` will currently emit a `STATUS_CHANGE` payload when `result.result` is `None` (since it falls into the non-`IssueOccurrence` branch), producing a Kafka message with both `occurrence` and `status_change` as `None`. This is reachable because `process_detectors` calls this helper for any `result` where `result.result is not None`, but other callers may not (and `DetectorEvaluationResult.result` is still optional); add an explicit `if result.result is None: return`/guard in the helper to prevent malformed events.",
+    "validation": {
+      "is_valid_bug": false,
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "None - the guard already exists in the caller",
+      "reasoning": "The droid's concern is that create_issue_occurrence_from_result could be called with result.result=None and produce malformed Kafka messages. However, examining process_detectors() at lines 60-62 shows: `if result.result is not None: create_issue_occurrence_from_result(result)`. The guard already exists in the only caller. The droid speculates about 'other callers' but there are no other callers in the codebase. This is overly defensive advice based on hypothetical future misuse rather than an actual bug in the current code.",
+      "code_evidence": "Lines 60-62 in process_detectors: `for result in detector_results.values(): if result.result is not None: create_issue_occurrence_from_result(result)` - the None check is already performed before calling the function.",
+      "files_explored": [
+        "src/sentry/workflow_engine/processors/detector.py",
+        "tests/sentry/workflow_engine/processors/test_detector.py"
+      ]
+    }
+  }
+]

@@ -1,0 +1,107 @@
+[
+  {
+    "golden_comment": "The translation is in Italian instead of Lithuanian. This should be translated to Lithuanian to match the file's locale (messages_lt.properties).",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties",
+        "line": 101
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Git diff shows totpStep1 was changed to 'Installa una delle seguenti applicazioni sul tuo cellulare:' which is Italian, not Lithuanian. The original Lithuanian text was properly localized.",
+      "reasoning": "Confirmed real bug. The PR changed the Lithuanian translation file but introduced Italian text instead. 'Installa' is Italian for 'Install', the entire phrase is Italian. This would confuse Lithuanian-speaking users.",
+      "files_explored": [
+        "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The totpStep1 value uses Traditional Chinese terms in the Simplified Chinese file (zh_CN), which is likely incorrect for this locale. Please verify the locale‑appropriate translation.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties",
+        "line": 112
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Git diff shows totpStep1 changed to '在您的手機上安裝以下應用程式之一：' - uses Traditional Chinese characters: 手機 (should be 手机), 應用程式 (should be 应用程序). File is for Simplified Chinese (zh_CN).",
+      "reasoning": "Confirmed real bug. The zh_CN file is for Simplified Chinese (mainland China) but the new text uses Traditional Chinese characters (Taiwan/Hong Kong). Simplified Chinese users would see incorrect character forms.",
+      "files_explored": [
+        "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The anchor sanitization logic has a potential issue where it consumes English matcher groups without proper validation. If the translated text has more anchor tags than the English text, this could lead to incorrect validation results.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+        "line": 150
+      },
+      "is_specific": false,
+      "is_clear": false,
+      "clarity_score": 3,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699751057,
+      "missing_details": [
+        "Specific line number",
+        "Clear explanation of the actual failure scenario"
+      ],
+      "vagueness_issues": [
+        "The described failure scenario doesn't actually occur - when translation has more anchors than English, the code correctly reports 'Didn't find anchor tag' error"
+      ],
+      "code_evidence": "The code at line 153 checks englishMatcher.find() - if English runs out of anchors first, it returns false and the error is properly reported via messages.add()",
+      "reasoning": "False positive. The golden comment suggests incorrect validation results when translation has more anchors than English. However, the code correctly handles this: when englishMatcher.find() returns false (no more English anchors), the else branch adds an error message. The validation result is correct.",
+      "files_explored": [
+        "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The method name 'santizeAnchors' should be 'sanitizeAnchors' (missing 'i').",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+        "line": 150
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 150: private String santizeAnchors(String key, String value, String englishValue) - confirmed typo, missing 'i' in 'sanitize'",
+      "reasoning": "Confirmed real bug (typo). Method name is misspelled. While this doesn't affect functionality, it's poor code quality and could cause confusion when searching/referencing the method.",
+      "files_explored": [
+        "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java"
+      ]
+    }
+  }
+]

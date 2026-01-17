@@ -1,0 +1,45 @@
+{
+  "pr_number": 12,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Shared timestamp default in dataclass - timezone.now() evaluated at class definition time",
+      "file": "src/sentry/integrations/services/assignment_source.py",
+      "line": 18
+    },
+    {
+      "id": 2,
+      "description": "to_dict() returns datetime object that may fail JSON serialization in Celery task kwargs",
+      "file": "src/sentry/integrations/services/assignment_source.py",
+      "line": 27
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 1,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_metrics": {
+    "total_comments": 4,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "The method name has a typo: test_from_dict_inalid_data should be test_from_dict_invalid_data.",
+      "reasoning": "This is a test method naming typo, not a functional bug. Test method names don't affect runtime behavior."
+    },
+    {
+      "golden_comment": "Method name says 'empty_array' but tests empty dict - consider renaming to 'test_from_dict_empty_dict' for clarity.",
+      "reasoning": "This is a naming clarity issue in test code, not a functional bug. The test logic is correct."
+    }
+  ],
+  "droid_missed": [2],
+  "golden_missed": []
+}

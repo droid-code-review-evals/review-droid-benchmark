@@ -1,0 +1,89 @@
+{
+  "pr_number": 3,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Null reference when mainHostDestinationCalendar is undefined in EventManager.ts",
+      "file": "packages/core/EventManager.ts",
+      "line": 118
+    },
+    {
+      "id": 2,
+      "description": "Logic error in updateEvent calendarId selection - find() with falsy externalCalendarId always fails",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 255
+    },
+    {
+      "id": 3,
+      "description": "Logic error in deleteEvent calendarId selection - same find() bug as updateEvent",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 315
+    },
+    {
+      "id": 4,
+      "description": "Logic inversion in organization creation - slug set when billing enabled instead of disabled",
+      "file": "packages/trpc/server/routers/viewer/organizations/create.handler.ts",
+      "line": 151
+    },
+    {
+      "id": 5,
+      "description": "Calendar interface contract broken - createEvent requires credentialId but implementations don't accept it",
+      "file": "packages/app-store/larkcalendar/lib/CalendarService.ts",
+      "line": 106
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 4,
+    "valid_comments": 3,
+    "bugs_found": [1, 2, 3],
+    "bugs_found_descriptions": [
+      "Null reference in EventManager.ts",
+      "updateEvent calendarId logic error",
+      "deleteEvent calendarId logic error"
+    ],
+    "false_positives": 1,
+    "false_positive_details": [
+      "Comment about persisting only first destination calendar - not a bug, Prisma relation is intentionally single"
+    ],
+    "precision": 0.75,
+    "recall": 0.6,
+    "f1": 0.667
+  },
+  "golden_metrics": {
+    "total_comments": 5,
+    "valid_comments": 4,
+    "bugs_found": [1, 2, 3, 4, 5],
+    "bugs_found_descriptions": [
+      "Null reference in EventManager.ts",
+      "Logic error in calendarId selection (covers both updateEvent and deleteEvent)",
+      "Organization creation logic inversion",
+      "Calendar interface contract broken"
+    ],
+    "false_positives": 1,
+    "false_positive_details": [
+      "Comment about redundant optional chaining - the code doesn't actually have optional chaining"
+    ],
+    "precision": 0.8,
+    "recall": 1.0,
+    "f1": 0.889
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "The optional chaining on mainHostDestinationCalendar?.integration is redundant since you already check mainHostDestinationCalendar in the ternary condition.",
+      "reasoning": "False positive - the actual code does NOT use optional chaining on mainHostDestinationCalendar.integration. The code accesses .integration directly without optional chaining, which is the actual bug that droid identified."
+    }
+  ],
+  "droid_false_positives": [
+    {
+      "droid_comment": "Persisting only the first destination calendar drops other hosts",
+      "reasoning": "Not a bug - the booking.destinationCalendar is a single Prisma relation by design. Multiple calendar event creation is handled separately in createAllCalendarEvents()."
+    }
+  ],
+  "droid_missed": [4, 5],
+  "droid_missed_descriptions": [
+    "Logic inversion in organization creation",
+    "Calendar interface contract broken"
+  ],
+  "golden_missed": [],
+  "notes": "Golden comment about calendarId logic error only explicitly mentions one location but the same bug pattern exists in both updateEvent (line 255) and deleteEvent (line 315). Droid identified both locations explicitly as separate comments."
+}

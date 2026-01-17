@@ -1,0 +1,71 @@
+{
+  "pr_number": 4,
+  "pr_title": "Enhance embed URL handling and validation system",
+  "ground_truth_bug_count": 7,
+  "droid_analysis": {
+    "total_comments": 7,
+    "true_positives": 4,
+    "false_positives": 3,
+    "precision": 0.571,
+    "recall": 0.571,
+    "f1": 0.571,
+    "bugs_found_details": [
+      "SSRF in poll_feed.rb (bug #1)",
+      "SSRF in topic_embed.rb (bug #2)",
+      "Origin check bypass indexOf (bug #3)",
+      "Spec mocking wrong layer (bug #7)"
+    ],
+    "false_positive_details": [
+      "Referer validation is intentional security",
+      "embeddable_host nil check logic misread",
+      "Unrelated require doesn't break - file exists"
+    ]
+  },
+  "golden_analysis": {
+    "total_comments": 6,
+    "true_positives": 4,
+    "false_positives": 2,
+    "precision": 0.667,
+    "recall": 0.857,
+    "f1": 0.750,
+    "avg_clarity_score": 4.67,
+    "avg_specificity_score": 3.67,
+    "bugs_found_details": [
+      "SSRF via open() - covers both locations (bugs #1, #2)",
+      "Origin check bypass indexOf (bug #3)",
+      "NoMethodError + XSS in TopicEmbed.import (bugs #4, #5)",
+      "ERB syntax error end if (bug #6)"
+    ],
+    "false_positive_details": [
+      "postMessage targetOrigin claim incorrect - full URL works",
+      "X-Frame-Options ALLOWALL is intentional for embed"
+    ]
+  },
+  "coverage": {
+    "bugs_found_by_both": 3,
+    "bugs_found_only_by_droid": 1,
+    "bugs_found_only_by_golden": 3,
+    "both_overlap": [
+      "SSRF in poll_feed.rb",
+      "SSRF in topic_embed.rb",
+      "Origin check bypass indexOf"
+    ],
+    "droid_unique": [
+      "Spec mocking wrong layer (controller vs job)"
+    ],
+    "golden_unique": [
+      "NoMethodError if contents is nil",
+      "XSS via unescaped URL interpolation",
+      "ERB syntax error end if"
+    ],
+    "droid_missed": [
+      "NoMethodError if contents is nil",
+      "XSS via unescaped URL interpolation",
+      "ERB syntax error end if"
+    ],
+    "golden_missed": [
+      "Spec mocking wrong layer"
+    ]
+  },
+  "summary": "PR #4 introduces embed functionality with 7 ground truth bugs. Golden achieved higher recall (85.7%) finding 6 of 7 bugs vs droid's 4. Droid had comparable precision (57.1% vs 66.7%) but made more false positives (3 vs 2). Droid uniquely caught a spec quality issue but missed obvious bugs like ERB syntax error and nil safety. Golden comments were generally clearer but lacked location specificity for SSRF bugs. Both correctly identified the critical SSRF vulnerabilities."
+}

@@ -1,0 +1,41 @@
+{
+  "pr_number": 10,
+  "pr_title": "FEATURE: Can edit category/host relationships for embedding",
+  "ground_truth_bug_count": 8,
+  "droid_analysis": {
+    "total_comments": 4,
+    "true_positives": 4,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667
+  },
+  "golden_analysis": {
+    "total_comments": 4,
+    "true_positives": 4,
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 0.5,
+    "f1": 0.667,
+    "avg_clarity_score": 4.75,
+    "avg_specificity_score": 3.5
+  },
+  "coverage": {
+    "bugs_found_by_both": 0,
+    "bugs_found_only_by_droid": 4,
+    "bugs_found_only_by_golden": 4,
+    "droid_missed": [
+      "NoMethodError in before_validation - host.sub! called when host is nil",
+      "Update and destroy methods don't check for nil after .first",
+      "record_for_host case sensitivity bug - SQL lower() on column but not on parameter",
+      "Migration doesn't normalize hosts - migrated data with http:// or paths won't match lookups"
+    ],
+    "golden_missed": [
+      "Migration crashes when embed_category site setting is unset",
+      "SQL injection/breakage in migration INSERT - unquoted string interpolation",
+      "Fabricator files swapped - category_fabricator.rb defines embeddable_host",
+      "_ids hydration deletes original IDs even when lookups return null"
+    ]
+  },
+  "notes": "Interesting case where droid and golden found completely disjoint sets of bugs with no overlap. Both achieved 100% precision (no false positives) but only 50% recall each. Droid focused on migration issues and test infrastructure, while golden focused on model/controller runtime errors and data consistency issues."
+}

@@ -1,0 +1,33 @@
+{
+  "pr_number": 4,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "picocli.exit() calls System.exit() which may be problematic for embedded usage",
+      "file": "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/command/UpdateCompatibilityCheck.java",
+      "line": 48,
+      "severity": "Medium",
+      "notes": "This is a valid design concern. The picocli.exit() method calls System.exit() for non-zero exit codes when not in test mode. While this is standard for CLI tools, it can be problematic if the Keycloak commands are ever embedded or called programmatically. The same pattern appears in UpdateCompatibilityMetadata.java."
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 3,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_metrics": {
+    "total_comments": 1,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [1],
+  "golden_missed": [],
+  "analysis_notes": "This PR adds a feature flag (rolling-updates) to the compatibility commands. All three droid comments were false positives: (1) Exit code change from 4 to 3 is intentional and documented, (2) Adding --features=rolling-updates to doc template is correct since the feature must be enabled, (3) The FeatureSpec null-check is already present in the code. The golden comment about System.exit() is valid - it identifies a design pattern that could be problematic for embedded usage, though it's standard for CLI tools."
+}

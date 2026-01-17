@@ -1,0 +1,38 @@
+{
+  "pr_number": 2,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Test cleanup uses incorrect alias 'alias' instead of 'idp-alias-' + i",
+      "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+      "line": 381,
+      "severity": "medium",
+      "type": "test_bug"
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.667
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "Recursive caching call using session instead of delegate",
+      "severity": "Critical",
+      "reasoning": "Not a bug. The pattern of using session.identityProviders().getById() in getForLogin() is intentional design that leverages individual IDP caching. The getById() method correctly uses idpDelegate for uncached lookups. This is a code style observation at best, not a Critical severity bug."
+    }
+  ],
+  "droid_missed": [1],
+  "golden_missed": []
+}

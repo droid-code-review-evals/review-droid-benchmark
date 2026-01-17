@@ -1,0 +1,114 @@
+[
+  {
+    "golden_comment": "Wrong parameter in null check (grantType vs. rawTokenId)",
+    "severity": "Critical",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+        "line": 68
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699750616,
+      "missing_details": [
+        "file path",
+        "line number",
+        "exact code that's wrong"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 68: `Objects.requireNonNull(grantType, \"Null rawTokenId not allowed\");` - should be rawTokenId not grantType",
+      "reasoning": "Real bug confirmed. Golden comment clearly identifies the nature of the bug (wrong parameter in null check) but lacks specificity on location. Droid caught the same bug with more detail.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "In isAccessTokenId, the substring for the grant shortcut and the equality check look inverted: the grant shortcut occupies indices 4-5 (substring(4,6)), and a match should return true (combined with UUID check), not false.",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+        "line": 483
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699750395,
+      "missing_details": [
+        "file path (only method name given)"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 483: `if (items[0].substring(3, 5).equals(expectedGrantShortcut)) return false;` - has TWO bugs: 1) substring(3,5) should be substring(4,6) for indices 4-5, and 2) return false on match is inverted",
+      "reasoning": "Real bug confirmed. Golden is actually MORE complete than droid - it identifies BOTH the inverted logic AND the wrong substring indices (3,5 vs 4,6). Droid only caught the inverted logic. The token format is sessionType(2)+tokenType(2)+grantType(2)+':'+UUID, so grant is at positions 4-5, requiring substring(4,6).",
+      "files_explored": [
+        "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/DefaultTokenContextEncoderProvider.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Javadoc mentions \"usually like 3-letters shortcut\" but some implementations use 2-letter shortcuts (\"ac\", \"cc\", \"rt\", \"te\", \"pc\", \"ci\", \"ro\"). Consider updating documentation to reflect actual usage pattern.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "server-spi-private/src/main/java/org/keycloak/protocol/oidc/grants/OAuth2GrantTypeFactory.java",
+        "line": 30
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Javadoc says 'usually like 3-letters shortcut' but actual implementations use 2-letter shortcuts. All grant shortcuts found: 'ac', 'cc', 'rt', 'dg', 'ci', 'ro', 'te', 'pc'",
+      "reasoning": "This is NOT a real bug - it's a documentation inconsistency. The Javadoc says 'usually like 3-letters' which is slightly inaccurate since all shortcuts are 2 letters, but this doesn't cause any functional issues. It's a code quality/documentation suggestion, not a bug.",
+      "files_explored": [
+        "server-spi-private/src/main/java/org/keycloak/protocol/oidc/grants/OAuth2GrantTypeFactory.java",
+        "services/src/main/java/org/keycloak/protocol/oidc/grants/AuthorizationCodeGrantTypeFactory.java",
+        "services/src/main/java/org/keycloak/protocol/oidc/grants/RefreshTokenGrantTypeFactory.java"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Catching generic RuntimeException is too broad. The implementation throws IllegalArgumentException specifically - catch that instead for more precise testing.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "services/src/test/java/org/keycloak/protocol/oidc/encode/DefaultTokenContextEncoderProviderTest.java",
+        "line": 82
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 82: `catch (RuntimeException iae)` - The implementation throws IllegalArgumentException which is a RuntimeException, so catching RuntimeException works but is broader than needed.",
+      "reasoning": "This is NOT a real bug - it's a test code quality suggestion. The test works correctly because IllegalArgumentException extends RuntimeException. Catching the broader exception type doesn't break functionality, it just makes the test less precise. This is a code style/quality comment, not a functional bug.",
+      "files_explored": [
+        "services/src/test/java/org/keycloak/protocol/oidc/encode/DefaultTokenContextEncoderProviderTest.java",
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/DefaultTokenContextEncoderProvider.java"
+      ]
+    }
+  }
+]

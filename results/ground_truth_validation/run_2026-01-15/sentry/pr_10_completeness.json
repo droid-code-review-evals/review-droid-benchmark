@@ -1,0 +1,53 @@
+{
+  "pr_number": 10,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "zip(error_ids, events.values()) ordering/alignment issue",
+      "file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+      "line": 111
+    },
+    {
+      "id": 2,
+      "description": "Detector validator uses wrong key 'detector_type' instead of 'type' when updating",
+      "file": "src/sentry/workflow_engine/endpoints/validators/base/detector.py",
+      "line": 63
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 3,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 0.333,
+    "recall": 0.5,
+    "f1": 0.4
+  },
+  "golden_metrics": {
+    "total_comments": 3,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 0.667,
+    "recall": 1.0,
+    "f1": 0.8
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "Breaking changes in error response format",
+      "reasoning": "This is an API improvement, not a bug. The endpoint is marked PRIVATE so breaking changes are acceptable. Adding structured error responses is better for debugging."
+    }
+  ],
+  "droid_false_positives": [
+    {
+      "comment_id": 2696085537,
+      "comment": "Fix age/timestamp mutual-exclusion validation logic",
+      "reasoning": "The validation logic is correct. The droid misread the code - validate_timestamp raises when BOTH age and timestamp are present, which is the intended mutual exclusion behavior."
+    },
+    {
+      "comment_id": 2696085746,
+      "comment": "Avoid AttributeError when request is unauthenticated",
+      "reasoning": "The endpoint requires ProjectReleasePermission which ensures authentication. By the time post() is called, request.user is guaranteed to be authenticated."
+    }
+  ],
+  "droid_missed": [2],
+  "golden_missed": []
+}

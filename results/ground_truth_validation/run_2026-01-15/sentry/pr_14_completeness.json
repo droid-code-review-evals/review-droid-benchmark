@@ -1,0 +1,43 @@
+{
+  "pr_number": 14,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Offset tracking assumes contiguous offsets - gaps cause commit stall",
+      "file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+      "line": 86
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 1,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 3,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "The queue.shutdown() method with 'immediate=False' parameter may not exist in the standard Python queue module.",
+      "reasoning": "queue.shutdown() was added in Python 3.13, and Sentry requires Python 3.13+. The method exists."
+    },
+    {
+      "golden_comment": "The magic number 50 for max_wait is used repeatedly throughout the tests.",
+      "reasoning": "No 'max_wait' or '50' appears anywhere in the test file. The referenced code doesn't exist."
+    },
+    {
+      "golden_comment": "The test test_thread_queue_parallel_error_handling has a docstring that doesn't match the test implementation.",
+      "reasoning": "The test 'test_thread_queue_parallel_error_handling' does not exist in this PR."
+    }
+  ],
+  "droid_missed": [],
+  "golden_missed": [1]
+}

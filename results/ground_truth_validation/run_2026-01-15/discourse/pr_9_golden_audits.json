@@ -1,0 +1,65 @@
+[
+  {
+    "golden_comment": "Thread-safety issue with lazy @loaded_locales",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "medium",
+      "bug_location": {
+        "file": "lib/freedom_patches/translate_accelerator.rb",
+        "line": 63
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which method has the issue"
+      ],
+      "vagueness_issues": [
+        "Does not specify whether it's ensure_loaded!, load_locale, or translate",
+        "Does not explain the specific race condition scenario"
+      ],
+      "code_evidence": "Line 63 `@loaded_locales ||= []` performs lazy initialization outside the LOAD_MUTEX. If two threads call ensure_loaded! simultaneously when @loaded_locales is nil, both could initialize it. Additionally, line 64's `unless @loaded_locales.include?(locale)` check is outside the mutex, creating a TOCTOU race where both threads could pass this check before either enters load_locale's synchronized block. However, the existing translate method (line 67) has a similar pattern, and load_locale has its own include? check inside the mutex, so the practical impact is limited to potential redundant work rather than data corruption.",
+      "reasoning": "This is a real but low-severity thread-safety issue. The lazy initialization pattern `@loaded_locales ||= []` is not atomic in Ruby MRI (though the GIL makes true race conditions rare). More importantly, the double-check pattern (check outside mutex, then check inside) can lead to redundant load_locale calls. However, since load_locale itself is idempotent (checks @loaded_locales.include? inside the mutex before loading), the worst case is duplicate work, not data corruption. The existing translate method has the same pattern, so this is more of a pre-existing code smell that the new ensure_loaded! perpetuates.",
+      "files_explored": [
+        "lib/freedom_patches/translate_accelerator.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Consider normalizing the input locale (e.g., to a symbol) when checking/loading here to avoid double-loading if the same locale is passed as a String vs Symbol (also applies to other locations in the PR).",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "medium",
+      "bug_location": {
+        "file": "lib/freedom_patches/translate_accelerator.rb",
+        "line": 63
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "exact line numbers",
+        "which specific locations are affected"
+      ],
+      "vagueness_issues": [
+        "Says 'also applies to other locations' without specifying which"
+      ],
+      "code_evidence": "Line 63-64: `@loaded_locales ||= []; load_locale locale unless @loaded_locales.include?(locale)` - if called with 'en' (String), it adds 'en' to the array. A subsequent call with :en (Symbol) would pass the include? check and attempt to reload. Line 48-49 in load_locale: same issue. Line 67 in translate: `load_locale(config.locale) unless @loaded_locales.include?(config.locale)` - same pattern. The FallbackLocaleList in i18n.rb returns symbols, but I18n.locale could be a string in some contexts.",
+      "reasoning": "This is a real code quality issue. Ruby treats 'en' (String) and :en (Symbol) as different values for Array#include?. If locales are passed inconsistently as strings vs symbols, the same locale could be loaded multiple times. Looking at FallbackLocaleList#[], it returns `[locale, SiteSetting.default_locale.to_sym, :en]` with explicit `.to_sym` and `:en` symbol, but the input locale might not be normalized. The practical impact is limited (redundant file loads), but it's a correctness issue worth fixing.",
+      "files_explored": [
+        "lib/freedom_patches/translate_accelerator.rb",
+        "config/initializers/i18n.rb"
+      ]
+    }
+  }
+]

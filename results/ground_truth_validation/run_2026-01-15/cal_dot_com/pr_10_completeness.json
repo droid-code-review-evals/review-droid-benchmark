@@ -1,0 +1,43 @@
+{
+  "pr_number": 10,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "BSD/macOS-specific sed -i '' syntax fails on Linux",
+      "file": "scripts/test-gcal-webhooks.sh",
+      "line": 68
+    },
+    {
+      "id": 2,
+      "description": "updateManyByCredentialId with empty data does not trigger @updatedAt",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 1024
+    }
+  ],
+  "droid_metrics": {
+    "total_comments": 2,
+    "valid_comments": 1,
+    "bugs_found": [1],
+    "precision": 0.5,
+    "recall": 0.5,
+    "f1": 0.5
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [2],
+  "golden_missed": [],
+  "droid_false_positives": [
+    {
+      "comment_id": 2699764273,
+      "comment": "Treat cacheUpdatedAt as string if it comes over tRPC - tRPC serializes Date to string unless transformer configured",
+      "reasoning": "False positive because tRPC in this codebase uses superjson transformer which properly handles Date serialization. The Date type is correct."
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+[
+  {
+    "golden_comment": "sample_rate = 0.0 is falsy and skipped",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": null,
+      "is_specific": false,
+      "is_clear": false,
+      "clarity_score": 2,
+      "specificity_score": 1,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "file path",
+        "line number",
+        "code context"
+      ],
+      "vagueness_issues": [
+        "No code in PR diff checks sample_rate with falsy comparison",
+        "May refer to code not in this PR's changeset"
+      ],
+      "code_evidence": "Searched all changed files. No sample_rate variable or falsy check found. The error_upsampling.py module doesn't process sample_rate values - it only checks allowlists and transforms query columns.",
+      "reasoning": "FALSE POSITIVE. The PR does not contain any code that checks sample_rate with a falsy check. The changed files (error_upsampling.py, organization_events_stats.py, discover.py) don't have this bug pattern. The sample_rate handling in event_manager.py (which uses '0 < client_sample_rate <= 1') is NOT part of this PR's changes.",
+      "files_explored": [
+        "src/sentry/api/helpers/error_upsampling.py",
+        "src/sentry/api/endpoints/organization_events_stats.py",
+        "src/sentry/search/events/datasets/discover.py",
+        "src/sentry/event_manager.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Using Python's built-in hash() to build cache keys is non-deterministic across processes (hash randomization), so keys won't match across workers and invalidate_upsampling_cache may fail to delete them. Use a deterministic serialization of project_ids for the cache key.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/helpers/error_upsampling.py",
+        "line": 26
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 26: cache_key = f\"error_upsampling_eligible:{organization.id}:{hash(tuple(sorted(snuba_params.project_ids)))}\" - Python's hash() uses PYTHONHASHSEED which is randomized by default since Python 3.3, causing different values across process restarts.",
+      "reasoning": "REAL BUG confirmed. The cache key uses hash(tuple(...)) which is non-deterministic due to Python's hash randomization (PYTHONHASHSEED). This means: 1) Cache keys will differ between worker processes, causing cache misses. 2) invalidate_upsampling_cache() will fail to delete keys created by other processes because it computes a different hash. A deterministic serialization like str(sorted(project_ids)) or hashlib.md5() should be used instead.",
+      "files_explored": [
+        "src/sentry/api/helpers/error_upsampling.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The upsampling eligibility check passes the outer dataset instead of the actual dataset used by scoped_dataset. In paths where the query ultimately runs against discover (e.g., dashboard split) while the original dataset is metrics, upsampling may be skipped even when all projects are allowlisted.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/api/endpoints/organization_events_stats.py",
+        "line": 218
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 218-221: should_upsample = is_errors_query_for_error_upsampled_projects(snuba_params, organization, dataset, request) - passes 'dataset' (outer scope) but get_event_stats_factory creates an inner fn() that can use different datasets during dashboard widget splitting (lines 330-370 use 'discover' instead of scoped_dataset in some cases).",
+      "reasoning": "REAL BUG confirmed. The eligibility check at line 218 uses the outer 'dataset' variable, but when dashboard widget splitting occurs, the actual query may run against 'discover' dataset (see lines 350-360 where split_dataset = discover for ERROR_EVENTS). This means upsampling eligibility could be checked against metrics_performance but query runs against discover, causing incorrect upsampling decisions.",
+      "files_explored": [
+        "src/sentry/api/endpoints/organization_events_stats.py",
+        "src/sentry/api/helpers/error_upsampling.py"
+      ]
+    }
+  }
+]

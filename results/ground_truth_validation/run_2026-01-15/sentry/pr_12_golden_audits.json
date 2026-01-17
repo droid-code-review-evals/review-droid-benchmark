@@ -1,0 +1,115 @@
+[
+  {
+    "golden_comment": "Shared mutable default in dataclass timestamp",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "src/sentry/integrations/services/assignment_source.py",
+        "line": 18
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2696000055,
+      "missing_details": [
+        "file path",
+        "line number",
+        "exact variable name (queued)"
+      ],
+      "vagueness_issues": [
+        "Doesn't specify which dataclass or which field"
+      ],
+      "code_evidence": "Line 18 in assignment_source.py: `queued: datetime = timezone.now()` - default is evaluated at class definition time, not per instance",
+      "reasoning": "Real bug confirmed. The dataclass AssignmentSource has `queued: datetime = timezone.now()` as a default. This is evaluated once at module load time, so all instances share the same timestamp. Droid caught this exact bug with more specific details.",
+      "files_explored": [
+        "src/sentry/integrations/services/assignment_source.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "The method name has a typo: test_from_dict_inalid_data should be test_from_dict_invalid_data.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "tests/sentry/integrations/services/test_assignment_source.py",
+        "line": 13
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 5,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [],
+      "vagueness_issues": [],
+      "code_evidence": "Line 13: `def test_from_dict_inalid_data(self):` - missing 'v' in 'invalid'",
+      "reasoning": "This is a typo in a test method name. While accurate, this is not a real bug - it's a code quality/naming issue. Test method names don't affect functionality. This is a false positive for 'bug' classification, though it's a valid code quality observation.",
+      "files_explored": [
+        "tests/sentry/integrations/services/test_assignment_source.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Method name says 'empty_array' but tests empty dict - consider renaming to 'test_from_dict_empty_dict' for clarity.",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "tests/sentry/integrations/services/test_assignment_source.py",
+        "line": 8
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 4,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "line number"
+      ],
+      "vagueness_issues": [],
+      "code_evidence": "Line 8: `def test_from_dict_empty_array(self):` followed by `data: dict[str, Any] = {}`",
+      "reasoning": "This is a naming inconsistency - method says 'empty_array' but tests an empty dict. This is not a real bug, just a code clarity issue. The test itself is functional and correct. False positive for bug classification.",
+      "files_explored": [
+        "tests/sentry/integrations/services/test_assignment_source.py"
+      ]
+    }
+  },
+  {
+    "golden_comment": "to_dict() returns a datetime for queued; if this dict is passed in task kwargs (e.g., via apply_async), JSON serialization may fail depending on the serializer, which can cause enqueue errors.",
+    "severity": "Medium",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "medium",
+      "bug_location": {
+        "file": "src/sentry/integrations/services/assignment_source.py",
+        "line": 27
+      },
+      "is_specific": true,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 3,
+      "matched_by_droid": false,
+      "droid_comment_id": null,
+      "missing_details": [
+        "exact line number"
+      ],
+      "vagueness_issues": [
+        "Says 'may fail depending on serializer' - conditional impact"
+      ],
+      "code_evidence": "Line 27: `def to_dict(self) -> dict[str, Any]: return asdict(self)` - asdict includes datetime directly. In sync_group_assignee_outbound (sync.py lines 137-143), assignment_source.to_dict() is passed to apply_async kwargs.",
+      "reasoning": "Real bug with medium confidence. Verified that to_dict() uses asdict() which preserves the datetime object. In sync.py, this dict is passed to apply_async's kwargs. Celery's default JSON serializer can't handle datetime objects. However, Sentry might use pickle or have custom serializers. The bug is conditional on serializer configuration but represents a potential issue.",
+      "files_explored": [
+        "src/sentry/integrations/services/assignment_source.py",
+        "src/sentry/integrations/utils/sync.py"
+      ]
+    }
+  }
+]

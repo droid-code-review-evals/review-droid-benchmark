@@ -1,0 +1,37 @@
+{
+  "pr_number": 10,
+  "ground_truth_bugs": [
+    {
+      "id": 1,
+      "description": "Race condition: BuildIndex concurrent map write - multiple goroutines can build same index and race on b.cache[key] = idx",
+      "file": "pkg/storage/unified/search/bleve.go",
+      "line": 137
+    },
+    {
+      "id": 2,
+      "description": "Race condition: TotalDocs concurrent map read - iterates b.cache without lock while BuildIndex writes to it",
+      "file": "pkg/storage/unified/search/bleve.go",
+      "line": 144
+    }
+  ],
+  "analysis_notes": "Both golden comments and the droid comment describe aspects of the same underlying race condition caused by moving the lock from protecting the entire BuildIndex function to only the cache assignment. Bug #1 is the write-write race, Bug #2 is the read-write race. These are effectively two manifestations of the same root cause but require separate fixes (TotalDocs needs its own lock, and BuildIndex lock scope should be reconsidered). The droid comment at line 137 addresses both issues in a single comment ('this write itself can race with concurrent reads if they aren't locked elsewhere'). Counting as 2 bugs since TotalDocs is a separate function that needs fixing.",
+  "droid_metrics": {
+    "total_comments": 1,
+    "valid_comments": 1,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_metrics": {
+    "total_comments": 2,
+    "valid_comments": 2,
+    "bugs_found": [1, 2],
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "golden_false_positives": [],
+  "droid_missed": [],
+  "golden_missed": []
+}

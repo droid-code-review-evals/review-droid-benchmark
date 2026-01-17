@@ -1,0 +1,93 @@
+[
+  {
+    "comment_id": 2699763440,
+    "file": "packages/trpc/server/routers/viewer/bookings.tsx",
+    "line": 553,
+    "droid_comment": "[P1] Await async deletes instead of `forEach(async …)` - This `forEach(async …)` is fire-and-forget; the reschedule flow can finish before `deleteEvent` completes, and any rejection won't be caught by the surrounding error handling. Use `for...of` with `await` or build a promise list and `await Promise.all(...)`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Reschedule flow can complete before calendar/video deletions finish. Any errors from deleteEvent or deleteMeeting won't be caught, leading to unhandled promise rejections and incomplete cleanup of old calendar events.",
+      "reasoning": "Verified at line 553: bookingRefsFiltered.forEach(async (bookingRef) => {...}). The async callback returns promises that forEach ignores. The surrounding code proceeds immediately to send reschedule emails without waiting for deletions to complete. This is a classic JavaScript async anti-pattern.",
+      "code_evidence": "Line 552-567 show the forEach with async callback calling calendar.deleteEvent() and deleteMeeting() without awaiting results. The function continues to sendRequestRescheduleEmail immediately after the forEach.",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings.tsx"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763441,
+    "file": "packages/features/bookings/lib/handleCancelBooking.ts",
+    "line": 455,
+    "droid_comment": "[P1] Avoid `forEach(async …)` when updating recurring bookings - This loop is `forEach(async …)`, so the handler can return before the per-credential deletes finish and any rejection won't propagate. Since this is part of the cancellation side-effects, switch to `for...of` + `await` or `await Promise.all(...)`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "When canceling recurring bookings, the handler may return before all calendar events are deleted from external calendars. Errors during deletion won't be properly handled, leading to orphaned calendar events.",
+      "reasoning": "Verified at line 459: .forEach(async (credential) => {...}). The code filters credentials by calendar type and iterates with forEach async, calling calendar.deleteEvent() for each booking reference. The promises are pushed to apiDeletes array but the forEach itself doesn't await completion.",
+      "code_evidence": "Lines 457-470 show forEach(async (credential) => { const calendar = await getCalendar(credential); for (const updBooking of updatedBookings) { ... await calendar?.deleteEvent(uid, evt, externalCalendarId); } }). The outer forEach doesn't await.",
+      "files_explored": [
+        "packages/features/bookings/lib/handleCancelBooking.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763446,
+    "file": "packages/app-store/vital/lib/reschedule.ts",
+    "line": 125,
+    "droid_comment": "[P1] Don't use `forEach(async …)` for deletions - `Array.forEach` doesn't await the async callback, so `Reschedule` can return/continue before `deleteEvent`/`deleteMeeting` completes (and errors won't be caught by the surrounding `try`). Use `for...of` with `await` or collect promises and `await Promise.all(...)`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "The Reschedule function can return true (success) before calendar/video event deletions complete. The try-catch block around the forEach won't catch async errors, making error handling ineffective.",
+      "reasoning": "Verified at line 125: bookingRefsFiltered.forEach(async (bookingRef) => {...}). The try-catch at line 124 and 133 only catches synchronous errors. The forEach spawns promises that run detached from the try-catch scope. Any deleteEvent or deleteMeeting failure goes unhandled.",
+      "code_evidence": "Lines 124-133 show try { bookingRefsFiltered.forEach(async (bookingRef) => { ... calendar?.deleteEvent() ... deleteMeeting() }) } catch (error). The catch can never catch async errors from the callback.",
+      "files_explored": [
+        "packages/app-store/vital/lib/reschedule.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763464,
+    "file": "packages/app-store/wipemycalother/lib/reschedule.ts",
+    "line": 125,
+    "droid_comment": "[P1] Don't use `forEach(async …)` for deletions - `forEach` won't await the async callback, so calendar/video deletions can run after `Reschedule` proceeds and failures won't be handled by the `try`. Prefer `for...of` + `await` or `await Promise.all(promises)`.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Identical issue to vital/lib/reschedule.ts - the Reschedule function returns before deletions complete, and errors aren't caught by the surrounding try-catch.",
+      "reasoning": "Verified at line 125: This file has identical code to vital/lib/reschedule.ts. Same forEach(async ...) pattern with ineffective try-catch around it.",
+      "code_evidence": "Lines 124-133 are identical to vital/lib/reschedule.ts, containing the same anti-pattern.",
+      "files_explored": [
+        "packages/app-store/wipemycalother/lib/reschedule.ts"
+      ]
+    }
+  },
+  {
+    "comment_id": 2699763728,
+    "file": "packages/core/CalendarManager.ts",
+    "line": 28,
+    "droid_comment": "[P0] `getCalendarCredentials` stores a Promise in `calendar` - `getCalendar()` is async now, but this function still does `const calendar = getCalendar(credential)` without awaiting, so `calendar` is a `Promise<Calendar|null>`. Any consumer expecting a `Calendar` (or destructuring `{ calendar }`) can break unless all callers are updated to `await item.calendar` and the return type is updated accordingly.",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "The getCalendarCredentials function returns objects where `calendar` is actually a Promise<Calendar|null> instead of Calendar|null. Consumers that directly access calendar methods without awaiting will fail at runtime.",
+      "reasoning": "Verified by examining the diff: getCalendar() was changed from sync to async (returning Promise<Calendar|null>). In getCalendarCredentials at line 28, the code still does `const calendar = getCalendar(credential)` without await. The PR attempted a partial fix in getConnectedCalendars (line 47: const calendar = await item.calendar), but this relies on all callers being aware the calendar property is a Promise.",
+      "code_evidence": "Diff shows getCalendar changed to async. Line 28 in getCalendarCredentials: `const calendar = getCalendar(credential)` stores Promise without await. getConnectedCalendars at line 47 does `await item.calendar` showing awareness of this, but the type signature is misleading.",
+      "files_explored": [
+        "packages/core/CalendarManager.ts",
+        "packages/app-store/_utils/getCalendar.ts"
+      ]
+    }
+  }
+]

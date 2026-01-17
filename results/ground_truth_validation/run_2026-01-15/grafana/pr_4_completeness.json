@@ -1,0 +1,28 @@
+{
+  "pr_number": 4,
+  "ground_truth_bugs": [],
+  "droid_metrics": {
+    "total_comments": 0,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": null,
+    "recall": null,
+    "f1": null
+  },
+  "golden_metrics": {
+    "total_comments": 1,
+    "valid_comments": 0,
+    "bugs_found": [],
+    "precision": 0.0,
+    "recall": null,
+    "f1": null
+  },
+  "golden_false_positives": [
+    {
+      "golden_comment": "The applyTemplateVariables method is called with request.filters as the third parameter, but this parameter is not used in the corresponding test setup.",
+      "reasoning": "This is a test coverage observation, not an actual bug. The filters parameter is optional in applyTemplateVariables (adhocFilters?: AdHocVariableFilter[]). The production code correctly passes request.filters - whether it's undefined or has actual filters is handled by the function. There are separate tests in datasource.test.ts that specifically test the adhocFilters functionality. The new tests in this PR correctly verify that template variable interpolation works, which is the primary purpose of the change."
+    }
+  ],
+  "droid_missed": [],
+  "golden_missed": []
+}

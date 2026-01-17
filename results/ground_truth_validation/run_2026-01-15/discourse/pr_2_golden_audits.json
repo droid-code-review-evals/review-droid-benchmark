@@ -1,0 +1,65 @@
+[
+  {
+    "golden_comment": "logic: Potential nil pointer exception - if no TopicUser record exists, tu will be nil and calling methods on it will crash",
+    "severity": "High",
+    "audit": {
+      "is_real_bug": true,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/controllers/topics_controller.rb",
+        "line": 106
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 4,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699755963,
+      "missing_details": [
+        "file path",
+        "line number",
+        "which method causes the nil error (notification_level)"
+      ],
+      "vagueness_issues": [
+        "Does not specify the file or line",
+        "Does not mention that current_user is actually protected by ensure_logged_in"
+      ],
+      "code_evidence": "Line 104: tu = TopicUser.find_by(user_id: current_user.id, topic_id: params[:topic_id]) returns nil if no record. Line 106: tu.notification_level raises NoMethodError for nil.",
+      "reasoning": "This is a real bug. TopicUser.find_by can return nil when a user has never interacted with a topic. The unsubscribe action then tries to access tu.notification_level without nil checking. The golden comment correctly identifies the issue but lacks file/line specificity. Droid comment #2699755963 caught the same bug with more detail (though it incorrectly also mentioned current_user being nil, which is protected).",
+      "files_explored": [
+        "app/controllers/topics_controller.rb",
+        "app/models/topic_user.rb"
+      ]
+    }
+  },
+  {
+    "golden_comment": "Typo in property name: 'stopNotificiationsText' should be 'stopNotificationsText' (missing 'n' in 'Notifications')",
+    "severity": "Low",
+    "audit": {
+      "is_real_bug": false,
+      "confidence": "high",
+      "bug_location": {
+        "file": "app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6",
+        "line": 5
+      },
+      "is_specific": false,
+      "is_clear": true,
+      "clarity_score": 5,
+      "specificity_score": 2,
+      "matched_by_droid": true,
+      "droid_comment_id": 2699756145,
+      "missing_details": [
+        "file path(s) where the typo exists"
+      ],
+      "vagueness_issues": [
+        "The golden comment says missing 'n' but actually it's an EXTRA 'i' - 'stopNotificiationsText' vs 'stopNotificationsText'"
+      ],
+      "code_evidence": "The property is consistently misspelled as 'stopNotificiationsText' (extra 'i', not missing 'n') in both controller and template, so the code works. The golden comment's description of the typo is incorrect.",
+      "reasoning": "The typo is consistent across controller and template, so the code functions correctly. This is NOT a bug - it's a code quality issue. Furthermore, the golden comment incorrectly describes the typo as 'missing n' when it's actually 'extra i'. The correct spelling 'notifications' becomes 'notificiations' (extra 'i' after 'c').",
+      "files_explored": [
+        "app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6",
+        "app/assets/javascripts/discourse/templates/topic/unsubscribe.hbs"
+      ]
+    }
+  }
+]

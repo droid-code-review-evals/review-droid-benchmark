@@ -1,0 +1,20 @@
+[
+  {
+    "comment_id": 2696000055,
+    "file": "src/sentry/integrations/services/assignment_source.py",
+    "line": 17,
+    "droid_comment": "**[P1] Fix frozen dataclass default to avoid shared timestamp**\n\n`queued: datetime = timezone.now()` is evaluated at import/class definition time, so every instance without an explicit `queued` shares the same timestamp. Use a `default_factory` instead (e.g., `field(default_factory=timezone.now)`).",
+    "validation": {
+      "is_valid_bug": true,
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "All AssignmentSource instances created without an explicit queued parameter will share the same timestamp from module import time, making the 'queued' field meaningless for tracking when assignments were actually queued",
+      "reasoning": "Verified in code: Line 18 has `queued: datetime = timezone.now()`. In Python dataclasses, default values are evaluated at class definition time, not instance creation. This means `timezone.now()` is called once when the module loads, and all instances share that same datetime. The fix would be to use `field(default_factory=timezone.now)`. This is a real bug that affects tracking/debugging but won't cause crashes.",
+      "code_evidence": "Line 18: `queued: datetime = timezone.now()` - timezone.now() is called at class definition, not per-instance",
+      "files_explored": [
+        "src/sentry/integrations/services/assignment_source.py"
+      ]
+    }
+  }
+]
