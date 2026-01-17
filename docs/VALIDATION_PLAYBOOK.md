@@ -2,29 +2,29 @@
 
 **Purpose:** Manually validate droid comments and golden comments against actual PR code using full Droid agent capabilities.
 
-**Usage:** Open a Droid session and say: "Follow the validation playbook for PR #{PR_NUMBER}"
+**Usage:** Open a Droid session and say: "Follow the validation playbook for {REPO_NAME} PR #{PR_NUMBER}"
+
+Examples:
+- "Follow the validation playbook for sentry PR #6"
+- "Follow the validation playbook for grafana PR #1"
+- "Follow the validation playbook for keycloak PR #5"
 
 ---
 
 ## Setup
 
-**Repository:** `/Users/user/review-droid-benchmark/work/droid-sentry`
+**Repositories:**
+- sentry: `/Users/user/review-droid-benchmark/work/droid-sentry` (PRs #6-15)
+- grafana: `/Users/user/review-droid-benchmark/work/droid-grafana` (PRs #1-10)
+- keycloak: `/Users/user/review-droid-benchmark/work/droid-keycloak` (PRs #1-10)
+- discourse: `/Users/user/review-droid-benchmark/work/droid-discourse` (PRs #1-10)
+- cal_dot_com: `/Users/user/review-droid-benchmark/work/droid-cal_dot_com` (PRs #1-10)
 
-**Results Directory:** `/Users/user/review-droid-benchmark/results/run_2026-01-15/`
+**Results Directory:** `/Users/user/review-droid-benchmark/results/run_2026-01-15/{REPO_NAME}/`
 
-**Output Directory:** `/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/`
+**Output Directory:** `/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/{REPO_NAME}/`
 
-**PR Mapping:**
-- PR #6: "Enhanced Pagination Performance for High-Volume Audit Logs"
-- PR #7: "Optimize spans buffer insertion with eviction during insert"
-- PR #8: "feat(upsampling) - Support upsampled error count with performance optimizations"
-- PR #9: "GitHub OAuth Security Enhancement"
-- PR #10: "Replays Self-Serve Bulk Delete System"
-- PR #11: "Span Buffer Multiprocess Enhancement with Health Monitoring"
-- PR #12: "feat(ecosystem): Implement cross-system issue synchronization"
-- PR #13: "ref(crons): Reorganize incident creation / issue occurrence logic"
-- PR #14: "feat(uptime): Add ability to use queues to manage parallelism"
-- PR #15: "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector"
+**Note:** Replace `{REPO_NAME}` with: sentry, grafana, keycloak, discourse, or cal_dot_com
 
 ---
 
@@ -48,8 +48,9 @@ When counting bugs for metrics calculation:
 
 ### Step 1.1: Navigate to Repository
 ```bash
-cd /Users/user/review-droid-benchmark/work/droid-sentry
+cd /Users/user/review-droid-benchmark/work/droid-{REPO_NAME}
 ```
+Replace `{REPO_NAME}` with: sentry, grafana, keycloak, discourse, or cal_dot_com
 
 ### Step 1.2: Get PR Base Branch and Checkout
 ```bash
@@ -84,7 +85,7 @@ git diff --name-status origin/$BASE_BRANCH...HEAD
 ## Part 2: Validate Droid Comments
 
 ### Step 2.1: Load Droid Comments
-Load from: `/Users/user/review-droid-benchmark/results/run_2026-01-15/pr_{PR_NUMBER}_comments.json`
+Load from: `/Users/user/review-droid-benchmark/results/run_2026-01-15/{REPO_NAME}/pr_{PR_NUMBER}_comments.json`
 
 Each comment has:
 - `id`: Comment ID
@@ -159,7 +160,7 @@ Create a validation entry:
 
 ### Step 2.3: Save Droid Validation Results
 Save all droid validations to:
-`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/pr_{PR_NUMBER}_droid_validations.json`
+`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/{REPO_NAME}/pr_{PR_NUMBER}_droid_validations.json`
 
 Format:
 ```json
@@ -175,9 +176,9 @@ Format:
 ## Part 3: Audit Golden Comments
 
 ### Step 3.1: Load Golden Comments
-Load from: `/Users/user/review-droid-benchmark/results/run_2026-01-15/golden_comments.json`
+Load from: `/Users/user/review-droid-benchmark/results/run_2026-01-15/{REPO_NAME}/golden_comments.json`
 
-Find the entry matching this PR's title (see PR Mapping above).
+Find the entry matching this PR number in the golden comments file.
 
 ### Step 3.2: Audit Each Golden Comment
 
@@ -257,7 +258,7 @@ Create an audit entry:
 
 ### Step 3.3: Save Golden Audit Results
 Save all golden audits to:
-`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/pr_{PR_NUMBER}_golden_audits.json`
+`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/{REPO_NAME}/pr_{PR_NUMBER}_golden_audits.json`
 
 Format:
 ```json
@@ -304,7 +305,7 @@ golden_f1 = 2 * (precision * recall) / (precision + recall)
 
 ### Step 4.4: Save Analysis
 Save to:
-`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/pr_{PR_NUMBER}_completeness.json`
+`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/{REPO_NAME}/pr_{PR_NUMBER}_completeness.json`
 
 Format:
 ```json
@@ -356,7 +357,7 @@ Combine all analysis into a final summary with:
 
 ### Step 5.2: Save PR Summary
 Save to:
-`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/pr_{PR_NUMBER}_summary.json`
+`/Users/user/review-droid-benchmark/results/ground_truth_validation/run_2026-01-15/{REPO_NAME}/pr_{PR_NUMBER}_summary.json`
 
 Format:
 ```json
@@ -398,7 +399,7 @@ Format:
 
 ### Step 6.1: Return to Base Branch
 ```bash
-cd /Users/user/review-droid-benchmark/work/droid-sentry
+cd /Users/user/review-droid-benchmark/work/droid-{REPO_NAME}
 # Return to whatever branch you were on, or the repo's default
 git checkout $(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
 ```
@@ -446,14 +447,15 @@ Check that you created:
 ## Example Session
 
 ```
-User: Follow the validation playbook for PR #6
+User: Follow the validation playbook for sentry PR #6
 
 Droid:
-1. Checking out PR #6...
+1. Checking out sentry PR #6...
+   ✓ Navigated to droid-sentry repository
    ✓ Fetched and checked out pr-6 branch
    
 2. Loading droid comments...
-   ✓ Found 3 droid comments from pr_6_comments.json
+   ✓ Found 3 droid comments from sentry/pr_6_comments.json
    
 3. Validating droid comment 1/3:
    - File: src/sentry/api/endpoints/organization_auditlogs.py:71
@@ -475,7 +477,7 @@ Droid:
    - Golden false positives: 0
    - Completeness score: 75%
    
-6. Saved all results to ground_truth_validation/run_2026-01-15/
+6. Saved all results to ground_truth_validation/run_2026-01-15/sentry/
    ✓ Done! Returning to main branch.
 ```
 
@@ -484,7 +486,17 @@ Droid:
 ## Ready to Start?
 
 **To validate a PR, say:**
-> "Follow the validation playbook for PR #{PR_NUMBER}"
+> "Follow the validation playbook for {REPO_NAME} PR #{PR_NUMBER}"
 
-**For parallel validation across all PRs:**
-Open 10 Droid sessions and assign one PR to each session (PR #6-15).
+**Examples:**
+- "Follow the validation playbook for sentry PR #6"
+- "Follow the validation playbook for grafana PR #1"
+- "Follow the validation playbook for keycloak PR #5"
+
+**For parallel validation across all 50 PRs:**
+Open multiple Droid sessions and assign PRs to each:
+- Sentry: PRs #6-15 (10 PRs)
+- Grafana: PRs #1-10 (10 PRs)
+- Keycloak: PRs #1-10 (10 PRs)
+- Discourse: PRs #1-10 (10 PRs)
+- Cal.com: PRs #1-10 (10 PRs)
