@@ -1,0 +1,15 @@
+{
+  "pr_number": 4,
+  "pr_title": "Advanced Query Processing Architecture",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "The applyTemplateVariables method is called with request.filters as the third parameter, but this parameter is not used in the corresponding test setup.",
+      "original_reasoning": "This is a test coverage observation, not an actual bug. The filters parameter is optional in applyTemplateVariables (adhocFilters?: AdHocVariableFilter[]). The production code correctly passes request.filters - whether it's undefined or has actual filters is handled by the function. There are separate tests in datasource.test.ts that specifically test the adhocFilters functionality. The new tests in this PR correctly verify that template variable interpolation works, which is the primary purpose of the change.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified on pr-4: runSplitQuery() and runShardSplitQuery() now pass request.filters into LokiDatasource.applyTemplateVariables(target, scopedVars, adhocFilters?). The adhocFilters arg is optional, and addAdHocFilters() returns the original expression when filters are undefined/empty. Adhoc filter behavior is covered separately in public/app/plugins/datasource/loki/datasource.test.ts (\"When using adhoc filters\" tests)."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

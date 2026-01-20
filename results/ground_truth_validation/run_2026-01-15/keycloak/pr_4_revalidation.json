@@ -1,0 +1,24 @@
+{
+  "pr_number": 4,
+  "pr_title": "Add HTML sanitizer for translated message resources",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "picocli.exit() calls System.exit() which may be problematic for embedded usage",
+      "file": "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/command/UpdateCompatibilityCheck.java",
+      "line": 48,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/command/UpdateCompatibilityCheck.java",
+      "verified_line": 48,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "Not a bug: this is a CLI command path and is expected to terminate the process with a non-zero exit code; test launch mode is explicitly guarded to avoid hard exits.",
+      "notes": "Re-verified on pr-4: the call is to the Keycloak Picocli wrapper instance (field `picocli` from AbstractCommand), whose `exit(int)` only calls System.exit for non-OK codes when not running in test launch mode (see quarkus/runtime/.../Picocli.java:203-207). For CLI usage, exiting with the command's exit code is intended behavior; 'embedded usage' is not a supported requirement for these commands."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

@@ -1,0 +1,54 @@
+{
+  "pr_number": 8,
+  "pr_title": "SMS workflow reminder retry count tracking",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "deleteMany OR clause deletes non-SMS reminders with retryCount > 1",
+      "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "line": 40,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "verified_line": 29,
+      "verified_severity": "medium",
+      "verified_bug_type": "data_corruption",
+      "verified_description": "The deleteMany filter uses an OR where the retryCount>1 branch is not scoped to SMS (or any other constraints), so it can delete WorkflowReminder rows for other methods (and/or future reminders) as soon as retryCount exceeds 1.",
+      "notes": "Verified at scheduleSMSReminders.ts:29-47: where: { OR: [{ method: SMS, scheduledDate<=now }, { retryCount>1 }] }. If the intent is SMS-only cleanup, the retryCount clause must also include method: SMS (and likely other constraints like scheduled=false)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Race condition in retryCount increment (scheduleSMS failure path)",
+      "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "line": 188,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "verified_line": 184,
+      "verified_severity": "medium",
+      "verified_bug_type": "race_condition",
+      "verified_description": "On the scheduleSMS failure path, retryCount is updated using the previously-read reminder.retryCount + 1, which is a non-atomic read-modify-write; concurrent runs can overwrite each other and lose increments.",
+      "notes": "Verified at scheduleSMSReminders.ts:178-186. Prisma supports atomic increments (data: { retryCount: { increment: 1 } }) to avoid lost updates."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "Race condition in retryCount increment (catch block path)",
+      "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "line": 197,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "verified_line": 195,
+      "verified_severity": "medium",
+      "verified_bug_type": "race_condition",
+      "verified_description": "In the catch block, retryCount is also updated via reminder.retryCount + 1 (non-atomic), so concurrent updates can clobber each other and undercount retries.",
+      "notes": "Verified at scheduleSMSReminders.ts:188-197. Same fix as above: use an atomic increment."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

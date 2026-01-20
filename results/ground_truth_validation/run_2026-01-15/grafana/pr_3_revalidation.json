@@ -1,0 +1,69 @@
+{
+  "pr_number": 3,
+  "pr_title": "Plugins: Chore: Renamed instrumentation middleware to metrics middleware",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "TestLogger.FromContext returns new logger instead of preserving original, breaking test log capture",
+      "file": "pkg/plugins/log/fake.go",
+      "line": 46,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+      "verdict": "confirmed",
+      "verified_file": "pkg/plugins/log/fake.go",
+      "verified_line": 46,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "TestLogger.FromContext always returns a fresh TestLogger, so callers like LoggerMiddleware that do logger.FromContext(ctx).Info(...) log into a different instance than the test holds, breaking log capture/inspection.",
+      "notes": "Confirmed: FromContext ignores ctx and returns NewTestLogger(); this violates the interface contract (should preserve base logger context) and can cause tests that assert on the original TestLogger's Logs fields to miss calls."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "grafanaInfraLogWrapper.FromContext type assertion may fail, silently dropping contextual attributes",
+      "file": "pkg/plugins/log/logger.go",
+      "line": 48,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+      "verdict": "rejected",
+      "verified_file": "pkg/plugins/log/logger.go",
+      "verified_line": 48,
+      "verified_severity": "medium",
+      "verified_bug_type": null,
+      "verified_description": null,
+      "notes": "Rejected: infra/log.(*ConcreteLogger).FromContext always returns either cl.New(...) (a *ConcreteLogger) or cl itself, so the type assertion to *log.ConcreteLogger cannot fail in the current implementation; contextual attributes are preserved."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "ContextualLoggerMiddleware methods panic on nil request (nil pointer dereference)",
+      "file": "pkg/services/pluginsintegration/clientmiddleware/contextual_logger_middleware.go",
+      "line": 40,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "pkg/services/pluginsintegration/clientmiddleware/contextual_logger_middleware.go",
+      "verified_line": 40,
+      "verified_severity": "medium",
+      "verified_bug_type": null,
+      "verified_description": null,
+      "notes": "Rejected as not reachable in the actual call path: the plugin client Decorator/Service rejects nil req upfront (errNilRequest), so this middleware should never observe a nil request pointer."
+    },
+    {
+      "bug_id": 4,
+      "original_description": "traceID no longer logged for plugin requests, breaking request tracing",
+      "file": "pkg/services/pluginsintegration/clientmiddleware/logger_middleware.go",
+      "line": 49,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "pkg/services/pluginsintegration/clientmiddleware/logger_middleware.go",
+      "verified_line": 49,
+      "verified_severity": "medium",
+      "verified_bug_type": null,
+      "verified_description": null,
+      "notes": "Rejected: traceID is now expected to be injected via infra/tracing's RegisterContextualLogProvider and logged by using logger.FromContext(ctx). Additionally, plugin/request attributes (pluginId/endpoint/ds/user) are added by the new ContextualLoggerMiddleware via log.WithContextualAttributes, so tracing context is not actually lost."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

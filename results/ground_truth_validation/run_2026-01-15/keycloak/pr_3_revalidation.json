@@ -1,0 +1,31 @@
+{
+  "pr_number": 3,
+  "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Dead code in concatenatedRSToASN1DER - ASN1Encoder instances created and discarded",
+      "file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+      "line": 107,
+      "original_severity": "low",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+      "verified_line": 114,
+      "verified_severity": "low",
+      "verified_bug_type": "dead_code",
+      "verified_description": "concatenatedRSToASN1DER() has two standalone calls to ASN1Encoder.create().write(...) whose results are discarded; the DER sequence is built using separate encoder instances below, so these two writes are dead code.",
+      "notes": "Re-checked on pr-3: unused calls are at lines 114-115; original line number was off. This is a real but low-impact issue (wasted work/confusing code)."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "Returns wrong provider (default keystore instead of BouncyCastle)",
+      "original_reasoning": "This is intentional design for a lightweight crypto provider. WildFlyElytronProvider returns null for the same method. The fallback behavior in BouncyIntegration handles non-BC providers gracefully. AuthzClientCryptoProvider has order 100, so it's only selected when BC providers aren't available. This is a design choice, not a bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Verified: CryptoIntegration now prefers highest order providers (Default/FIPS/Elytron have order=200; AuthzClientCryptoProvider has order=100) so this provider is only selected when others aren't on the classpath. In authz-client code, getBouncyCastleProvider() is not referenced directly; BouncyIntegration also tolerates null by falling back to the first JCA provider. Not a functional bug in this PR." 
+    }
+  ],
+  "newly_discovered_bugs": []
+}

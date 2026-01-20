@@ -1,0 +1,88 @@
+{
+  "pr_number": 1,
+  "pr_title": "feat: add calendar cache status and actions (#22532)",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "forEach(async...) fire-and-forget in bookings.tsx reschedule flow",
+      "file": "packages/trpc/server/routers/viewer/bookings.tsx",
+      "line": 553,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/bookings.tsx",
+      "verified_line": 553,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "Async callback passed to bookingRefsFiltered.forEach() is never awaited, so calendar/video deletions can run after the mutation continues (and any rejection becomes unhandled).",
+      "notes": "Code uses bookingRefsFiltered.forEach(async ...) with awaits inside but no Promise.all/map/for..of; errors are not handled and deletions are not awaited before proceeding to send email/webhooks."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "forEach(async...) fire-and-forget in handleCancelBooking recurring booking deletion",
+      "file": "packages/features/bookings/lib/handleCancelBooking.ts",
+      "line": 459,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/features/bookings/lib/handleCancelBooking.ts",
+      "verified_line": 460,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In the recurring booking path, an async forEach is used for per-credential deletions; its async work is not awaited and pushed values are resolved results (not promises), so later Promise.all(...) does not reliably wait for the deletes.",
+      "notes": "The recurring branch does credentials.filter(...).forEach(async (credential) => { const calendar = await getCalendar(credential); ... const deletedEvent = await calendar?.deleteEvent(...); apiDeletes.push(deletedEvent); }); Since the forEach itself isn't awaited, apiDeletes may be incomplete when awaited later, and failures become unhandled." 
+    },
+    {
+      "bug_id": 3,
+      "original_description": "forEach(async...) fire-and-forget in vital reschedule",
+      "file": "packages/app-store/vital/lib/reschedule.ts",
+      "line": 125,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/app-store/vital/lib/reschedule.ts",
+      "verified_line": 125,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "Async callback passed to bookingRefsFiltered.forEach() is not awaited; the surrounding try/catch will not catch async rejections and the function can return before deletions complete.",
+      "notes": "The code wraps bookingRefsFiltered.forEach(async ...) in try/catch, but try/catch only catches synchronous errors from the forEach call, not errors from the awaited operations inside the callback." 
+    },
+    {
+      "bug_id": 4,
+      "original_description": "forEach(async...) fire-and-forget in wipemycalother reschedule",
+      "file": "packages/app-store/wipemycalother/lib/reschedule.ts",
+      "line": 125,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/app-store/wipemycalother/lib/reschedule.ts",
+      "verified_line": 125,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "Async callback passed to bookingRefsFiltered.forEach() is not awaited; deletions run fire-and-forget and errors will not be caught by the outer try/catch.",
+      "notes": "Same pattern as vital reschedule: bookingRefsFiltered.forEach(async ...) inside try/catch; async failures are not caught and completion is not awaited." 
+    },
+    {
+      "bug_id": 5,
+      "original_description": "getCalendarCredentials stores Promise<Calendar> without await, breaking type contract",
+      "file": "packages/core/CalendarManager.ts",
+      "line": 28,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+      "verdict": "rejected",
+      "verified_file": "packages/core/CalendarManager.ts",
+      "verified_line": 28,
+      "notes": "After getCalendar was changed to async, callers were updated to await it (e.g., getConnectedCalendars uses `const calendar = await item.calendar;`). Storing the promise in getCalendarCredentials is consistent with that usage and does not violate a typed contract in this repo (all call sites pass the result into getConnectedCalendars)."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "Consider adding try-catch around the await to handle import failures gracefully",
+      "original_reasoning": "The code already handles missing/invalid app lookups gracefully with null checks and log.warn. The await on appStore[key] won't throw - it returns undefined for missing keys. This is a speculative/defensive suggestion without a concrete bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Verified in multiple call sites (e.g., getCalendar/handlePayment): `await appStore[missingKey]` resolves to undefined (no throw), and the subsequent `if (!(app && ...))` guard handles the missing app case. Only a rejected dynamic import would throw, which is not evidenced by the PR/code." 
+    }
+  ],
+  "newly_discovered_bugs": []
+}

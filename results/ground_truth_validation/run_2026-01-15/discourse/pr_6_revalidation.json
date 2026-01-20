@@ -1,0 +1,54 @@
+{
+  "pr_number": 6,
+  "pr_title": "UX: show complete URL path if website domain is same as instance domain",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Missing ? suffix on include_website_name method causes unconditional serialization",
+      "file": "app/serializers/user_serializer.rb",
+      "line": 153,
+      "original_severity": "high",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "app/serializers/user_serializer.rb",
+      "verified_line": 153,
+      "verified_severity": "high",
+      "verified_bug_type": "security",
+      "verified_description": "`include_website_name` is misnamed; ActiveModel::Serializer looks for `include_website_name?`, so `website_name` is always serialized and bypasses the `untrusted_attributes`/`restrict_user_fields?` gating used for `website`, potentially exposing website-derived data to anonymous viewers.",
+      "notes": "`website_name` is added as an attribute but not included in `untrusted_attributes`, and the intended include hook is missing the required `?` suffix (line 153)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "String literal mutation with << operator ('.' << website_host)",
+      "file": "app/serializers/user_serializer.rb",
+      "line": 150,
+      "original_severity": "medium",
+      "original_source": "golden",
+      "verdict": "rejected",
+      "verified_file": "app/serializers/user_serializer.rb",
+      "verified_line": 149,
+      "verified_severity": "low",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "Not a bug in this codebase as-is: `\".\" << website_host` only raises if string literals are frozen (e.g., `# frozen_string_literal: true`), which is not enabled in this file/app/serializers.",
+      "notes": "The expression is odd style, but with mutable string literals it does not crash and does not create persistent cross-call mutation issues. Would only become a `FrozenError` under frozen string literals." 
+    },
+    {
+      "bug_id": 3,
+      "original_description": "Incorrect same-domain check using label count instead of registrable domain",
+      "file": "app/serializers/user_serializer.rb",
+      "line": 145,
+      "original_severity": "medium",
+      "original_source": "droid",
+      "verdict": "modified",
+      "verified_file": "app/serializers/user_serializer.rb",
+      "verified_line": 144,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "The sibling-subdomain heuristic compares only `split('.')[1..]` when label counts match, which misclassifies domains under multi-level public suffixes (e.g. `foo.co.uk` vs `bar.co.uk`) as the same and incorrectly includes the full path.",
+      "notes": "Bug is real; updated verified_line to 144 and clarified the concrete failing case (public-suffix/registrable-domain mismatch)."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

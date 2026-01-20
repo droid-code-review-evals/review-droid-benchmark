@@ -1,0 +1,39 @@
+{
+  "pr_number": 5,
+  "pr_title": "Optimize header layout performance with flexbox mixins",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Invalid -ms-align-items property in align-items mixin",
+      "file": "app/assets/stylesheets/common/foundation/mixins.scss",
+      "line": 122,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "app/assets/stylesheets/common/foundation/mixins.scss",
+      "verified_line": 121,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "The flexbox align-items mixin includes an invalid CSS property (-ms-align-items), so the intended IE vendor-prefixed rule is wrong; the correct IE rule (-ms-flex-align) is already present, so this is mostly a correctness/quality issue.",
+      "notes": "Draft line appears off by +1; -ms-align-items is at mixins.scss:121. Downgraded severity to low because the correct -ms-flex-align rule is also present and the invalid property is ignored by browsers."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Removing float:right from .panel breaks noscript header layout",
+      "file": "app/assets/stylesheets/common/base/header.scss",
+      "line": 35,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "app/assets/stylesheets/common/base/header.scss",
+      "verified_line": 35,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "PR removes float:right from .d-header .panel and relies on flexbox alignment, but the server-rendered header partial (app/views/application/_header.html.erb) nests .panel inside a .row that is not a flex container, so margin-left:auto won't right-align it and the non-JS header layout regresses.",
+      "notes": "Confirmed via app/views/application/_header.html.erb: .panel is nested under .contents > .row, so it is not a direct flex item."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

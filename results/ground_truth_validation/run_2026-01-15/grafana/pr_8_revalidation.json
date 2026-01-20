@@ -1,0 +1,39 @@
+{
+  "pr_number": 8,
+  "pr_title": "Frontend Asset Optimization",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Incomplete double-checked locking - no re-check of cache after acquiring write lock",
+      "file": "pkg/api/webassets/webassets.go",
+      "line": 48,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "pkg/api/webassets/webassets.go",
+      "verified_line": 48,
+      "verified_severity": "medium",
+      "verified_bug_type": "race_condition",
+      "verified_description": "GetWebAssets reads the cache under RLock, but after acquiring the write lock it does not re-check whether another goroutine has already populated entryPointAssetsCache; as a result, concurrent callers that initially observed nil can redundantly re-load and re-parse the manifest (file/CDN) even though the cache is now filled.",
+      "notes": "Confirmed in GetWebAssets: after the initial RLock path, code unconditionally takes entryPointAssetsCacheMu.Lock() and proceeds to load assets without checking entryPointAssetsCache again. This is a classic incomplete double-checked locking pattern that can cause duplicate work and enable the cache-overwrite issue in bug #2."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Cache corruption on error - nil result overwrites valid cached entry when fetch fails",
+      "file": "pkg/api/webassets/webassets.go",
+      "line": 69,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "pkg/api/webassets/webassets.go",
+      "verified_line": 69,
+      "verified_severity": "medium",
+      "verified_bug_type": "race_condition",
+      "verified_description": "GetWebAssets assigns entryPointAssetsCache = result even when err != nil and/or result is nil; with concurrent callers (and no cache re-check after acquiring the write lock), a later caller can fail to load assets and overwrite a valid cached entry with nil, forcing future requests to reload and potentially returning errors.",
+      "notes": "Confirmed at webassets.go:69: entryPointAssetsCache is set to result unconditionally. Combined with the missing in-lock cache re-check, a goroutine that observed nil before another goroutine populated the cache can later acquire the lock, fail to load (result=nil, err!=nil), and overwrite the already-populated cache."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

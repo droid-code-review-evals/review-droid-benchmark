@@ -1,0 +1,39 @@
+{
+  "pr_number": 6,
+  "pr_title": "Advanced date override handling and timezone compatibility improvements",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Dayjs object comparison with === always returns false (dead code for all-day override check)",
+      "file": "packages/trpc/server/routers/viewer/slots.ts",
+      "line": 114,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/slots.ts",
+      "verified_line": 114,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "All-day date override detection compares two Dayjs objects with ===, which is always false, causing all-day overrides to be ignored and returning availability incorrectly.",
+      "notes": "Verified in pr-6 branch: line 114 uses `dayjs(... ) === dayjs(... )`. This makes the all-day override path unreachable. Note: draft PR title differs from current GH PR #6 title, but the referenced file/lines match this PR's diff."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Working hours end time calculated using slotStartTime instead of slotEndTime (allows bookings past working hours)",
+      "file": "packages/trpc/server/routers/viewer/slots.ts",
+      "line": 141,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/slots.ts",
+      "verified_line": 141,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "Working-hours validation calculates `end` from `slotStartTime` instead of `slotEndTime`, so it fails to reject slots whose end time exceeds `workingHour.endTime`.",
+      "notes": "Verified in pr-6 branch: lines 141-142 compute both `start` and `end` from `slotStartTime`, so duration is ignored when enforcing working hours."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

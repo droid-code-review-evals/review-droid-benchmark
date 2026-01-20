@@ -1,0 +1,23 @@
+{
+  "repo": "sentry",
+  "revalidation_date": "2026-01-20",
+  "prs_reviewed": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "total_bugs_reviewed": 30,
+  "confirmed": 18,
+  "modified": 8,
+  "rejected": 4,
+  "false_positives_confirmed": 10,
+  "false_positives_reversed": 0,
+  "newly_discovered": 0
+}

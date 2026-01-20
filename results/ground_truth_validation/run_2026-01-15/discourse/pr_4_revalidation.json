@@ -1,0 +1,136 @@
+{
+  "pr_number": 4,
+  "pr_title": "Enhance embed URL handling and validation system",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "SSRF via open() in poll_feed.rb - arbitrary URL fetch from site setting",
+      "file": "app/jobs/scheduled/poll_feed.rb",
+      "line": 28,
+      "original_severity": "high",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "app/jobs/scheduled/poll_feed.rb",
+      "verified_line": 29,
+      "verified_severity": "high",
+      "verified_bug_type": "security",
+      "verified_description": "Uses open-uri open(SiteSetting.feed_polling_url) without scheme/host/private-network validation, enabling SSRF (and potentially local file reads via file://) if this setting is attacker-influenced.",
+      "notes": "Location off by +1 line vs draft (open() call is at line 29)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "SSRF via open() in topic_embed.rb import_remote - arbitrary URL fetch without validation",
+      "file": "app/models/topic_embed.rb",
+      "line": 48,
+      "original_severity": "critical",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "app/models/topic_embed.rb",
+      "verified_line": 48,
+      "verified_severity": "high",
+      "verified_bug_type": "security",
+      "verified_description": "import_remote fetches remote content with open(url).read without validating scheme/redirect targets or blocking private IP ranges; even though some call paths constrain host, redirects can still enable SSRF.",
+      "notes": "Downgraded severity from critical→high because the main embed retrieval path constrains the host to SiteSetting.embeddable_host, but redirects/scheme handling remain risky."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "Origin check bypass via indexOf substring match in postMessage handler",
+      "file": "app/assets/javascripts/embed.js",
+      "line": 17,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "app/assets/javascripts/embed.js",
+      "verified_line": 17,
+      "verified_severity": "medium",
+      "verified_bug_type": "security",
+      "verified_description": "Message handler uses discourseUrl.indexOf(e.origin) for origin validation, which can be bypassed by an attacker-controlled origin that is a prefix of discourseUrl (e.g., https://discourse.example.co matching https://discourse.example.com/), allowing untrusted postMessage to resize the iframe.",
+      "notes": "Confirmed as written: substring check is not strict origin equality."
+    },
+    {
+      "bug_id": 4,
+      "original_description": "NoMethodError when contents parameter is nil in TopicEmbed.import",
+      "file": "app/models/topic_embed.rb",
+      "line": 13,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "app/models/topic_embed.rb",
+      "verified_line": 13,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "TopicEmbed.import calls contents << ...; if contents is nil (e.g., missing RSS item content or Readability::Document content), this raises NoMethodError.",
+      "notes": "Confirmed at line 13 (contents << ...)."
+    },
+    {
+      "bug_id": 5,
+      "original_description": "XSS vulnerability via unescaped URL interpolation in import HTML",
+      "file": "app/models/topic_embed.rb",
+      "line": 13,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "app/models/topic_embed.rb",
+      "verified_line": 13,
+      "verified_severity": "high",
+      "verified_bug_type": "security",
+      "verified_description": "Appends raw HTML containing <a href='#{url}'>#{url}</a> into contents, and later stores it as raw_html without escaping/sanitization; a crafted URL containing quotes can inject attributes/HTML and lead to XSS in embedded content.",
+      "notes": "Upgraded severity from medium→high due to raw_html rendering and direct string interpolation into an HTML attribute."
+    },
+    {
+      "bug_id": 6,
+      "original_description": "ERB syntax error: 'end if' is invalid Ruby",
+      "file": "app/views/embed/best.html.erb",
+      "line": 6,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "app/views/embed/best.html.erb",
+      "verified_line": 6,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "Template contains '<%- end if %>', which is invalid Ruby/ERB syntax and will raise a template compilation error.",
+      "notes": "Confirmed at line 6."
+    },
+    {
+      "bug_id": 7,
+      "original_description": "Spec mocks TopicRetriever but controller enqueues job - test may not verify real behavior",
+      "file": "spec/controllers/embed_controller_spec.rb",
+      "line": 40,
+      "original_severity": "low",
+      "original_source": "droid_only",
+      "verdict": "modified",
+      "verified_file": "spec/controllers/embed_controller_spec.rb",
+      "verified_line": 43,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "The controller enqueues Jobs.enqueue(:retrieve_topic, ...) when no embed exists, but the spec expects TopicRetriever.new(...).retrieve; as written, the spec does not match implementation and should fail.",
+      "notes": "Spec expectation is around line 43; implementation uses Jobs.enqueue at app/controllers/embed_controller.rb:15."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "postMessage targetOrigin should be the origin (scheme+host+port), not the full referrer URL; using the full URL will cause the message to be dropped and prevent resizing.",
+      "original_reasoning": "Technically incorrect - postMessage with full URL as targetOrigin still works; browser extracts origin. The message is NOT dropped if origin matches.",
+      "verdict": "actually_real_bug",
+      "notes": "The embed layout uses request.referer (a full URL, including path) as targetOrigin: app/views/layouts/embed.html.erb:11. targetOrigin is required to be an origin (scheme+host+port), so this can throw or prevent the resize message from being delivered."
+    },
+    {
+      "original_comment": "The code sets X-Frame-Options: ALLOWALL which completely disables clickjacking protection...",
+      "original_reasoning": "This is intentional for an embed endpoint. The purpose IS to be embedded in iframes. X-Frame-Options: ALLOWALL is correct. Referer cannot be spoofed by JavaScript.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: ensure_embeddable intentionally sets X-Frame-Options=ALLOWALL for the embed endpoint (app/controllers/embed_controller.rb)."
+    }
+  ],
+  "newly_discovered_bugs": [
+    {
+      "description": "postMessage targetOrigin uses the full referer URL instead of an origin, which can break embed resizing (DOMException or message dropped).",
+      "file": "app/views/layouts/embed.html.erb",
+      "line": 11,
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "notes": "Discovered while revalidating the claimed false positive; targetOrigin should be something like new URL(request.referer).origin, not the full referer string."
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "pr_number": 12,
+  "pr_title": "GitHub OAuth Security Enhancement",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Shared timestamp default in dataclass - timezone.now() evaluated at class definition time",
+      "file": "src/sentry/integrations/services/assignment_source.py",
+      "line": 18,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/integrations/services/assignment_source.py",
+      "verified_line": 18,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "AssignmentSource.queued uses queued: datetime = timezone.now(), which is evaluated once at import/class-definition time; all AssignmentSource instances created without an explicit queued value will share the same timestamp instead of capturing the creation time.",
+      "notes": "Confirmed at assignment_source.py:18. In dataclasses, non-default_factory defaults are evaluated when the class is defined; fix would be field(default_factory=timezone.now)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "to_dict() returns datetime object that may fail JSON serialization in Celery task kwargs",
+      "file": "src/sentry/integrations/services/assignment_source.py",
+      "line": 27,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "src/sentry/integrations/services/assignment_source.py",
+      "verified_line": 27,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "Rejected: Although to_dict() (assignment_source.py:27-28) returns a dict containing a datetime under 'queued', Sentry's Celery configuration uses pickle serialization, so passing this dict in apply_async kwargs does not require JSON serialization.",
+      "notes": "Verified Celery serializer is pickle (src/sentry/conf/server.py:740-742). sync_group_assignee_outbound passes assignment_source.to_dict() via apply_async kwargs (src/sentry/integrations/utils/sync.py:109-121), which is fine under pickle serialization."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "The method name has a typo: test_from_dict_inalid_data should be test_from_dict_invalid_data.",
+      "original_reasoning": "This is a test method naming typo, not a functional bug. Test method names don't affect runtime behavior.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed in tests/sentry/integrations/services/test_assignment_source.py: test_from_dict_inalid_data is misspelled but still discovered/executed (it starts with 'test_'); naming typo is not a functional bug."
+    },
+    {
+      "original_comment": "Method name says 'empty_array' but tests empty dict - consider renaming to 'test_from_dict_empty_dict' for clarity.",
+      "original_reasoning": "This is a naming clarity issue in test code, not a functional bug. The test logic is correct.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed in tests/sentry/integrations/services/test_assignment_source.py: test_from_dict_empty_array uses data = {}. This is a clarity issue only; test behavior is correct."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

@@ -1,0 +1,69 @@
+{
+  "pr_number": 5,
+  "pr_title": "Add Groups resource type and scopes to authorization schema",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Feature flag inconsistency - V1 flag (ADMIN_FINE_GRAINED_AUTHZ) used in cleanup listener instead of V2 (ADMIN_FINE_GRAINED_AUTHZ_V2)",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/AdminPermissions.java",
+      "line": 77,
+      "original_severity": "high",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/AdminPermissions.java",
+      "verified_line": 77,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "AdminPermissions.registerListener() only performs permission cleanup when Profile.Feature.ADMIN_FINE_GRAINED_AUTHZ (v1) is enabled; when ADMIN_FINE_GRAINED_AUTHZ_V2 is enabled (and v1 is not), Role/Client/Group removal events will not disable corresponding fine-grained permissions, leaving stale authorization state.",
+      "notes": "Confirmed: AdminPermissions.registerListener(...) is always called from DefaultKeycloakSessionFactory/QuarkusKeycloakSessionFactory, but onEvent() is gated by ADMIN_FINE_GRAINED_AUTHZ instead of also allowing ADMIN_FINE_GRAINED_AUTHZ_V2; there is no alternate listener for V2, so cleanup won't run in V2-only deployments."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Owner mismatch in hasPermission - findByName uses server.getId() but resources are created with resourceServer.getClientId()",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "line": 213,
+      "original_severity": "high",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "verified_line": 214,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "ClientPermissionsV2 resource lookups pass the wrong ownerId: resourceStore.findByName(server, client.getId(), server.getId()) (and the global hasPermission(String) variant) use ResourceServer.getId() as owner, but ResourceStore's default owner for resource-server-owned resources is resourceServer.getClientId(); as a result, lookups for per-client resources and the type-level Clients resource can fail, causing permission evaluation to ignore grants.",
+      "notes": "Modified: line is 214 (not 213) and the issue applies to both hasPermission(ClientModel, ...) and hasPermission(String) (see findByName(server, CLIENTS_RESOURCE_TYPE, server.getId()) at line 244). Verified against ResourceStore: findByName(resourceServer, name) delegates to findByName(resourceServer, name, resourceServer.getClientId()), and AdminPermissionsSchema creates resources with owner=resourceServer.getClientId()."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "getClientsWithPermission uses findByType which only finds type-level 'Clients' resource; per-client resources have no type set",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "line": 137,
+      "original_severity": "high",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "verified_line": 138,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "ClientPermissionsV2.getClientsWithPermission() iterates resources via resourceStore.findByType(server, AdminPermissionsSchema.CLIENTS_RESOURCE_TYPE, ...) which only yields resources that have their type set to \"Clients\"; however, per-client resources created via AdminPermissionsSchema.getResourceObjectResource() use ResourceStore.create(resourceServer, name, owner) without assigning a type, so per-client resources won't be discovered and the method will miss granted clients.",
+      "notes": "Modified: line is 138 (not 137). Verified that AdminPermissionsSchema.getResourceObjectResource() creates resources with create(resourceServer, name, resourceServer.getClientId()) and only updates scopes; it does not set a resource type, so findByType('Clients') will not enumerate these per-client resources."
+    },
+    {
+      "bug_id": 4,
+      "original_description": "Potential NPE in hasPermission - getResourceTypeResource can return null, causing NPE in findByResource and resource.getScopes()",
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "line": 218,
+      "original_severity": "medium",
+      "original_source": "unknown",
+      "verdict": "modified",
+      "verified_file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "verified_line": 217,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "ClientPermissionsV2.hasPermission(ClientModel, ...) does not null-check the fallback resource returned by AdminPermissionsSchema.SCHEMA.getResourceTypeResource(...); when it returns null (e.g., schema unsupported or the type resource not yet created), policyStore.findByResource(server, resource) and later resource.getScopes() will throw NullPointerException.",
+      "notes": "Modified: line is 217 (not 218); the NPE would occur at the subsequent findByResource(...) call (line 219) and/or when constructing the ResourcePermission with resource.getScopes()."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

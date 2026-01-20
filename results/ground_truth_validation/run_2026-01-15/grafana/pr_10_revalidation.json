@@ -1,0 +1,39 @@
+{
+  "pr_number": 10,
+  "pr_title": "Unified Storage Performance Optimizations",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Race condition: BuildIndex concurrent map write - multiple goroutines can build same index and race on b.cache[key] = idx",
+      "file": "pkg/storage/unified/search/bleve.go",
+      "line": 137,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "pkg/storage/unified/search/bleve.go",
+      "verified_line": 72,
+      "verified_severity": "medium",
+      "verified_bug_type": "race_condition",
+      "verified_description": "BuildIndex is no longer serialized (cacheMu lock was moved from the start of BuildIndex to only around the final cache write), so concurrent callers can build the same key in parallel and then overwrite b.cache[key] with the last writer; the overwritten bleve.Index is never closed, leading to wasted work and potential resource leaks.",
+      "notes": "In this PR, BuildIndex removed the cacheMu Lock/Unlock that previously wrapped the whole function and now only locks around b.cache[key] = idx (bleve.go:85-90 vs 134-139). This avoids a map-write panic but allows duplicate builds and last-write-wins cache replacement without closing the old index. Caller searchSupport.getOrCreateIndex explicitly notes this missing per-key blocking (resource/search.go:290-296)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Race condition: TotalDocs concurrent map read - iterates b.cache without lock while BuildIndex writes to it",
+      "file": "pkg/storage/unified/search/bleve.go",
+      "line": 144,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "pkg/storage/unified/search/bleve.go",
+      "verified_line": 144,
+      "verified_severity": "high",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "TotalDocs ranges over b.cache without any lock; if BuildIndex (or any other writer) updates b.cache concurrently, Go can panic with \"concurrent map iteration and map write\" during metrics collection.",
+      "notes": "TotalDocs iterates `for _, v := range b.cache` with no cacheMu RLock (bleve.go:144-151). BuildIndex writes to b.cache under cacheMu.Lock (bleve.go:137-139), but since TotalDocs does not take any lock, this can still race and panic. TotalDocs is called from the prometheus Collector (resource/bleve_index_metrics.go:96) which can run concurrently with index creation."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

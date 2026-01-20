@@ -1,0 +1,54 @@
+{
+  "pr_number": 9,
+  "pr_title": "feat(ecosystem): Implement cross-system issue synchronization",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "KeyError/TypeError when accessing integration.metadata['sender']['login'] - sender key may not exist",
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 501,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/integrations/github/integration.py",
+      "verified_line": 503,
+      "verified_severity": "high",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "GitHubInstallation compares pipeline.fetch_state('github_authenticated_user') to integration.metadata['sender']['login'] without checking that metadata contains 'sender' (or that it has 'login'); integrations without sender metadata will raise KeyError/TypeError and 500 the install flow.",
+      "notes": "At src/sentry/integrations/github/integration.py:501-505 it directly indexes integration.metadata['sender']['login']. Sender metadata is not guaranteed: build_integration only adds metadata['sender'] if state.get('sender') is present, and the GitHubIntegrationsInstallationEndpoint explicitly returns 404 when 'sender' is missing from integration.metadata."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Null reference if github_authenticated_user state is missing from pipeline",
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 500,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "src/sentry/integrations/github/integration.py",
+      "verified_line": 502,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "pipeline.fetch_state('github_authenticated_user') returns None when unset; the comparison itself does not dereference or raise and simply fails closed by returning the error response.",
+      "notes": "Re-checked src/sentry/pipeline/base.py: fetch_state() returns None when the key is absent. The only runtime error risk at this site is the unguarded integration.metadata['sender']['login'] access (captured as bug_id 1)."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "OAuth state uses static pipeline.signature instead of per-request random value (CSRF vulnerability)",
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 401,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/integrations/github/integration.py",
+      "verified_line": 402,
+      "verified_severity": "high",
+      "verified_bug_type": "security",
+      "verified_description": "OAuthLoginView uses state = pipeline.signature, where Pipeline.signature is a deterministic md5 of the pipeline view class names; this makes the OAuth 'state' value predictable rather than per-flow random, weakening CSRF protection.",
+      "notes": "At src/sentry/integrations/github/integration.py:402 it sets state = pipeline.signature and later compares request.GET['state'] to pipeline.signature. Pipeline.signature is computed at src/sentry/pipeline/base.py: pipe_ids -> md5_text(*pipe_ids).hexdigest(), which is stable for a given pipeline definition and not a per-request nonce."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

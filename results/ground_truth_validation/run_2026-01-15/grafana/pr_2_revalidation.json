@@ -1,0 +1,40 @@
+{
+  "pr_number": 2,
+  "pr_title": "Advanced SQL Analytics Framework",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Asymmetric cache trust logic: cached grants trusted immediately but cached denials fall through to DB, allowing stale grants to persist after permission revocation",
+      "file": "pkg/services/authz/rbac/service.go",
+      "line": 127,
+      "original_severity": "high",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "pkg/services/authz/rbac/service.go",
+      "verified_line": 131,
+      "verified_severity": "high",
+      "verified_bug_type": "security",
+      "verified_description": "Check() trusts cached positive permissions (permCache hit) and returns Allowed=true without consulting the DB; after a permission revocation, the stale cached grant can continue to authorize access until cache expiry, while cache-miss/negative results explicitly fall back to the DB.",
+      "notes": "Confirmed in pkg/services/authz/rbac/service.go: on permCache hit, it returns immediately when allowed==true (line ~131), but when allowed==false it falls through to getIdentityPermissions(). The accompanying test 'Fallback to the database on outdated cache' demonstrates the intentional asymmetry for stale negatives, leaving stale positives possible after revocation."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "The test comment says the cached permissions 'allow access', but the map stores false for dashboards:uid:dash1, so checkPermission will still treat this scope as not allowed.",
+      "original_reasoning": "This is a misleading test comment, not a functional bug. The test's intent is to prove permDenialCache takes precedence over permCache. Since permDenialCache is checked first and returns denial immediately, the permCache is never reached - whether it stores true or false is irrelevant to the test outcome. The test logic is correct; only the explanatory comment is confusing.",
+      "verdict": "actually_real_bug",
+      "notes": "In pkg/services/authz/rbac/service_test.go:981-983, the comment says the permCache should allow access to prove it isn't checked, but it sets dashboards:uid:dash1 to false. With false, the test would still deny even if permDenialCache precedence were broken, so this test does not validate the intended ordering/precedence."
+    }
+  ],
+  "newly_discovered_bugs": [
+    {
+      "description": "Test does not actually prove permDenialCache precedence because the permCache entry is set to false despite a comment claiming it should allow.",
+      "file": "pkg/services/authz/rbac/service_test.go",
+      "line": 981,
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "notes": "The test 'Should deny on explicit cache deny entry' sets permDenialCache deny and permCache dashboards:uid:dash1=false, so the assertion would still pass even if the implementation checked permCache first; to prove precedence it should set the permCache entry to true and/or assert the DB path isn't taken."
+    }
+  ]
+}

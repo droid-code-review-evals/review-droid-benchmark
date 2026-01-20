@@ -1,0 +1,31 @@
+{
+  "pr_number": 3,
+  "pr_title": "Add comprehensive email validation for blocked users",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Race condition and side effects in should_block? method",
+      "file": "app/models/blocked_email.rb",
+      "line": 11,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "rejected",
+      "verified_file": "app/models/blocked_email.rb",
+      "verified_line": 11,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "",
+      "notes": "The non-atomic increment is only used for statistics and does not affect the allow/block decision; the table migration sets match_count default to 0 and not-null, and the PR’s own spec asserts these side effects are intended. This does not constitute a functional bug in typical usage. (Also: draft pr_title does not match the actual PR #3 title on GitHub.)"
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "Regex pattern @(#{domains}) only matches domain suffixes, not full domains. evil.example.com would match whitelist entry example.com.",
+      "original_reasoning": "This is incorrect. The regex @(example\\.com) does NOT match evil.example.com because the @ must immediately precede the domain. Verified by testing: 'user@evil.example.com' =~ /@(example\\.com)/i returns nil. The existing test 'should not reject partial matches' confirms the regex works correctly.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed by inspection: EmailValidator builds /@(#{domains})/i (with dots escaped) so it only matches when '@' is immediately followed by the listed domain; 'user@evil.example.com' does not contain '@example.com'."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

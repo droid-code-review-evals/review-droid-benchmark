@@ -1,0 +1,76 @@
+{
+  "pr_number": 7,
+  "pr_title": "Enhance embed URL handling and validation system",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "topic-meta-data h5 a lightness inverted from 30% to 70% in light theme",
+      "file": "app/assets/stylesheets/desktop/topic-post.scss",
+      "line": 291,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "app/assets/stylesheets/desktop/topic-post.scss",
+      "verified_line": 291,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In .topic-meta-data h5 a, the light-theme color was changed from scale-color($primary, $lightness: 30%) to dark-light-choose(...$lightness: 70%...) while most other changes preserve the original light-theme lightness; this appears to invert the intended contrast/weight for the light theme.",
+      "notes": "Diff shows: color: scale-color($primary, $lightness: 30%) -> color: dark-light-choose(scale-color($primary, $lightness: 70%), scale-color($secondary, $lightness: 30%)) at line 291. This is the opposite direction of the original (subtle/darker) styling and inconsistent with surrounding replacements that keep light-theme values the same."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "mobile modal .custom-message-length lightness changed from 70% to 30% in light theme (inconsistent with desktop)",
+      "file": "app/assets/stylesheets/mobile/modal.scss",
+      "line": 103,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+      "verdict": "confirmed",
+      "verified_file": "app/assets/stylesheets/mobile/modal.scss",
+      "verified_line": 103,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "Mobile .custom-message-length changes light-theme lightness from 70% to 30%, while desktop keeps 70% (but with dark-light-choose), creating an inconsistent appearance between desktop and mobile for the same UI element.",
+      "notes": "mobile/modal.scss: scale-color($primary, $lightness: 70%) -> dark-light-choose(scale-color($primary, $lightness: 30%), scale-color($secondary, $lightness: 70%)) at line 102. desktop/modal.scss still uses $lightness: 70% for the light-theme side."
+    },
+    {
+      "bug_id": 3,
+      "original_description": ".name selector lightness changed from 30% to 50% (inconsistent with PR pattern)",
+      "file": "app/assets/stylesheets/desktop/user.scss",
+      "line": 522,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "app/assets/stylesheets/desktop/user.scss",
+      "verified_line": 522,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In desktop user.scss, .group-member-info .name changes from scale-color($primary, $lightness: 30%) to a 50% lightness value, removing the intended visual distinction from .title and deviating from the typical pattern of preserving light-theme values when wrapping with dark-light-choose.",
+      "notes": "Diff shows: .name color scale-color($primary, $lightness: 30%) -> dark-light-choose(scale-color($primary, $lightness: 50%), scale-color($secondary, $lightness: 50%)) at line 522; .title remains at 50%."
+    },
+    {
+      "bug_id": 4,
+      "original_description": ".name selector lightness changed from 30% to 50% (mobile variant of bug 3)",
+      "file": "app/assets/stylesheets/mobile/user.scss",
+      "line": 497,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "app/assets/stylesheets/mobile/user.scss",
+      "verified_line": 497,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In mobile user.scss, .group-member-info .name changes from 30% to 50% lightness, mirroring the desktop issue and making name/title styling uniform where it previously differed.",
+      "notes": "Diff shows: .name color scale-color($primary, $lightness: 30%) -> dark-light-choose(scale-color($primary, $lightness: 50%), scale-color($secondary, $lightness: 50%)) at line 497."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "In topic-post.css the original code used $lightness: 70% but the replacement uses $lightness: 30% for the light theme. This makes the text significantly darker than intended.",
+      "original_reasoning": "The claim is factually incorrect. After examining the full diff of topic-post.scss, no change goes from 70% to 30% for light theme. The notable change (.topic-meta-data h5 a) goes the opposite direction (30% to 70%). The golden comment has the values reversed.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: in app/assets/stylesheets/desktop/topic-post.scss the notable change is 30% -> 70% for the light-theme side (line 291), not 70% -> 30%."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

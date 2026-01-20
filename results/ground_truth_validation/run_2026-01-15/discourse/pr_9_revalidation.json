@@ -1,0 +1,39 @@
+{
+  "pr_number": 9,
+  "pr_title": "FEATURE: per-topic unsubscribe option in emails",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Thread-safety issue with lazy @loaded_locales initialization in ensure_loaded!",
+      "file": "lib/freedom_patches/translate_accelerator.rb",
+      "line": 63,
+      "original_severity": "low",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "lib/freedom_patches/translate_accelerator.rb",
+      "verified_line": 62,
+      "verified_severity": "low",
+      "verified_bug_type": "race_condition",
+      "verified_description": "I18n.ensure_loaded! initializes and reads @loaded_locales outside the LOAD_MUTEX (via ||= and include?), which is a data race under concurrent requests and can cause redundant locale loads / lost initialization array, though load_locale itself is synchronized.",
+      "notes": "Verified on PR #9 branch (actual GH PR #9 title is 'FEATURE: Localization fallbacks (server-side)'): ensure_loaded! is newly added at translate_accelerator.rb:62-65 and does @loaded_locales ||= [] plus an unlocked include? check. The critical load path is still protected by LOAD_MUTEX in load_locale, so this is low impact (likely at worst redundant work), but it is not thread-safe as written."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "String/Symbol locale normalization issue causing potential double-loading",
+      "file": "lib/freedom_patches/translate_accelerator.rb",
+      "line": 63,
+      "original_severity": "low",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "lib/freedom_patches/translate_accelerator.rb",
+      "verified_line": 62,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "",
+      "notes": "Not a demonstrated bug in this PR as written: the new fallback initializer builds the locale list using SiteSetting.default_locale.to_sym and (typically) I18n.locale is normalized by the I18n gem to a Symbol, so ensure_loaded! is called with Symbols and @loaded_locales stores Symbols consistently. While passing mixed String/Symbol locales could theoretically double-load, this PR does not introduce such mixed usage in-tree."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

@@ -1,0 +1,39 @@
+{
+  "pr_number": 9,
+  "pr_title": "Advanced SQL Analytics Framework",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "enableSqlExpressions function always returns false due to inverted flag and both branches returning false",
+      "file": "pkg/expr/reader.go",
+      "line": 193,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "pkg/expr/reader.go",
+      "verified_line": 194,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "enableSqlExpressions negates the FlagSqlExpressions feature flag and then returns false in both branches, so SQL expressions are always treated as disabled; as a result, the QueryTypeSQL branch always returns an error (\"sqlExpressions is not implemented\") even when the flag is enabled.",
+      "notes": "Confirmed in pkg/expr/reader.go:194-200: enabled := !h.features.IsEnabledGlobally(...) and both code paths return false. Call site in QueryTypeSQL checks !enabled and returns an error, making SQL expressions unreachable."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "sql.NewInMemoryDB returns stub with 'not implemented' errors replacing working go-duck implementation",
+      "file": "pkg/expr/sql/db.go",
+      "line": 23,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "pkg/expr/sql/db.go",
+      "verified_line": 24,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "NewInMemoryDB returns a DB whose methods (RunCommands, QueryFramesInto, TablesList) all return \"not implemented\" errors, so SQL parsing (TablesList -> RunCommands) and execution (SQLCommand.Execute -> QueryFramesInto) will fail immediately.",
+      "notes": "Confirmed in pkg/expr/sql/db.go:12-21 and 24-25: all DB methods return errors.New(\"not implemented\") and NewInMemoryDB returns &DB{}. This breaks pkg/expr/sql/parser.go (TablesList) and pkg/expr/sql_command.go (Execute) which rely on these methods to work."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

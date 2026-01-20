@@ -1,0 +1,54 @@
+{
+    "pr_number": 9,
+    "pr_title": "Implement recovery key support for user storage providers",
+    "revalidation_date": "2026-01-20",
+    "bug_verdicts": [
+        {
+            "bug_id": 1,
+            "original_description": "Optional.get() without isPresent() check in RecoveryAuthnCodeInputLoginBean constructor",
+            "file": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+            "line": 20,
+            "original_severity": "high",
+            "original_source": "both",
+            "verdict": "modified",
+            "verified_file": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+            "verified_line": 19,
+            "verified_severity": "medium",
+            "verified_bug_type": "runtime_error",
+            "verified_description": "RecoveryAuthnCodeInputLoginBean dereferences Optional values via credentialModelOpt.get() and getNextRecoveryAuthnCode().get() without presence checks, which can throw NoSuchElementException if the recovery-codes credential is missing or has no remaining codes.",
+            "notes": "Re-verified: constructor uses credentialModelOpt.get() (line 19) and getNextRecoveryAuthnCode().get() (line 21). Updated line number and downgraded severity because the crash requires missing/invalid credential state rather than a typical happy-path login. Draft PR title differs from current PR title (gh pr view)."
+        },
+        {
+            "bug_id": 2,
+            "original_description": "NPE in getCredentials() when getMyUser() returns null",
+            "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+            "line": 235,
+            "original_severity": "high",
+            "original_source": "droid_only",
+            "verdict": "modified",
+            "verified_file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+            "verified_line": 235,
+            "verified_severity": "medium",
+            "verified_bug_type": "runtime_error",
+            "verified_description": "BackwardsCompatibilityUserStorage#getCredentials assigns myUser = getMyUser(user) and then dereferences myUser.recoveryCodes/myUser.otp without a null check; if the backing users map has no entry for the username, this throws NullPointerException.",
+            "notes": "Re-verified: getMyUser returns users.get(translateUserName(user.getUsername())), which can return null. The first dereference is at line 235 (myUser.recoveryCodes). Downgraded severity as this is in testsuite providers and depends on an unknown user entry."
+        },
+        {
+            "bug_id": 3,
+            "original_description": "Missing id on RecoveryAuthnCodesCredentialModel returned by getCredentials()",
+            "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+            "line": 237,
+            "original_severity": "low",
+            "original_source": "golden_only",
+            "verdict": "confirmed",
+            "verified_file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+            "verified_line": 237,
+            "verified_severity": "low",
+            "verified_bug_type": "logic_bug",
+            "verified_description": "getCredentials() reconstructs a RecoveryAuthnCodesCredentialModel via RecoveryAuthnCodesCredentialModel.createFromValues(...), but createFromValues does not set an id; the returned model therefore lacks the persisted credential id from myUser.recoveryCodes.",
+            "notes": "Re-verified: RecoveryAuthnCodesCredentialModel#createFromValues sets type/createdDate/credentialData/secretData but never calls setId. BackwardsCompatibilityUserStorage stores recovery codes with a generated id, so the reconstructed model should carry myUser.recoveryCodes.getId()."
+        }
+    ],
+    "false_positive_verdicts": [],
+    "newly_discovered_bugs": []
+}

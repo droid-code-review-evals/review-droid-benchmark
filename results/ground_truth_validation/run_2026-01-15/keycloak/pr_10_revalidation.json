@@ -1,0 +1,39 @@
+{
+  "pr_number": 10,
+  "pr_title": "Fix concurrent group access to prevent NullPointerException",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "getSubGroupsCount() returns null violating GroupModel contract",
+      "file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+      "line": 275,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+      "verified_line": 275,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "GroupAdapter.getSubGroupsCount() can return null when modelSupplier.get() returns null, violating the GroupModel#getSubGroupsCount contract (\"never returns null\") and risking NPEs in callers.",
+      "notes": "Confirmed: GroupModel#getSubGroupsCount Javadoc states it never returns null, but GroupAdapter returns null when the underlying model is missing (modelSupplier.get() == null)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Reader thread not joined causing test flakiness",
+      "file": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+      "line": 138,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+      "verified_line": 138,
+      "verified_severity": "medium",
+      "verified_bug_type": "race_condition",
+      "verified_description": "Test starts a background reader thread but never joins it; the test can assert before the thread finishes (or leaks past the test), making failures nondeterministic.",
+      "notes": "Confirmed: thread is started and controlled only via an AtomicBoolean; there is no join/timeout and no daemon flag, so it can run concurrently with assertions or outlive the test."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

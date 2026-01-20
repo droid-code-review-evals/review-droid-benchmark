@@ -1,0 +1,31 @@
+{
+  "pr_number": 13,
+  "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "get_monitor_environment_context returns original monitor.config instead of modified config variable",
+      "file": "src/sentry/monitors/logic/incident_occurrence.py",
+      "line": 165,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "src/sentry/monitors/logic/incident_occurrence.py",
+      "verified_line": 168,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "get_monitor_environment_context() copies monitor_environment.monitor.config into a local `config` dict and updates schedule_type to a display value, but then returns `monitor_environment.monitor.config` instead of the modified `config`, so the returned monitor context is missing the intended schedule_type transformation.",
+      "notes": "Confirmed in src/sentry/monitors/logic/incident_occurrence.py:159-171. The local `config` variable is modified but never used in the returned dict (line 168). This is a monitor context payload correctness issue (no runtime exception), so severity is best treated as LOW."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "The code fetches MonitorCheckIn objects by ID when the required data already exists in previous_checkins. This creates an unnecessary database query.",
+      "original_reasoning": "Not a bug - the re-query is necessary because previous_checkins contains SimpleCheckIn dicts from .values(), not full ORM objects. create_incident_occurrence requires MonitorCheckIn objects to access attributes like .monitor_environment and .trace_id. There is a minor optimization opportunity when failure_issue_threshold==1, but this is not a bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed in src/sentry/monitors/logic/incidents.py:37-40 and 93-102. previous_checkins is built via .values(\"id\", \"date_added\", \"status\") for performance when threshold > 1, so it does not include fields needed by create_incident_occurrence (e.g., failed_checkin.trace_id, failed_checkin.monitor_environment). The extra query could be avoided for failure_issue_threshold==1, but that is an optimization, not a bug."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

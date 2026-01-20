@@ -1,0 +1,106 @@
+{
+  "pr_number": 11,
+  "pr_title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Inconsistent metric tagging - 'shards' vs 'shard' typo",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 199,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "src/sentry/spans/consumers/process/flusher.py",
+      "verified_line": 199,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "SpanFlusher.main emits metrics with inconsistent tag keys: 'spans.buffer.flusher.produce' and 'spans.buffer.segment_size_bytes' use tags={'shard': shard_tag}, but 'spans.buffer.flusher.wait_produce' uses tags={'shards': shard_tag}; this splits/loses aggregation for shard-tagged dashboards.",
+      "notes": "Confirmed mismatch at flusher.py:189 ('shard') vs flusher.py:199 ('shards'). Severity downgraded: observability bug, not a runtime failure."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "ZeroDivisionError if max_processes=0 with empty shards",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 62,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+      "verdict": "rejected",
+      "verified_file": "src/sentry/spans/consumers/process/flusher.py",
+      "verified_line": 51,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "Rejected: The reported ZeroDivisionError does not occur for the described inputs.",
+      "notes": "SpanFlusher sets self.max_processes = max_processes or len(buffer.assigned_shards) (flusher.py:51), so a passed max_processes=0 is treated as falsy and replaced with len(assigned_shards). If assigned_shards is empty, the enumerate loop that computes i % self.num_processes never runs, so no modulo-by-zero occurs."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "isinstance(process, multiprocessing.Process) always False for SpawnProcess - hung processes not killed in _ensure_processes_alive",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 253,
+      "original_severity": "high",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/spans/consumers/process/flusher.py",
+      "verified_line": 254,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In _ensure_processes_alive, processes are created via multiprocessing.get_context('spawn').Process (SpawnProcess), but the kill path is guarded by isinstance(process, multiprocessing.Process), which is False for SpawnProcess; as a result, hung/crashed processes are not killed before restarting, leading to orphan/duplicate flusher processes.",
+      "notes": "Verified locally: type is multiprocessing.context.SpawnProcess and isinstance(p, multiprocessing.Process) is False in Python 3.13.1. The code uses the same incorrect isinstance check at flusher.py:254."
+    },
+    {
+      "bug_id": 4,
+      "original_description": "Monkeypatched time.sleep makes test_basic's sleep(0.1) a no-op",
+      "file": "tests/sentry/spans/consumers/process/test_consumer.py",
+      "line": 58,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "tests/sentry/spans/consumers/process/test_consumer.py",
+      "verified_line": 15,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "test_basic monkeypatches time.sleep to a no-op (test_consumer.py:15), then later calls time.sleep(0.1) (test_consumer.py:62) expecting to give the flusher time to process; the sleep is still monkeypatched, so the delay never happens and the test can remain racy/flaky.",
+      "notes": "The new import of time does not bypass the monkeypatch because the patch targets the 'time' module (monkeypatch.setattr(\"time.sleep\", ...))."
+    },
+    {
+      "bug_id": 5,
+      "original_description": "join() breaks early on deadline, skipping terminate for remaining processes",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 336,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/spans/consumers/process/flusher.py",
+      "verified_line": 339,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "SpanFlusher.join iterates processes and breaks the loop when the deadline is exceeded, which skips termination for any remaining processes; this can leave child flusher processes running past join(timeout=...).",
+      "notes": "See flusher.py:339-341 where remaining_time <= 0 triggers break, preventing later processes from reaching the terminate() call."
+    },
+    {
+      "bug_id": 6,
+      "original_description": "isinstance(process, multiprocessing.Process) always False for SpawnProcess in join() - terminate never called",
+      "file": "src/sentry/spans/consumers/process/flusher.py",
+      "line": 343,
+      "original_severity": "high",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/spans/consumers/process/flusher.py",
+      "verified_line": 346,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "SpanFlusher.join uses isinstance(process, multiprocessing.Process) before calling terminate(); because spawned processes are SpawnProcess and isinstance(..., multiprocessing.Process) is False, terminate() is never called and processes may outlive shutdown.",
+      "notes": "Same root cause as bug #3, but affects shutdown behavior (flusher.py:346-347)."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "Fixed sleep in tests can be flaky; wait on condition instead",
+      "original_reasoning": "This is a code quality/style suggestion, not a bug. Tests work correctly with the current sleep-based approach.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: the comment is a style/testing robustness suggestion, not a concrete correctness bug by itself. (Separately, this PR does introduce a real test issue where time.sleep is monkeypatched to a no-op; that is captured as bug #4.)"
+    }
+  ],
+  "newly_discovered_bugs": []
+}

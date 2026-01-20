@@ -1,0 +1,31 @@
+{
+  "pr_number": 2,
+  "pr_title": "FEATURE: Localization fallbacks (server-side)",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "TopicUser nil NoMethodError in unsubscribe action",
+      "file": "app/controllers/topics_controller.rb",
+      "line": 106,
+      "original_severity": "high",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "app/controllers/topics_controller.rb",
+      "verified_line": 107,
+      "verified_severity": "high",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "TopicUser.find_by(...) can return nil when the user has no TopicUser row for the topic (common for default/regular state); dereferencing tu.notification_level raises NoMethodError in the unsubscribe action.",
+      "notes": "Confirmed: ensure_logged_in runs for :unsubscribe so current_user is present; the failure is from tu being nil. The nil dereference occurs at the first access of tu.notification_level (line 107 in this branch), not on the find_by line."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "Typo in property name: 'stopNotificiationsText' should be 'stopNotificationsText' (missing 'n' in 'Notifications')",
+      "original_reasoning": "The typo is consistent in both the controller and template files, so the code works correctly. This is a code quality issue, not a functional bug. Additionally, the description is incorrect - it's an extra 'i', not a missing 'n'.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified: app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6 defines stopNotificiationsText, and app/assets/javascripts/discourse/templates/topic/unsubscribe.hbs references {{{stopNotificiationsText}}}, so it resolves at runtime despite the typo."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

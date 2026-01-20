@@ -1,0 +1,61 @@
+{
+  "pr_number": 7,
+  "pr_title": "Add HTML sanitizer for translated message resources",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Italian translation in Lithuanian locale file (messages_lt.properties)",
+      "file": "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties",
+      "line": 101,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties",
+      "verified_line": 101,
+      "verified_severity": "low",
+      "verified_bug_type": "documentation",
+      "verified_description": "messages_lt.properties contains an Italian TOTP instruction (totpStep1), indicating a locale string mismatch.",
+      "notes": "Re-verified: totpStep1 is in Italian ('Installa una delle seguenti applicazioni...') inside the Lithuanian locale file. This is user-facing but not a runtime/logic failure; severity downgraded to low."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Traditional Chinese characters in Simplified Chinese locale file (messages_zh_CN.properties)",
+      "file": "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties",
+      "line": 112,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties",
+      "verified_line": 112,
+      "verified_severity": "low",
+      "verified_bug_type": "documentation",
+      "verified_description": "messages_zh_CN.properties includes Traditional Chinese characters (e.g., totpStep1 uses '手機', '應用程式'), which is inconsistent with the Simplified Chinese locale.",
+      "notes": "Re-verified at totpStep1: uses Traditional Chinese wording in zh_CN file. This is a localization/content issue; severity downgraded to low."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "Method name typo: 'santizeAnchors' should be 'sanitizeAnchors'",
+      "file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+      "line": 150,
+      "original_severity": "low",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+      "verified_line": 150,
+      "verified_severity": "low",
+      "verified_bug_type": "documentation",
+      "verified_description": "The helper method is consistently spelled 'santizeAnchors' across its definition and call sites, so it does not cause incorrect behavior or runtime errors.",
+      "notes": "Confirmed the typo exists (method name and invocation), but it is internal and consistently referenced; no functional impact. Treating as non-bug (code-quality/naming issue)."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "The anchor sanitization logic has a potential issue where it consumes English matcher groups without proper validation. If the translated text has more anchor tags than the English text, this could lead to incorrect validation results.",
+      "original_reasoning": "The code correctly handles the case where translation has more anchors than English. When englishMatcher.find() returns false (no more English anchors), the else branch adds an appropriate error message. The validation result is correct.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-checked VerifyMessageProperties.santizeAnchors: it iterates anchors in the translation and, if the English matcher runs out (englishMatcher.find() == false) or tags differ, it records an error and breaks; extra translated anchors are therefore detected."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

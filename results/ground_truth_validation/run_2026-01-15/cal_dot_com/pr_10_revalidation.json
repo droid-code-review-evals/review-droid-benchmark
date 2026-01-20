@@ -1,0 +1,39 @@
+{
+  "pr_number": 10,
+  "pr_title": "feat: add calendar cache status and actions (#22532)",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "BSD/macOS-specific sed -i '' syntax fails on Linux",
+      "file": "scripts/test-gcal-webhooks.sh",
+      "line": 68,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "scripts/test-gcal-webhooks.sh",
+      "verified_line": 68,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "Script uses BSD sed in-place syntax (sed -i ''), which fails under GNU sed on Linux, causing the env file update step to error and the script to fail.",
+      "notes": "Confirmed: line 68 uses `sed -i '' -E ...`, which is not portable to GNU sed."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "updateManyByCredentialId with empty data does not trigger @updatedAt",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 1024,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "verified_line": 1024,
+      "verified_severity": "high",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "`SelectedCalendarRepository.updateManyByCredentialId(this.credential.id, {})` passes an empty `data` object to Prisma `updateMany`, which can throw a Prisma validation error and will not bump `@updatedAt` as intended.",
+      "notes": "Modified severity to HIGH: this is called from Google Calendar webhook flow (`packages/app-store/googlecalendar/api/webhook.ts`) via `fetchAvailabilityAndSetCache`, so a Prisma validation error here can break webhook handling in a common code path when calendar cache is enabled."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

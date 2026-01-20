@@ -1,0 +1,46 @@
+{
+  "pr_number": 10,
+  "pr_title": "Replays Self-Serve Bulk Delete System",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "zip(error_ids, events.values()) ordering/alignment issue",
+      "file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+      "line": 111,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+      "verified_line": 118,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "fetch_error_details zips error_ids with nodestore.backend.get_multi(...).values(); get_multi returns a dict whose values order can differ from the input id_list (e.g., mixed cached/uncached IDs), so error IDs can be paired with the wrong event payload.",
+      "notes": "nodestore/base.py:get_multi builds a dict for uncached_ids (in input order) then does items.update(cache_items); cached keys added after can shift dict iteration order away from the original id_list. Pairing should be by node_id lookup, not by dict.values() order."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Detector validator uses wrong key 'detector_type' instead of 'type' when updating",
+      "file": "src/sentry/workflow_engine/endpoints/validators/base/detector.py",
+      "line": 63,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/workflow_engine/endpoints/validators/base/detector.py",
+      "verified_line": 64,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "BaseDetectorTypeValidator.update reads validated_data['detector_type'], but the serializer field is named 'type'; as a result, PUT /organization-detectors/{id} cannot update a detector's type (it falls back to instance.group_type).",
+      "notes": "OrganizationDetectorDetailsEndpoint.put passes request.data with a 'type' field and uses this validator; create() correctly uses validated_data['type'].slug, but update() uses 'detector_type', so updates silently ignore the requested type."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "Breaking changes in error response format",
+      "original_reasoning": "This is an API improvement, not a bug. The endpoint is marked PRIVATE so breaking changes are acceptable. Adding structured error responses is better for debugging.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: BrowserReportingCollectorEndpoint is publish_status PRIVATE (src/sentry/issues/endpoints/browser_reporting_collector.py:83). Returning structured 422 bodies for validation failures is not inherently a bug and is acceptable for a private/experimental collector endpoint."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

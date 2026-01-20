@@ -1,0 +1,39 @@
+{
+  "pr_number": 15,
+  "pr_title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "MetricAlertDetectorHandler missing abstract method implementations",
+      "file": "src/sentry/incidents/grouptype.py",
+      "line": 12,
+      "original_severity": "high",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "src/sentry/incidents/grouptype.py",
+      "verified_line": 11,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "MetricAlertDetectorHandler subclasses StatefulDetectorHandler but does not implement required abstract members (counter_names, get_dedupe_value, get_group_key_values, build_occurrence_and_event_data), so it cannot be instantiated (TypeError: Can't instantiate abstract class...) if a detector of type metric_alert_fire is ever evaluated.",
+      "notes": "Confirmed: MetricAlertDetectorHandler is defined as `pass` (src/sentry/incidents/grouptype.py:11-12) while StatefulDetectorHandler is an ABC with several abstract requirements (src/sentry/workflow_engine/processors/detector.py:107-150). This GroupType is marked as an example and not referenced elsewhere (no other usages of metric_alert_fire), so downgraded severity to MEDIUM (runtime error if/when used, but not a common path today)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Docstring says returns list but method returns dict",
+      "file": "src/sentry/workflow_engine/processors/detector.py",
+      "line": 201,
+      "original_severity": "low",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "src/sentry/workflow_engine/processors/detector.py",
+      "verified_line": 230,
+      "verified_severity": "low",
+      "verified_bug_type": "documentation",
+      "verified_description": "StatefulDetectorHandler.evaluate returns a dict[DetectorGroupKey, DetectorEvaluationResult], but its docstring still says it returns a list of DetectorEvaluationResult.",
+      "notes": "Confirmed mismatch at src/sentry/workflow_engine/processors/detector.py:228-238: signature returns a dict, but docstring line 230 states 'returns a list'. Updated verified line accordingly."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

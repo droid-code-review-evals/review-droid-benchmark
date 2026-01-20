@@ -1,0 +1,43 @@
+{
+  "pr_number": 14,
+  "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Offset tracking assumes contiguous offsets - gaps cause commit stall",
+      "file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+      "line": 86,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+      "verdict": "modified",
+      "verified_file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+      "verified_line": 86,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "OffsetTracker.get_committable_offsets returns the last processed offset (e.g. 100) rather than the next offset to read (101), but the commit callbacks in this PR expect Kafka-style commit semantics (next offset). This makes commits lag by 1 and can stall progress in the presence of gaps/out-of-order offsets.",
+      "notes": "At src/sentry/remote_subscriptions/consumers/queue_consumer.py:86-97 the tracker computes highest_committable as the last completed offset and returns it directly. However the new tests in tests/sentry/uptime/consumers/test_results_consumer.py assert commits are the next offset (e.g. test_thread_queue_parallel_offset_commit expects 105 after processing 100-104; test_thread_queue_parallel_offset_gaps expects committing 101 after only 100 is complete)."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "The queue.shutdown() method with 'immediate=False' parameter may not exist in the standard Python queue module.",
+      "original_reasoning": "queue.shutdown() was added in Python 3.13, and Sentry requires Python 3.13+. The method exists.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: repo declares python_requires = >=3.13 (setup.cfg:24), and the code already depends on Python 3.13 queue APIs (queue.ShutDown / Queue.shutdown)."
+    },
+    {
+      "original_comment": "The magic number 50 for max_wait is used repeatedly throughout the tests.",
+      "original_reasoning": "No 'max_wait' or '50' appears anywhere in the test file. The referenced code doesn't exist.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed false positive (style/nit, not a bug), but the draft reasoning is incorrect: max_wait = 50 appears multiple times in tests/sentry/uptime/consumers/test_results_consumer.py (e.g. lines 1718, 1765, 1812)."
+    },
+    {
+      "original_comment": "The test test_thread_queue_parallel_error_handling has a docstring that doesn't match the test implementation.",
+      "original_reasoning": "The test 'test_thread_queue_parallel_error_handling' does not exist in this PR.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed false positive (docstring mismatch claim is not a functional bug), but the draft reasoning is incorrect: test_thread_queue_parallel_error_handling exists at tests/sentry/uptime/consumers/test_results_consumer.py:1874 and its docstring matches the test intent."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

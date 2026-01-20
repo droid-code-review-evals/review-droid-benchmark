@@ -1,0 +1,23 @@
+{
+  "repo": "grafana",
+  "revalidation_date": "2026-01-20",
+  "prs_reviewed": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "total_bugs_reviewed": 23,
+  "confirmed": 12,
+  "modified": 7,
+  "rejected": 4,
+  "false_positives_confirmed": 4,
+  "false_positives_reversed": 1,
+  "newly_discovered": 1
+}

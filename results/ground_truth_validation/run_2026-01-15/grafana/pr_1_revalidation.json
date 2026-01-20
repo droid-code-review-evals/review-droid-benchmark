@@ -1,0 +1,86 @@
+{
+  "pr_number": 1,
+  "pr_title": "Anonymous: Add configurable device limit",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Race condition in device count check (TOCTOU)",
+      "file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+      "line": 103,
+      "original_severity": "high",
+      "original_bug_type": "unknown",
+      "original_found_by": "golden_only",
+      "verdict": "modified",
+      "verified_file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+      "verified_line": 115,
+      "verified_severity": "high",
+      "verified_bug_type": "race_condition",
+      "verified_description": "CreateOrUpdateDevice enforces AnonymousDeviceLimit via a non-atomic count-then-insert/update (TOCTOU); concurrent requests can exceed the configured device limit.",
+      "notes": "Re-verified on pr-1: CountDevices() is called before deciding whether to insert; the count check is at database.go:115 (not 103)."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Anonymous auth fails entirely when device limit reached (intentional but potentially unwanted DoS risk)",
+      "file": "pkg/services/anonymous/anonimpl/client.go",
+      "line": 44,
+      "original_severity": "medium",
+      "original_bug_type": "unknown",
+      "original_found_by": "both",
+      "verdict": "modified",
+      "verified_file": "pkg/services/anonymous/anonimpl/client.go",
+      "verified_line": 44,
+      "verified_severity": "medium",
+      "verified_bug_type": "security",
+      "verified_description": "Anonymous Authenticate() returns an error (blocking anonymous login for that request) when TagDevice returns ErrDeviceLimitReached, enabling a practical DoS against new anonymous sessions once the device limit is saturated.",
+      "notes": "This path is triggered via errors.Is(err, anonstore.ErrDeviceLimitReached) at client.go:45; other TagDevice errors are logged and ignored. The original description's 'entirely' is overstated: existing/non-expired devices can still be updated without hitting the error."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "ErrDeviceLimitReached misleading when device doesn't exist",
+      "file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+      "line": 96,
+      "original_severity": "low",
+      "original_bug_type": "unknown",
+      "original_found_by": "both",
+      "verdict": "rejected",
+      "verified_file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+      "verified_line": 96,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "updateDevice returns ErrDeviceLimitReached when UPDATE affects 0 rows.",
+      "notes": "Re-checked: updateDevice() is only reached from CreateOrUpdateDevice() when count >= deviceLimit. When the limit is reached, failing to update (because the device is missing/expired/out-of-window) is equivalent to disallowing a new device, so ErrDeviceLimitReached is consistent with the caller's intent rather than a misleading bug."
+    },
+    {
+      "bug_id": 4,
+      "original_description": "TagDevice now returns errors, changing auth contract",
+      "file": "pkg/services/anonymous/anonimpl/impl.go",
+      "line": 146,
+      "original_severity": "medium",
+      "original_bug_type": "unknown",
+      "original_found_by": "droid_only",
+      "verdict": "modified",
+      "verified_file": "pkg/services/anonymous/anonimpl/impl.go",
+      "verified_line": 147,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "TagDevice now returns the error from tagDeviceUI (including device-limit/db errors) instead of best-effort logging-and-continuing, changing authentication behavior for anonymous requests.",
+      "notes": "In this PR diff, TagDevice gained `return err` after logging at impl.go:147; previously it did not return the error." 
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "This call won't compile: dbSession.Exec(args...) is given a []interface{} where the first element is the query, but Exec's signature requires a first parameter of type string (not an interface{} splat).",
+      "original_reasoning": "The pattern 'args = append([]interface{}{query}, args...); dbSession.Exec(args...)' is already used in the codebase at pkg/services/sqlstore/session.go lines 150-151. DBSession embeds xorm.Session which accepts variadic interface{} for Exec. The code compiles correctly.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified: pkg/services/sqlstore/session.go uses `sqlOrArgs := append([]any{query}, args...); res, err := sess.Exec(sqlOrArgs...)`, so the variadic call pattern is valid."
+    },
+    {
+      "original_comment": "Time window calculation inconsistency: Using device.UpdatedAt.UTC().Add(-anonymousDeviceExpiration) as the lower bound but device.UpdatedAt as the current time may not match the intended logic.",
+      "original_reasoning": "device.UpdatedAt is set to time.Now() when creating the device (impl.go:139), so using device.UpdatedAt.UTC() is effectively the same as time.Now().UTC(). The time window logic (30 days back, 1 minute forward) is intentional for finding non-expired devices with clock skew tolerance.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified: Tagged device sets UpdatedAt = time.Now() (impl.go:141) and DB comparisons use UTC consistently; the 1-minute forward skew is documented in usageStatFn()."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

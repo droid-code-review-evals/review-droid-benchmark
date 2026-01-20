@@ -1,0 +1,52 @@
+{
+    "pr_number": 8,
+    "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+    "revalidation_date": "2026-01-20",
+    "bug_verdicts": [
+        {
+            "bug_id": 1,
+            "original_description": "Wrong null check parameter in AccessTokenContext constructor (grantType checked twice, rawTokenId not checked)",
+            "file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+            "line": 68,
+            "original_severity": "medium",
+            "original_source": "both",
+            "verdict": "modified",
+            "verified_file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+            "verified_line": 73,
+            "verified_severity": "medium",
+            "verified_bug_type": "runtime_error",
+            "verified_description": "AccessTokenContext constructor checks grantType twice and never null-checks rawTokenId; rawTokenId may be null and error message is also incorrect.",
+            "notes": "Confirmed bug: constructor has Objects.requireNonNull(grantType, \"Null rawTokenId not allowed\") at line 73. Updated verified line number and clarified impact/message mismatch."
+        },
+        {
+            "bug_id": 2,
+            "original_description": "Inverted logic AND wrong substring indices in isAccessTokenId matcher",
+            "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+            "line": 483,
+            "original_severity": "medium",
+            "original_source": "both",
+            "verdict": "confirmed",
+            "verified_file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+            "verified_line": 483,
+            "verified_severity": "medium",
+            "verified_bug_type": "logic_bug",
+            "verified_description": "isAccessTokenId() extracts the grant shortcut using substring(3,5) instead of the correct (4,6) for the 6-char encoded context, and it returns false when the extracted shortcut equals the expected value (inverted check), so the matcher fails to enforce the expected grant.",
+            "notes": "Re-verified against DefaultTokenContextEncoderProvider token-id format: context is 6 chars (st[0-1], tt[2-3], gt[4-5]). AssertEvents uses substring(3,5) and inverted equality check."
+        }
+    ],
+    "false_positive_verdicts": [
+        {
+            "original_comment": "Javadoc mentions \"usually like 3-letters shortcut\" but some implementations use 2-letter shortcuts",
+            "original_reasoning": "Documentation inconsistency, not a functional bug. Does not cause runtime errors or incorrect behavior.",
+            "verdict": "confirmed_false_positive",
+            "notes": "Confirmed: this is documentation wording in OAuth2GrantTypeFactory#getShortcut Javadoc (line 30). Even if implementations use 2-letter shortcuts, it does not affect runtime behavior."
+        },
+        {
+            "original_comment": "Catching generic RuntimeException is too broad",
+            "original_reasoning": "Code quality suggestion for test code. Test still works correctly as IllegalArgumentException extends RuntimeException.",
+            "verdict": "confirmed_false_positive",
+            "notes": "Confirmed: DefaultTokenContextEncoderProviderTest.testIncorrectGrantType catches RuntimeException (line 82). This is a test-only broad catch; it still validates the failure path and does not introduce functional issues in production code."
+        }
+    ],
+    "newly_discovered_bugs": []
+}

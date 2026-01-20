@@ -1,0 +1,39 @@
+{
+  "pr_number": 4,
+  "pr_title": "feat: convert InsightsBookingService to use Prisma.sql raw queries",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Unreachable branches in getBaseConditions() - else if (filterConditions) and else branches can never execute",
+      "file": "packages/lib/server/service/insightsBooking.ts",
+      "line": 77,
+      "original_severity": "low",
+      "original_source": "golden",
+      "verdict": "modified",
+      "verified_file": "packages/lib/server/service/insightsBooking.ts",
+      "verified_line": 68,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "getAuthorizationConditions() always returns a Prisma.Sql (including NOTHING_CONDITION), so authConditions is always truthy; therefore the `else if (filterConditions)` and final `else` branches in getBaseConditions() are unreachable dead code.",
+      "notes": "Adjusted line to the start of getBaseConditions(); description remains accurate but impact is limited to dead/unreachable branches."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Org-level members excluded for orgs without child teams - teamsFromOrg.length guard prevents fetching org memberships",
+      "file": "packages/lib/server/service/insightsBooking.ts",
+      "line": 157,
+      "original_severity": "medium",
+      "original_source": "golden",
+      "verdict": "confirmed",
+      "verified_file": "packages/lib/server/service/insightsBooking.ts",
+      "verified_line": 157,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "buildOrgAuthorizationCondition() only queries memberships when teamsFromOrg.length > 0; for orgs with no child teams, it skips fetching memberships for the orgId itself, leaving userIdsFromOrg empty and omitting the userId-based condition (excluding org members' non-team bookings).",
+      "notes": "The guard should not depend on child teams existing because teamIds always includes orgId." 
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

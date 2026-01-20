@@ -1,0 +1,46 @@
+{
+  "pr_number": 8,
+  "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Non-deterministic hash() in cache key causes cross-process inconsistency",
+      "file": "src/sentry/api/helpers/error_upsampling.py",
+      "line": 26,
+      "original_severity": "low",
+      "original_source": "golden_only",
+      "verdict": "rejected",
+      "verified_file": "src/sentry/api/helpers/error_upsampling.py",
+      "verified_line": 26,
+      "verified_severity": "low",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "The cache key uses hash(tuple(sorted(project_ids))) where project_ids are ints; tuple/int hashing is stable across processes, so this is not cross-process non-determinism.",
+      "notes": "Verified in CPython 3.13: hash((1,2,3)) is identical across separate interpreter invocations; snuba_params.project_ids are typed as ints. Using hash does imply theoretical collisions, but the claimed cross-process inconsistency is not reproducible here."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Upsampling eligibility check uses outer dataset instead of scoped_dataset",
+      "file": "src/sentry/api/endpoints/organization_events_stats.py",
+      "line": 218,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "src/sentry/api/endpoints/organization_events_stats.py",
+      "verified_line": 218,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "_get_event_stats() calls is_errors_query_for_error_upsampled_projects(..., dataset, request) using the outer 'dataset' variable, but the query is executed against the 'scoped_dataset' argument; when these differ (e.g. dashboard discover-split paths), the upsampling decision can be computed against the wrong dataset.",
+      "notes": "At src/sentry/api/endpoints/organization_events_stats.py:220-222 the function uses outer 'dataset' instead of 'scoped_dataset', so eligibility can be wrong when _get_event_stats is invoked with discover/other datasets during widget split logic."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "sample_rate = 0.0 is falsy and skipped",
+      "original_reasoning": "No code in the PR's changed files checks sample_rate with a falsy comparison. The sample_rate handling in event_manager.py (which uses strict inequality) is not part of this PR.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Searched the PR's changed files for 'sample_rate' and found no occurrences; nothing in this PR introduces a falsy check on sample_rate."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

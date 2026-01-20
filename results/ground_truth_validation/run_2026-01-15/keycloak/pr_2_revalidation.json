@@ -1,0 +1,31 @@
+{
+  "pr_number": 2,
+  "pr_title": "Implement recovery key support for user storage providers",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Test cleanup uses incorrect alias 'alias' instead of 'idp-alias-' + i",
+      "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+      "line": 381,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+      "verified_line": 381,
+      "verified_severity": "medium",
+      "verified_bug_type": "test_bug",
+      "verified_description": "OrganizationCacheTest registers cleanup for created identity providers using the literal alias \"alias\" (instead of the actual created alias like \"idp-alias-\" + i), so the created IDPs are not removed after the test, causing test pollution/flakiness.",
+      "notes": "Confirmed at line 381: getCleanup().addCleanup(testRealm().identityProviders().get(\"alias\")::remove) despite creating IDPs with alias \"idp-alias-\" + i. Same hardcoded alias pattern also appears at lines 303 and 425 in the same file."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "Recursive caching call using session instead of delegate",
+      "original_reasoning": "Not a bug. The pattern of using session.identityProviders().getById() in getForLogin() is intentional design that leverages individual IDP caching. The getById() method correctly uses idpDelegate for uncached lookups. This is a code style observation at best, not a Critical severity bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified in InfinispanIdentityProviderStorageProvider: getForLogin/getByOrganization cache the ID list, then resolve each IDP via session.identityProviders().getById(id), which hits the caching layer and delegates to JPA on cache misses; there is no infinite recursion and this matches the intended per-IDP caching design."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

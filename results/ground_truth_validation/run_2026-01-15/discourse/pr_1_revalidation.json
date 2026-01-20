@@ -1,0 +1,54 @@
+{
+  "pr_number": 1,
+  "pr_title": "FEATURE: Can edit category/host relationships for embedding",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Duplicate downsize method definition causes ArgumentError for 4-arg callers",
+      "file": "app/models/optimized_image.rb",
+      "line": 147,
+      "original_severity": "high",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "app/models/optimized_image.rb",
+      "verified_line": 149,
+      "verified_severity": "high",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "OptimizedImage defines self.downsize twice; the later (dimensions, opts) definition overrides the earlier (max_width, max_height, opts) signature, so existing callers like resize_emoji.rb pass 4 args + opts and crash with ArgumentError.",
+      "notes": "Confirmed: optimized_image.rb has def self.downsize at lines 145 and 149; Ruby overwrites the first with the second. Existing call OptimizedImage.downsize(path, path, 100, 100, opts) (app/jobs/regular/resize_emoji.rb:14) will raise wrong number of arguments."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Hardcoded 10MB client-side limit ignores site settings, causing client/server divergence",
+      "file": "app/assets/javascripts/discourse/lib/utilities.js",
+      "line": 182,
+      "original_severity": "low",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "app/assets/javascripts/discourse/lib/utilities.js",
+      "verified_line": 182,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "Client-side upload validation hardcodes maxSizeKB = 10*1024 for both images and attachments, ignoring Discourse.SiteSettings max_image_size_kb/max_attachment_size_kb and potentially allowing uploads larger than admin-configured limits (and preventing uploads when configured limits are higher).",
+      "notes": "Verified: validateUploadedFile derives type ('image' vs 'attachment') but still uses a fixed 10MB limit (line 182) and 413 handling also hardcodes 10MB (line 246), so UI behavior diverges from site settings. Severity upgraded to MEDIUM due to bypassing configured attachment limits and misleading error messaging."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "Passing 80% to gifsicle --resize-fit fails for animated GIFs (expects WxH geometry)",
+      "file": "app/controllers/uploads_controller.rb",
+      "line": 67,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "app/controllers/uploads_controller.rb",
+      "verified_line": 67,
+      "verified_severity": "medium",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "UploadsController attempts to downsize oversized images by calling OptimizedImage.downsize(..., \"80%\", allow_animation: ...); for GIFs with allow_animation enabled this routes to gifsicle --resize-fit with an invalid '80%' geometry string, causing the resize command to fail (exit != 0) and downsizing to silently not occur.",
+      "notes": "Confirmed path: uploads_controller.rb:67 passes \"80%\" as dimensions; optimized_image.rb uses gifsicle in resize_instructions_animated with `--resize-fit #{dimensions}` for .GIF when allow_animation is true, and convert_with returns false on nonzero exit status."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

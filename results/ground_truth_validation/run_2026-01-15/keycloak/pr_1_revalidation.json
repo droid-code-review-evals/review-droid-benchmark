@@ -1,0 +1,31 @@
+{
+  "pr_number": 1,
+  "pr_title": "Fixing Re-authentication with passkeys",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Conditional passkey UI not set up for initial login when user is null - breaks ID-less passkey authentication",
+      "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+      "line": 115,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+      "verified_line": 115,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "UsernamePasswordForm only calls webauthnAuth.fillContextForm() when isConditionalPasskeysEnabled(context.getUser()) is true, but isConditionalPasskeysEnabled requires user != null; during initial (id-less) passkey login context.getUser() is null, so the form never gets WebAuthn challenge/ENABLE_WEBAUTHN_CONDITIONAL_UI attributes and conditional passkey authentication is broken.",
+      "notes": "Verified in UsernamePasswordForm.java: isConditionalPasskeysEnabled(UserModel user) returns webauthnAuth != null && passkeysEnabled && user != null. WebAuthnConditionalUIAuthenticator.fillContextForm() sets ENABLE_WEBAUTHN_CONDITIONAL_UI and delegates to WebAuthnAuthenticator.fillContextForm(), which supports the ID-less scenario (shouldShowWebAuthnAuthenticators=false) and does not require a user; the regression is the new user != null guard preventing fillContextForm from running when it is needed most (initial login)."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "ConditionalPasskeysEnabled() called without UserModel parameter",
+      "original_reasoning": "This comment is unclear and doesn't describe a real bug. The method isConditionalPasskeysEnabled(UserModel user) IS called with a parameter (context.getUser()). The comment seems to be a poorly worded version of the second golden comment about user being null.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: isConditionalPasskeysEnabled(UserModel user) exists and is invoked with context.getUser(). The real issue (captured as bug #1) is that the implementation requires user != null, which prevents conditional passkeys setup for initial login."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

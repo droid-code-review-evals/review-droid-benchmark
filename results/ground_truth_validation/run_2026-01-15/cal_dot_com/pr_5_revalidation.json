@@ -1,0 +1,54 @@
+{
+  "pr_number": 5,
+  "pr_title": "Advanced date override handling and timezone compatibility improvements",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Async forEach pattern - remindersToUpdate.forEach(async...) doesn't await delete operations",
+      "file": "packages/trpc/server/routers/viewer/workflows.tsx",
+      "line": 575,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "packages/trpc/server/routers/viewer/workflows.tsx",
+      "verified_line": 574,
+      "verified_severity": "medium",
+      "verified_bug_type": "race_condition",
+      "verified_description": "remindersToUpdate.forEach(async ...) is not awaited, and deleteScheduledEmailReminder/deleteScheduledSMSReminder are invoked without await; reminder cancellations run fire-and-forget and can race with subsequent workflow edits/reminder scheduling.",
+      "notes": "Adjusted line to the start of the async forEach block; underlying issue is the un-awaited async cancellations."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "NULL referenceId sent to SendGrid API in cron job - query doesn't filter out null referenceIds",
+      "file": "packages/features/ee/workflows/api/scheduleEmailReminders.ts",
+      "line": 43,
+      "original_severity": "high",
+      "original_source": "droid",
+      "verdict": "modified",
+      "verified_file": "packages/features/ee/workflows/api/scheduleEmailReminders.ts",
+      "verified_line": 44,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "scheduleEmailReminders queries cancelled reminders without restricting to EMAIL and without filtering out null referenceIds, then unconditionally calls SendGrid scheduled_sends cancel with batch_id = reminder.referenceId; this can attempt to cancel non-email reminders and/or send a null batch_id, causing the cancellation loop to fail (caught) and leaving reminders un-cancelled.",
+      "notes": "Adjusted line to the remindersToCancel query; additionally found the query lacks a method=EMAIL guard even though this is the email reminder cron handler."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "immediateDelete=true path doesn't delete WorkflowReminder record from database",
+      "file": "packages/features/ee/workflows/lib/reminders/emailReminderManager.ts",
+      "line": 213,
+      "original_severity": "high",
+      "original_source": "golden",
+      "verdict": "confirmed",
+      "verified_file": "packages/features/ee/workflows/lib/reminders/emailReminderManager.ts",
+      "verified_line": 213,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In deleteScheduledEmailReminder(), when immediateDelete is true it cancels the SendGrid batch and returns without deleting or updating the corresponding prisma.workflowReminder record, leaving stale reminders in the database.",
+      "notes": "Verified immediateDelete branch early-returns after SendGrid cancellation without touching the DB record."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

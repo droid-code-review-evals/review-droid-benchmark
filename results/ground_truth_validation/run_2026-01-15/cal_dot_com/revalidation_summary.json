@@ -1,0 +1,23 @@
+{
+  "repo": "cal_dot_com",
+  "revalidation_date": "2026-01-20",
+  "prs_reviewed": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "total_bugs_reviewed": 43,
+  "confirmed": 25,
+  "modified": 13,
+  "rejected": 5,
+  "false_positives_confirmed": 2,
+  "false_positives_reversed": 0,
+  "newly_discovered": 0
+}

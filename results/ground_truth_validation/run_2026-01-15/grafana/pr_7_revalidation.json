@@ -1,0 +1,39 @@
+{
+  "pr_number": 7,
+  "pr_title": "Database Performance Optimizations",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Error log level used for debugging/informational messages in cleanup code",
+      "file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+      "line": 534,
+      "original_severity": "low",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+      "verified_line": 534,
+      "verified_severity": "low",
+      "verified_bug_type": "performance",
+      "verified_description": "CleanAnnotations/CleanOrphanedAnnotationTags log routine cleanup progress at Error level (including full ID batches and SQL condition strings) even when no error occurred, which can cause noisy error logs and high log volume.",
+      "notes": "Confirmed at xorm_store.go:534/537/554/557/576/579: r.log.Error is used for normal cleanup progress and logs potentially large 'ids' slices; these should be Debug/Info and only log errors when err != nil."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Cleanup ticker changed from 10m to 1m - increases DB load 10x",
+      "file": "pkg/services/cleanup/cleanup.go",
+      "line": 77,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+      "verdict": "confirmed",
+      "verified_file": "pkg/services/cleanup/cleanup.go",
+      "verified_line": 77,
+      "verified_severity": "medium",
+      "verified_bug_type": "performance",
+      "verified_description": "CleanUpService.Run() schedules the full cleanup job loop every 1 minute (down from 10 minutes on the base branch), potentially running DB-intensive cleanup (including annotation cleanup) up to 10x more frequently and keeping the instance under constant cleanup load.",
+      "notes": "Confirmed by comparing against base: origin/db-cleanup-baseline uses time.NewTicker(time.Minute * 10) at cleanup.go:77; PR changes it to time.Minute * 1 without any gating/config in this file."
+    }
+  ],
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}

@@ -1,0 +1,91 @@
+{
+  "pr_number": 3,
+  "pr_title": "Fixed some minor bugs that caused console errors",
+  "revalidation_date": "2026-01-20",
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Null reference when mainHostDestinationCalendar is undefined in EventManager.ts",
+      "file": "packages/core/EventManager.ts",
+      "line": 118,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "modified",
+      "verified_file": "packages/core/EventManager.ts",
+      "verified_line": 119,
+      "verified_severity": "high",
+      "verified_bug_type": "runtime_error",
+      "verified_description": "If evt.location is Google Meet and destinationCalendar is empty/undefined, mainHostDestinationCalendar is undefined and `mainHostDestinationCalendar.integration` throws.",
+      "notes": "PR code destructures `const [mainHostDestinationCalendar] = evt.destinationCalendar ?? []` then accesses `mainHostDestinationCalendar.integration` without a null-check."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Logic error in updateEvent calendarId selection - find() with falsy externalCalendarId always fails",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 255,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "verified_line": 254,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In updateEvent(), when externalCalendarId is falsy the fallback does `find(cal.externalId === externalCalendarId)` (i.e., === undefined), so selectedCalendar becomes undefined and the update targets an invalid calendarId.",
+      "notes": "See `const selectedCalendar = externalCalendarId ? externalCalendarId : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;`."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "Logic error in deleteEvent calendarId selection - same find() bug as updateEvent",
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 315,
+      "original_severity": "medium",
+      "original_source": "both",
+      "verdict": "confirmed",
+      "verified_file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "verified_line": 315,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "In deleteEvent(), when externalCalendarId is falsy the fallback does `find(cal.externalId === externalCalendarId)` (i.e., === undefined), so calendarId becomes undefined and the code falls back to deleting on the primary calendar even if the event was created on a different calendar.",
+      "notes": "See `const calendarId = externalCalendarId ? externalCalendarId : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;` plus the `defaultCalendarId = \"primary\"` fallback."
+    },
+    {
+      "bug_id": 4,
+      "original_description": "Logic inversion in organization creation - slug set when billing enabled instead of disabled",
+      "file": "packages/trpc/server/routers/viewer/organizations/create.handler.ts",
+      "line": 151,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/organizations/create.handler.ts",
+      "verified_line": 151,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "When IS_TEAM_BILLING_ENABLED is true, the handler still sets `slug` on the created organization while also setting `metadata.requestedSlug`; elsewhere (e.g. teams create) billing-enabled flow stores the requested slug in metadata and omits `slug`, so this conditional is inverted/incorrect.",
+      "notes": "Line 151 uses `...(IS_TEAM_BILLING_ENABLED ? { slug } : {}),` which contradicts the billing-gated slug pattern used in `apps/api/pages/api/teams/_post.ts`."
+    },
+    {
+      "bug_id": 5,
+      "original_description": "Calendar interface contract broken - createEvent requires credentialId but implementations don't accept it",
+      "file": "packages/app-store/larkcalendar/lib/CalendarService.ts",
+      "line": 106,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+      "verdict": "modified",
+      "verified_file": "packages/app-store/larkcalendar/lib/CalendarService.ts",
+      "verified_line": 125,
+      "verified_severity": "high",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "TypeScript contract mismatch: `Calendar.createEvent(event, credentialId)` is required (packages/types/Calendar.d.ts), but LarkCalendarService implements `createEvent(event)` without the credentialId parameter, causing interface-implementation incompatibility.",
+      "notes": "`packages/types/Calendar.d.ts` defines `createEvent(event: CalendarEvent, credentialId: number)`; LarkCalendarService declares `async createEvent(event: CalendarEvent)` (line 125)."
+    }
+  ],
+  "false_positive_verdicts": [
+    {
+      "original_comment": "The optional chaining on mainHostDestinationCalendar?.integration is redundant since you already check mainHostDestinationCalendar in the ternary condition.",
+      "original_reasoning": "False positive - the actual code does NOT use optional chaining on mainHostDestinationCalendar.integration. The code accesses .integration directly without optional chaining, which is the actual bug that droid identified.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: EventManager.ts uses `mainHostDestinationCalendar.integration` (no optional chaining), so the comment's premise doesn't match the code."
+    }
+  ],
+  "newly_discovered_bugs": []
+}

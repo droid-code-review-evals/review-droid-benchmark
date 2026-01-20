@@ -1,0 +1,97 @@
+{
+  "pr_number": 9,
+  "pr_title": "Add guest management functionality to existing bookings",
+  "revalidation_date": "2026-01-20",
+
+  "bug_verdicts": [
+    {
+      "bug_id": 1,
+      "original_description": "Team admin/owner permission check uses AND instead of OR",
+      "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "line": 46,
+      "original_severity": "medium",
+      "original_source": "both",
+
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "verified_line": 46,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "isTeamAdminOrOwner uses (isTeamAdmin && isTeamOwner), which incorrectly requires both roles; this can wrongly deny access when a user is an admin OR an owner.",
+      "notes": "Code currently computes isTeamAdminOrOwner with && (lines 46-48), so users who satisfy only one of the checks fail the permission gate."
+    },
+    {
+      "bug_id": 2,
+      "original_description": "Case sensitivity bypass in email blacklist check",
+      "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "line": 76,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "verified_line": 77,
+      "verified_severity": "medium",
+      "verified_bug_type": "security",
+      "verified_description": "BLACKLISTED_GUEST_EMAILS entries are lowercased, but guest emails are compared without normalization (blacklistedGuestEmails.includes(guest)), allowing case-variant bypass (e.g., Foo@bar.com).",
+      "notes": "blacklistedGuestEmails is lowercased, but guest is not lowercased before the includes() check (line 77)."
+    },
+    {
+      "bug_id": 3,
+      "original_description": "Email sender receives original guests instead of uniqueGuests",
+      "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "line": 168,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "verified_line": 168,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "sendAddGuestsEmails is called with the raw input guests array instead of the filtered uniqueGuests list, which can misclassify who is newly added (and include blacklisted/existing emails) when deciding which attendee email template to send.",
+      "notes": "Handler builds uniqueGuests but passes guests into sendAddGuestsEmails (line 168), defeating the filtering done earlier."
+    },
+    {
+      "bug_id": 4,
+      "original_description": "No deduplication of duplicate emails within input array",
+      "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "line": 73,
+      "original_severity": "medium",
+      "original_source": "golden_only",
+
+      "verdict": "confirmed",
+      "verified_file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "verified_line": 74,
+      "verified_severity": "medium",
+      "verified_bug_type": "logic_bug",
+      "verified_description": "uniqueGuests is computed via guests.filter(...) but does not remove duplicates within the guests input; duplicate addresses can be inserted via createMany and/or lead to repeated notifications.",
+      "notes": "The filter only excludes existing attendees and blacklisted emails; it does not enforce uniqueness across the incoming guests list (lines 74-78)."
+    },
+    {
+      "bug_id": 5,
+      "original_description": "Empty string initialization causes validation UX issues",
+      "file": "apps/web/components/dialog/AddGuestsDialog.tsx",
+      "line": 31,
+      "original_severity": "medium",
+      "original_source": "both",
+
+      "verdict": "rejected",
+      "notes": "The initial state [\"\"] appears intentional to render one email input row immediately (MultiEmail renders the form only when value.length > 0). This is a UX choice rather than a concrete functional bug."
+    },
+    {
+      "bug_id": 6,
+      "original_description": "Email types swapped - new guests get AttendeeScheduledEmail instead of proper notification",
+      "file": "packages/emails/email-manager.ts",
+      "line": 542,
+      "original_severity": "medium",
+      "original_source": "droid_only",
+
+      "verdict": "rejected",
+      "notes": "sendAddGuestsEmails sending AttendeeScheduledEmail to newly added attendees (and AttendeeAddGuestsEmail to existing attendees) matches the email copy/subjects: scheduled email is appropriate for brand-new invitees; add-guests email is appropriate for notifying existing attendees about added guests. The real issue here is passing the wrong newGuests list from the handler (see bug_id 3)."
+    }
+  ],
+
+  "false_positive_verdicts": [],
+  "newly_discovered_bugs": []
+}
