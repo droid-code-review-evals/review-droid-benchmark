@@ -1,0 +1,445 @@
+{
+  "repo": "sentry",
+  "generated_from": "ground_truth_validation/run_2026-01-15",
+  "total_bugs": 30,
+  "total_false_positives": 10,
+  "prs": [
+    {
+      "pr_number": 6,
+      "pr_title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+      "bug_count": 4,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "member None AttributeError",
+          "file": "src/sentry/api/endpoints/organization_auditlogs.py",
+          "line": 71,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "BasePaginator negative slicing",
+          "file": "src/sentry/api/paginator.py",
+          "line": 186,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "OptimizedCursorPaginator negative slicing",
+          "file": "src/sentry/api/paginator.py",
+          "line": 877,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "datetime TypeError in get_item_key",
+          "file": "src/sentry/api/paginator.py",
+          "line": 838,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Importing non-existent OptimizedCursorPaginator",
+          "reasoning": "OptimizedCursorPaginator exists in src/sentry/api/paginator.py at line 819. The import is valid."
+        }
+      ]
+    },
+    {
+      "pr_number": 7,
+      "pr_title": "Optimize spans buffer insertion with eviction during insert",
+      "bug_count": 7,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "end_timestamp_precise KeyError in process_batch",
+          "file": "src/sentry/spans/consumers/process/factory.py",
+          "line": 141,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "organization_context.member None AttributeError",
+          "file": "src/sentry/api/endpoints/organization_auditlogs.py",
+          "line": 70,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "BasePaginator negative slicing AssertionError",
+          "file": "src/sentry/api/paginator.py",
+          "line": 182,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "OptimizedCursorPaginator negative slicing AssertionError",
+          "file": "src/sentry/api/paginator.py",
+          "line": 883,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 5,
+          "description": "ZUNIONSTORE score corruption (default SUM corrupts timestamps)",
+          "file": "src/sentry/scripts/spans/add-buffer.lua",
+          "line": 47,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 6,
+          "description": "SET to ZSET WRONGTYPE during migration",
+          "file": "src/sentry/spans/buffer.py",
+          "line": 197,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 7,
+          "description": "OptimizedCursorPaginator.get_item_key datetime TypeError",
+          "file": "src/sentry/api/paginator.py",
+          "line": 839,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 8,
+      "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+      "bug_count": 2,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Non-deterministic hash() in cache key causes cross-process inconsistency",
+          "file": "src/sentry/api/helpers/error_upsampling.py",
+          "line": 26,
+          "severity": "low",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Upsampling eligibility check uses outer dataset instead of scoped_dataset",
+          "file": "src/sentry/api/endpoints/organization_events_stats.py",
+          "line": 218,
+          "severity": "medium",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "sample_rate = 0.0 is falsy and skipped",
+          "reasoning": "No code in the PR's changed files checks sample_rate with a falsy comparison. The sample_rate handling in event_manager.py (which uses strict inequality) is not part of this PR."
+        }
+      ]
+    },
+    {
+      "pr_number": 9,
+      "pr_title": "feat(ecosystem): Implement cross-system issue synchronization",
+      "bug_count": 3,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "KeyError/TypeError when accessing integration.metadata['sender']['login'] - sender key may not exist",
+          "file": "src/sentry/integrations/github/integration.py",
+          "line": 501,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Null reference if github_authenticated_user state is missing from pipeline",
+          "file": "src/sentry/integrations/github/integration.py",
+          "line": 500,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "OAuth state uses static pipeline.signature instead of per-request random value (CSRF vulnerability)",
+          "file": "src/sentry/integrations/github/integration.py",
+          "line": 401,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 10,
+      "pr_title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+      "bug_count": 2,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "zip(error_ids, events.values()) ordering/alignment issue",
+          "file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+          "line": 111,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Detector validator uses wrong key 'detector_type' instead of 'type' when updating",
+          "file": "src/sentry/workflow_engine/endpoints/validators/base/detector.py",
+          "line": 63,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Breaking changes in error response format",
+          "reasoning": "This is an API improvement, not a bug. The endpoint is marked PRIVATE so breaking changes are acceptable. Adding structured error responses is better for debugging."
+        }
+      ]
+    },
+    {
+      "pr_number": 11,
+      "pr_title": "Replays Self-Serve Bulk Delete System",
+      "bug_count": 6,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Inconsistent metric tagging - 'shards' vs 'shard' typo",
+          "file": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 199,
+          "severity": "medium",
+          "bug_type": "logic_bug",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "ZeroDivisionError if max_processes=0 with empty shards",
+          "file": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 62,
+          "severity": "medium",
+          "bug_type": "runtime_error",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "isinstance(process, multiprocessing.Process) always False for SpawnProcess - hung processes not killed in _ensure_processes_alive",
+          "file": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 253,
+          "severity": "high",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "Monkeypatched time.sleep makes test_basic's sleep(0.1) a no-op",
+          "file": "tests/sentry/spans/consumers/process/test_consumer.py",
+          "line": 58,
+          "severity": "medium",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 5,
+          "description": "join() breaks early on deadline, skipping terminate for remaining processes",
+          "file": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 336,
+          "severity": "medium",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 6,
+          "description": "isinstance(process, multiprocessing.Process) always False for SpawnProcess in join() - terminate never called",
+          "file": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 343,
+          "severity": "high",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Fixed sleep in tests can be flaky; wait on condition instead",
+          "reasoning": "This is a code quality/style suggestion, not a bug. Tests work correctly with the current sleep-based approach."
+        }
+      ]
+    },
+    {
+      "pr_number": 12,
+      "pr_title": "GitHub OAuth Security Enhancement",
+      "bug_count": 2,
+      "false_positive_count": 2,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Shared timestamp default in dataclass - timezone.now() evaluated at class definition time",
+          "file": "src/sentry/integrations/services/assignment_source.py",
+          "line": 18,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "to_dict() returns datetime object that may fail JSON serialization in Celery task kwargs",
+          "file": "src/sentry/integrations/services/assignment_source.py",
+          "line": 27,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "The method name has a typo: test_from_dict_inalid_data should be test_from_dict_invalid_data.",
+          "reasoning": "This is a test method naming typo, not a functional bug. Test method names don't affect runtime behavior."
+        },
+        {
+          "golden_comment": "Method name says 'empty_array' but tests empty dict - consider renaming to 'test_from_dict_empty_dict' for clarity.",
+          "reasoning": "This is a naming clarity issue in test code, not a functional bug. The test logic is correct."
+        }
+      ]
+    },
+    {
+      "pr_number": 13,
+      "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "get_monitor_environment_context returns original monitor.config instead of modified config variable",
+          "file": "src/sentry/monitors/logic/incident_occurrence.py",
+          "line": 165,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "The code fetches MonitorCheckIn objects by ID when the required data already exists in previous_checkins. This creates an unnecessary database query.",
+          "reasoning": "Not a bug - the re-query is necessary because previous_checkins contains SimpleCheckIn dicts from .values(), not full ORM objects. create_incident_occurrence requires MonitorCheckIn objects to access attributes like .monitor_environment and .trace_id. There is a minor optimization opportunity when failure_issue_threshold==1, but this is not a bug."
+        }
+      ]
+    },
+    {
+      "pr_number": 14,
+      "pr_title": "Optimize spans buffer insertion with eviction during insert",
+      "bug_count": 1,
+      "false_positive_count": 3,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Offset tracking assumes contiguous offsets - gaps cause commit stall",
+          "file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+          "line": 86,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "The queue.shutdown() method with 'immediate=False' parameter may not exist in the standard Python queue module.",
+          "reasoning": "queue.shutdown() was added in Python 3.13, and Sentry requires Python 3.13+. The method exists."
+        },
+        {
+          "golden_comment": "The magic number 50 for max_wait is used repeatedly throughout the tests.",
+          "reasoning": "No 'max_wait' or '50' appears anywhere in the test file. The referenced code doesn't exist."
+        },
+        {
+          "golden_comment": "The test test_thread_queue_parallel_error_handling has a docstring that doesn't match the test implementation.",
+          "reasoning": "The test 'test_thread_queue_parallel_error_handling' does not exist in this PR."
+        }
+      ]
+    },
+    {
+      "pr_number": 15,
+      "pr_title": "Enhanced Pagination Performance for High-Volume Audit Logs",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "MetricAlertDetectorHandler missing abstract method implementations",
+          "file": "src/sentry/incidents/grouptype.py",
+          "line": 12,
+          "severity": "high",
+          "bug_type": "runtime_error",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Docstring says returns list but method returns dict",
+          "file": "src/sentry/workflow_engine/processors/detector.py",
+          "line": 201,
+          "severity": "low",
+          "bug_type": "documentation",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    }
+  ]
+}

@@ -1,0 +1,328 @@
+{
+  "repo": "keycloak",
+  "generated_from": "ground_truth_validation/run_2026-01-15",
+  "total_bugs": 20,
+  "total_false_positives": 6,
+  "prs": [
+    {
+      "pr_number": 1,
+      "pr_title": "Fix concurrent group access to prevent NullPointerException",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Conditional passkey UI not set up for initial login when user is null - breaks ID-less passkey authentication",
+          "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+          "line": 115,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": "The PR changes isConditionalPasskeysEnabled() to require user != null, but on initial login context.getUser() is null. The original code set up passkey UI when user was null; the new code doesn't."
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "ConditionalPasskeysEnabled() called without UserModel parameter",
+          "reasoning": "This comment is unclear and doesn't describe a real bug. The method isConditionalPasskeysEnabled(UserModel user) IS called with a parameter (context.getUser()). The comment seems to be a poorly worded version of the second golden comment about user being null."
+        }
+      ]
+    },
+    {
+      "pr_number": 2,
+      "pr_title": "Implement recovery key support for user storage providers",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Test cleanup uses incorrect alias 'alias' instead of 'idp-alias-' + i",
+          "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+          "line": 381,
+          "severity": "medium",
+          "bug_type": "test_bug",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Recursive caching call using session instead of delegate",
+          "severity": "Critical",
+          "reasoning": "Not a bug. The pattern of using session.identityProviders().getById() in getForLogin() is intentional design that leverages individual IDP caching. The getById() method correctly uses idpDelegate for uncached lookups. This is a code style observation at best, not a Critical severity bug."
+        }
+      ]
+    },
+    {
+      "pr_number": 3,
+      "pr_title": "Implement access token context encoding framework",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Dead code in concatenatedRSToASN1DER - ASN1Encoder instances created and discarded",
+          "file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+          "line": 107,
+          "severity": "low",
+          "bug_type": "dead_code",
+          "found_by": "both",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Returns wrong provider (default keystore instead of BouncyCastle)",
+          "reasoning": "This is intentional design for a lightweight crypto provider. WildFlyElytronProvider returns null for the same method. The fallback behavior in BouncyIntegration handles non-BC providers gracefully. AuthzClientCryptoProvider has order 100, so it's only selected when BC providers aren't available. This is a design choice, not a bug."
+        }
+      ]
+    },
+    {
+      "pr_number": 4,
+      "pr_title": "Add HTML sanitizer for translated message resources",
+      "bug_count": 1,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "picocli.exit() calls System.exit() which may be problematic for embedded usage",
+          "file": "quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/cli/command/UpdateCompatibilityCheck.java",
+          "line": 48,
+          "severity": "Medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 5,
+      "pr_title": "Add Groups resource type and scopes to authorization schema",
+      "bug_count": 4,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Feature flag inconsistency - V1 flag (ADMIN_FINE_GRAINED_AUTHZ) used in cleanup listener instead of V2 (ADMIN_FINE_GRAINED_AUTHZ_V2)",
+          "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/AdminPermissions.java",
+          "line": 77,
+          "severity": "high",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Owner mismatch in hasPermission - findByName uses server.getId() but resources are created with resourceServer.getClientId()",
+          "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+          "line": 213,
+          "severity": "high",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "getClientsWithPermission uses findByType which only finds type-level 'Clients' resource; per-client resources have no type set",
+          "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+          "line": 137,
+          "severity": "high",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "Potential NPE in hasPermission - getResourceTypeResource can return null, causing NPE in findByResource and resource.getScopes()",
+          "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+          "line": 218,
+          "severity": "medium",
+          "bug_type": "runtime_error",
+          "found_by": "unknown",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 6,
+      "pr_title": "Add Client resource type and scopes to authorization schema",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "canManage() incorrectly accepts VIEW permission - privilege escalation",
+          "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+          "line": 70,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "getGroupIdsWithViewPermission uses resource ID instead of group ID (resource name), causing permission filtering to fail",
+          "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+          "line": 120,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 7,
+      "pr_title": "Add rolling-updates feature flag and compatibility framework",
+      "bug_count": 3,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Italian translation in Lithuanian locale file (messages_lt.properties)",
+          "file": "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties",
+          "line": 101,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Traditional Chinese characters in Simplified Chinese locale file (messages_zh_CN.properties)",
+          "file": "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties",
+          "line": 112,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Method name typo: 'santizeAnchors' should be 'sanitizeAnchors'",
+          "file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+          "line": 150,
+          "severity": "low",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "The anchor sanitization logic has a potential issue where it consumes English matcher groups without proper validation. If the translated text has more anchor tags than the English text, this could lead to incorrect validation results.",
+          "reasoning": "The code correctly handles the case where translation has more anchors than English. When englishMatcher.find() returns false (no more English anchors), the else branch adds an appropriate error message. The validation result is correct."
+        }
+      ]
+    },
+    {
+      "pr_number": 8,
+      "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+      "bug_count": 2,
+      "false_positive_count": 2,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Wrong null check parameter in AccessTokenContext constructor (grantType checked twice, rawTokenId not checked)",
+          "file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+          "line": 68,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Inverted logic AND wrong substring indices in isAccessTokenId matcher",
+          "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+          "line": 483,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Javadoc mentions \"usually like 3-letters shortcut\" but some implementations use 2-letter shortcuts",
+          "reasoning": "Documentation inconsistency, not a functional bug. Does not cause runtime errors or incorrect behavior."
+        },
+        {
+          "golden_comment": "Catching generic RuntimeException is too broad",
+          "reasoning": "Code quality suggestion for test code. Test still works correctly as IllegalArgumentException extends RuntimeException."
+        }
+      ]
+    },
+    {
+      "pr_number": 9,
+      "pr_title": "Add caching support for IdentityProviderStorageProvider.getForLogin operations",
+      "bug_count": 3,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Optional.get() without isPresent() check in RecoveryAuthnCodeInputLoginBean constructor",
+          "file": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+          "line": 20,
+          "severity": "high",
+          "bug_type": "runtime_error",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "NPE in getCredentials() when getMyUser() returns null",
+          "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+          "line": 235,
+          "severity": "high",
+          "bug_type": "runtime_error",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Missing id on RecoveryAuthnCodesCredentialModel returned by getCredentials()",
+          "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+          "line": 237,
+          "severity": "low",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 10,
+      "pr_title": "Fixing Re-authentication with passkeys",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "getSubGroupsCount() returns null violating GroupModel contract",
+          "file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+          "line": 275,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Reader thread not joined causing test flakiness",
+          "file": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+          "line": 138,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    }
+  ]
+}

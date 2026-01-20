@@ -1,0 +1,489 @@
+{
+  "repo": "discourse",
+  "generated_from": "ground_truth_validation/run_2026-01-15",
+  "total_bugs": 36,
+  "total_false_positives": 5,
+  "prs": [
+    {
+      "pr_number": 1,
+      "pr_title": "FEATURE: Can edit category/host relationships for embedding",
+      "bug_count": 3,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Duplicate downsize method definition causes ArgumentError for 4-arg callers",
+          "file": "app/models/optimized_image.rb",
+          "line": 147,
+          "severity": "high",
+          "bug_type": "runtime_error",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Hardcoded 10MB client-side limit ignores site settings, causing client/server divergence",
+          "file": "app/assets/javascripts/discourse/lib/utilities.js",
+          "line": 182,
+          "severity": "low",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Passing 80% to gifsicle --resize-fit fails for animated GIFs (expects WxH geometry)",
+          "file": "app/controllers/uploads_controller.rb",
+          "line": 67,
+          "severity": "medium",
+          "bug_type": "runtime_error",
+          "found_by": "both",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 2,
+      "pr_title": "FEATURE: Localization fallbacks (server-side)",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "TopicUser nil NoMethodError in unsubscribe action",
+          "file": "app/controllers/topics_controller.rb",
+          "line": 106,
+          "severity": "high",
+          "bug_type": "runtime_error",
+          "found_by": "both",
+          "details": "TopicUser.find_by returns nil when user has no TopicUser record for the topic. Accessing tu.notification_level raises NoMethodError."
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Typo in property name: 'stopNotificiationsText' should be 'stopNotificationsText' (missing 'n' in 'Notifications')",
+          "reasoning": "The typo is consistent in both the controller and template files, so the code works correctly. This is a code quality issue, not a functional bug. Additionally, the description is incorrect - it's an extra 'i', not a missing 'n'."
+        }
+      ]
+    },
+    {
+      "pr_number": 3,
+      "pr_title": "FIX: proper handling of group memberships",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Race condition and side effects in should_block? method",
+          "file": "app/models/blocked_email.rb",
+          "line": 11,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": "The should_block? method performs read-modify-write on match_count without atomic operations, causing race conditions under concurrent signups. Save failures are also silently ignored."
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "Regex pattern @(#{domains}) only matches domain suffixes, not full domains. evil.example.com would match whitelist entry example.com.",
+          "reasoning": "This is incorrect. The regex @(example\\.com) does NOT match evil.example.com because the @ must immediately precede the domain. Verified by testing: 'user@evil.example.com' =~ /@(example\\.com)/i returns nil. The existing test 'should not reject partial matches' confirms the regex works correctly."
+        }
+      ]
+    },
+    {
+      "pr_number": 4,
+      "pr_title": "scale-color $lightness must use $secondary for dark themes",
+      "bug_count": 7,
+      "false_positive_count": 2,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "SSRF via open() in poll_feed.rb - arbitrary URL fetch from site setting",
+          "file": "app/jobs/scheduled/poll_feed.rb",
+          "line": 28,
+          "severity": "high",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "SSRF via open() in topic_embed.rb import_remote - arbitrary URL fetch without validation",
+          "file": "app/models/topic_embed.rb",
+          "line": 48,
+          "severity": "critical",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Origin check bypass via indexOf substring match in postMessage handler",
+          "file": "app/assets/javascripts/embed.js",
+          "line": 17,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "NoMethodError when contents parameter is nil in TopicEmbed.import",
+          "file": "app/models/topic_embed.rb",
+          "line": 13,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 5,
+          "description": "XSS vulnerability via unescaped URL interpolation in import HTML",
+          "file": "app/models/topic_embed.rb",
+          "line": 13,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 6,
+          "description": "ERB syntax error: 'end if' is invalid Ruby",
+          "file": "app/views/embed/best.html.erb",
+          "line": 6,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 7,
+          "description": "Spec mocks TopicRetriever but controller enqueues job - test may not verify real behavior",
+          "file": "spec/controllers/embed_controller_spec.rb",
+          "line": 40,
+          "severity": "low",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "postMessage targetOrigin should be the origin (scheme+host+port), not the full referrer URL; using the full URL will cause the message to be dropped and prevent resizing.",
+          "reasoning": "Technically incorrect - postMessage with full URL as targetOrigin still works; browser extracts origin. The message is NOT dropped if origin matches."
+        },
+        {
+          "golden_comment": "The code sets X-Frame-Options: ALLOWALL which completely disables clickjacking protection...",
+          "reasoning": "This is intentional for an embed endpoint. The purpose IS to be embedded in iframes. X-Frame-Options: ALLOWALL is correct. Referer cannot be spoofed by JavaScript."
+        }
+      ]
+    },
+    {
+      "pr_number": 5,
+      "pr_title": "UX: show complete URL path if website domain is same as instance domain",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Invalid -ms-align-items property in align-items mixin",
+          "file": "app/assets/stylesheets/common/foundation/mixins.scss",
+          "line": 122,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Removing float:right from .panel breaks noscript header layout",
+          "file": "app/assets/stylesheets/common/base/header.scss",
+          "line": 35,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 6,
+      "pr_title": "Optimize header layout performance with flexbox mixins",
+      "bug_count": 3,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Missing ? suffix on include_website_name method causes unconditional serialization",
+          "file": "app/serializers/user_serializer.rb",
+          "line": 153,
+          "severity": "high",
+          "bug_type": "unknown",
+          "found_by": [
+            "droid",
+            "golden"
+          ],
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "String literal mutation with << operator ('.' << website_host)",
+          "file": "app/serializers/user_serializer.rb",
+          "line": 150,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": [
+            "golden"
+          ],
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Incorrect same-domain check using label count instead of registrable domain",
+          "file": "app/serializers/user_serializer.rb",
+          "line": 145,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": [
+            "droid"
+          ],
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 7,
+      "pr_title": "Enhance embed URL handling and validation system",
+      "bug_count": 4,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "topic-meta-data h5 a lightness inverted from 30% to 70% in light theme",
+          "file": "app/assets/stylesheets/desktop/topic-post.scss",
+          "line": 291,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "mobile modal .custom-message-length lightness changed from 70% to 30% in light theme (inconsistent with desktop)",
+          "file": "app/assets/stylesheets/mobile/modal.scss",
+          "line": 103,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": ".name selector lightness changed from 30% to 50% (inconsistent with PR pattern)",
+          "file": "app/assets/stylesheets/desktop/user.scss",
+          "line": 522,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": ".name selector lightness changed from 30% to 50% (mobile variant of bug 3)",
+          "file": "app/assets/stylesheets/mobile/user.scss",
+          "line": 497,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "In topic-post.css the original code used $lightness: 70% but the replacement uses $lightness: 30% for the light theme. This makes the text significantly darker than intended.",
+          "reasoning": "The claim is factually incorrect. After examining the full diff of topic-post.scss, no change goes from 70% to 30% for light theme. The notable change (.topic-meta-data h5 a) goes the opposite direction (30% to 70%). The golden comment has the values reversed."
+        }
+      ]
+    },
+    {
+      "pr_number": 8,
+      "pr_title": "Add comprehensive email validation for blocked users",
+      "bug_count": 5,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "findMembers returns undefined when name is empty, breaking callers that expect a promise",
+          "file": "app/assets/javascripts/discourse/models/group.js",
+          "line": 21,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "create action ignores alias_level parameter while update handles it, causing data inconsistency",
+          "file": "app/controllers/admin/groups_controller.rb",
+          "line": 23,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Test uses PUT for remove_member but route expects DELETE, test will fail with routing error",
+          "file": "spec/controllers/admin/groups_controller_spec.rb",
+          "line": 113,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "Template iterates over 'members' but controller doesn't have 'members' property, should use 'model.members'",
+          "file": "app/assets/javascripts/discourse/templates/group/members.hbs",
+          "line": 6,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 5,
+          "description": "Pagination next action caps offset at user_count, causing empty last page when offset == user_count",
+          "file": "app/assets/javascripts/admin/controllers/admin-group.js.es6",
+          "line": 32,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 9,
+      "pr_title": "FEATURE: per-topic unsubscribe option in emails",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Thread-safety issue with lazy @loaded_locales initialization in ensure_loaded!",
+          "file": "lib/freedom_patches/translate_accelerator.rb",
+          "line": 63,
+          "severity": "low",
+          "bug_type": "race_condition",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "String/Symbol locale normalization issue causing potential double-loading",
+          "file": "lib/freedom_patches/translate_accelerator.rb",
+          "line": 63,
+          "severity": "low",
+          "bug_type": "logic_bug",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 10,
+      "pr_title": "FEATURE: automatically downsize large images",
+      "bug_count": 8,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Migration crashes when embed_category site setting is unset - accessing [0]['id'] on empty result",
+          "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+          "line": 11,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "SQL injection/breakage in migration INSERT - unquoted string interpolation",
+          "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+          "line": 25,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Fabricator files swapped - category_fabricator.rb defines embeddable_host, breaking all category specs",
+          "file": "spec/fabricators/category_fabricator.rb",
+          "line": 1,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "_ids hydration deletes original IDs even when lookups return null, inconsistent with singular behavior",
+          "file": "app/assets/javascripts/discourse/models/store.js.es6",
+          "line": 198,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid",
+          "details": ""
+        },
+        {
+          "id": 5,
+          "description": "NoMethodError in before_validation - host.sub! called when host is nil",
+          "file": "app/models/embeddable_host.rb",
+          "line": 6,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden",
+          "details": ""
+        },
+        {
+          "id": 6,
+          "description": "Update and destroy methods don't check for nil after .first, causing NoMethodError on missing record",
+          "file": "app/controllers/admin/embeddable_hosts_controller.rb",
+          "line": 10,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden",
+          "details": ""
+        },
+        {
+          "id": 7,
+          "description": "record_for_host case sensitivity bug - SQL lower() on column but not on parameter",
+          "file": "app/models/embeddable_host.rb",
+          "line": 17,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden",
+          "details": ""
+        },
+        {
+          "id": 8,
+          "description": "Migration doesn't normalize hosts - migrated data with http:// or paths won't match lookups",
+          "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+          "line": 25,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    }
+  ]
+}

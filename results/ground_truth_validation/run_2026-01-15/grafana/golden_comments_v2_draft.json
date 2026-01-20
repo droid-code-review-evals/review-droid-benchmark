@@ -1,0 +1,351 @@
+{
+  "repo": "grafana",
+  "generated_from": "ground_truth_validation/run_2026-01-15",
+  "total_bugs": 23,
+  "total_false_positives": 5,
+  "prs": [
+    {
+      "pr_number": 1,
+      "pr_title": "Unified Storage Performance Optimizations",
+      "bug_count": 4,
+      "false_positive_count": 2,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Race condition in device count check (TOCTOU)",
+          "file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+          "line": 103,
+          "severity": "high",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Anonymous auth fails entirely when device limit reached (intentional but potentially unwanted DoS risk)",
+          "file": "pkg/services/anonymous/anonimpl/client.go",
+          "line": 44,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "ErrDeviceLimitReached misleading when device doesn't exist",
+          "file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+          "line": 96,
+          "severity": "low",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "TagDevice now returns errors, changing auth contract",
+          "file": "pkg/services/anonymous/anonimpl/impl.go",
+          "line": 146,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "This call won't compile: dbSession.Exec(args...) is given a []interface{} where the first element is the query, but Exec's signature requires a first parameter of type string (not an interface{} splat).",
+          "reasoning": "The pattern 'args = append([]interface{}{query}, args...); dbSession.Exec(args...)' is already used in the codebase at pkg/services/sqlstore/session.go lines 150-151. DBSession embeds xorm.Session which accepts variadic interface{} for Exec. The code compiles correctly."
+        },
+        {
+          "golden_comment": "Time window calculation inconsistency: Using device.UpdatedAt.UTC().Add(-anonymousDeviceExpiration) as the lower bound but device.UpdatedAt as the current time may not match the intended logic.",
+          "reasoning": "device.UpdatedAt is set to time.Now() when creating the device (impl.go:139), so using device.UpdatedAt.UTC() is effectively the same as time.Now().UTC(). The time window logic (30 days back, 1 minute forward) is intentional for finding non-expired devices with clock skew tolerance."
+        }
+      ]
+    },
+    {
+      "pr_number": 2,
+      "pr_title": "Advanced SQL Analytics Framework",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Asymmetric cache trust logic: cached grants trusted immediately but cached denials fall through to DB, allowing stale grants to persist after permission revocation",
+          "file": "pkg/services/authz/rbac/service.go",
+          "line": 127,
+          "severity": "high",
+          "bug_type": "security",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "The test comment says the cached permissions 'allow access', but the map stores false for dashboards:uid:dash1, so checkPermission will still treat this scope as not allowed.",
+          "reasoning": "This is a misleading test comment, not a functional bug. The test's intent is to prove permDenialCache takes precedence over permCache. Since permDenialCache is checked first and returns denial immediately, the permCache is never reached - whether it stores true or false is irrelevant to the test outcome. The test logic is correct; only the explanatory comment is confusing."
+        }
+      ]
+    },
+    {
+      "pr_number": 3,
+      "pr_title": "Frontend Asset Optimization",
+      "bug_count": 4,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "TestLogger.FromContext returns new logger instead of preserving original, breaking test log capture",
+          "file": "pkg/plugins/log/fake.go",
+          "line": 46,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "grafanaInfraLogWrapper.FromContext type assertion may fail, silently dropping contextual attributes",
+          "file": "pkg/plugins/log/logger.go",
+          "line": 48,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "ContextualLoggerMiddleware methods panic on nil request (nil pointer dereference)",
+          "file": "pkg/services/pluginsintegration/clientmiddleware/contextual_logger_middleware.go",
+          "line": 40,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "traceID no longer logged for plugin requests, breaking request tracing",
+          "file": "pkg/services/pluginsintegration/clientmiddleware/logger_middleware.go",
+          "line": 49,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 4,
+      "pr_title": "Database Performance Optimizations",
+      "bug_count": 0,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [],
+      "original_false_positives": [
+        {
+          "golden_comment": "The applyTemplateVariables method is called with request.filters as the third parameter, but this parameter is not used in the corresponding test setup.",
+          "reasoning": "This is a test coverage observation, not an actual bug. The filters parameter is optional in applyTemplateVariables (adhocFilters?: AdHocVariableFilter[]). The production code correctly passes request.filters - whether it's undefined or has actual filters is handled by the function. There are separate tests in datasource.test.ts that specifically test the adhocFilters functionality. The new tests in this PR correctly verify that template variable interpolation works, which is the primary purpose of the change."
+        }
+      ]
+    },
+    {
+      "pr_number": 5,
+      "pr_title": "Dual Storage Architecture",
+      "bug_count": 1,
+      "false_positive_count": 1,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "SilenceGrafanaRuleDrawer never renders for rules from list view because it requires RulerRuleDTO but only GrafanaPromRuleDTO is passed",
+          "file": "public/app/features/alerting/unified/rule-list/components/RuleActionsButtons.V2.tsx",
+          "line": 103,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": [
+        {
+          "golden_comment": "The rendered GrafanaRuleListItem is missing the required key prop for React list items. This can cause rendering issues when the list order changes.",
+          "reasoning": "The key prop IS present: `key={promRule.uid}` in GrafanaGroupLoader.tsx. The golden comment is incorrect."
+        }
+      ]
+    },
+    {
+      "pr_number": 6,
+      "pr_title": "Notification Rule Processing Engine",
+      "bug_count": 5,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Context/log propagation bug in Delete - uses d.Log instead of enriched log variable",
+          "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 98,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "DeleteCollection goroutine uses recordStorageDuration instead of recordLegacyDuration",
+          "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 166,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        },
+        {
+          "id": 3,
+          "description": "Create failure calls recordLegacyDuration instead of recordStorageDuration",
+          "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 45,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 4,
+          "description": "Update failure calls recordLegacyDuration instead of recordStorageDuration",
+          "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 129,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 5,
+          "description": "Delete success uses name instead of options.Kind for metric label (cardinality explosion)",
+          "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 106,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 7,
+      "pr_title": "Advanced Query Processing Architecture",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Error log level used for debugging/informational messages in cleanup code",
+          "file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+          "line": 534,
+          "severity": "low",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Cleanup ticker changed from 10m to 1m - increases DB load 10x",
+          "file": "pkg/services/cleanup/cleanup.go",
+          "line": 77,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "droid_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 8,
+      "pr_title": "Plugins: Chore: Renamed instrumentation middleware to metrics middleware",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Incomplete double-checked locking - no re-check of cache after acquiring write lock",
+          "file": "pkg/api/webassets/webassets.go",
+          "line": 48,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Cache corruption on error - nil result overwrites valid cached entry when fetch fails",
+          "file": "pkg/api/webassets/webassets.go",
+          "line": 69,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "golden_only",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 9,
+      "pr_title": "AuthZService: improve authz caching",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "enableSqlExpressions function always returns false due to inverted flag and both branches returning false",
+          "file": "pkg/expr/reader.go",
+          "line": 193,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "sql.NewInMemoryDB returns stub with 'not implemented' errors replacing working go-duck implementation",
+          "file": "pkg/expr/sql/db.go",
+          "line": 23,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    },
+    {
+      "pr_number": 10,
+      "pr_title": "Anonymous: Add configurable device limit",
+      "bug_count": 2,
+      "false_positive_count": 0,
+      "ground_truth_bugs": [
+        {
+          "id": 1,
+          "description": "Race condition: BuildIndex concurrent map write - multiple goroutines can build same index and race on b.cache[key] = idx",
+          "file": "pkg/storage/unified/search/bleve.go",
+          "line": 137,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        },
+        {
+          "id": 2,
+          "description": "Race condition: TotalDocs concurrent map read - iterates b.cache without lock while BuildIndex writes to it",
+          "file": "pkg/storage/unified/search/bleve.go",
+          "line": 144,
+          "severity": "medium",
+          "bug_type": "unknown",
+          "found_by": "both",
+          "details": ""
+        }
+      ],
+      "original_false_positives": []
+    }
+  ]
+}
