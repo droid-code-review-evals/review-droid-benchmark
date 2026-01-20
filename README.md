@@ -10,7 +10,8 @@ This project measures Droid's code review quality using the [AI Code Review Eval
 |--------|-------|
 | Repositories | 5 (Sentry, Grafana, Keycloak, Discourse, Cal.com) |
 | Total PRs | 50 (10 per repo) |
-| Golden Comments | 145 |
+| Golden Comments v1 | 145 (original, includes false positives) |
+| Golden Comments v2 | 137 (validated, with file/line info) |
 | Languages | Python, Go, Java, Ruby, TypeScript |
 
 ## Getting Started
@@ -38,6 +39,21 @@ The **[Validation Playbook](docs/VALIDATION_PLAYBOOK.md)** provides a manual pro
 - Establishing ground truth beyond string matching
 
 Ground truth validation results are stored in `results/ground_truth_validation/`.
+
+### Golden Comments v2
+
+We created a validated set of golden comments (v2) through rigorous manual review:
+
+- **[Golden Comments v2 Plan](docs/GOLDEN_COMMENTS_V2_PLAN.md)** - 3-phase validation methodology
+- **[Revalidation Playbook](docs/REVALIDATION_PLAYBOOK.md)** - Per-PR revalidation procedure
+
+**v2 improvements over v1:**
+- 28 false positives identified and removed
+- 19 bugs rejected during revalidation
+- All bugs now have exact file/line locations
+- All bugs classified by type (runtime_error, logic_bug, security, etc.)
+
+Final output: `results/golden_comments_v2.json`
 
 ## Analysis & Results
 
@@ -73,16 +89,21 @@ review-droid-benchmark/
 ├── scripts/                  # Evaluation scripts
 │   ├── evaluate_sentry_run.py
 │   ├── generate_results_markdown.py
-│   └── ...
+│   ├── generate_v2_draft.py
+│   ├── finalize_v2.py
+│   └── create_golden_comments_repo.py
 ├── results/                  # Evaluation outputs by run
 │   ├── run_2026-01-14/
 │   ├── run_2026-01-15/
-│   └── ground_truth_validation/
+│   ├── ground_truth_validation/
+│   ├── golden_comments_v2.json
+│   └── v1_false_positives.json
 ├── repos/                    # Local clones
 │   ├── augment-*.git/        # Mirror clones
 │   └── golden_comments/      # Golden comment dataset
 ├── work/                     # Working directories
-│   └── droid-*/              # Clones for PR creation
+│   ├── droid-*/              # Clones for PR creation
+│   └── droid-golden_comments/ # Validated golden comments repo
 └── PLAN_ARCHIVE.md           # Historical planning document
 ```
 
@@ -93,6 +114,8 @@ review-droid-benchmark/
 | Setup infrastructure | [docs/SETUP.md](docs/SETUP.md) |
 | Run evaluations | [docs/EVALS.md](docs/EVALS.md) |
 | Manual validation | [docs/VALIDATION_PLAYBOOK.md](docs/VALIDATION_PLAYBOOK.md) |
+| Golden Comments v2 | [docs/GOLDEN_COMMENTS_V2_PLAN.md](docs/GOLDEN_COMMENTS_V2_PLAN.md) |
+| Revalidation playbook | [docs/REVALIDATION_PLAYBOOK.md](docs/REVALIDATION_PLAYBOOK.md) |
 | System design | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Performance analysis | [docs/analysis/TRACE_ANALYSIS.md](docs/analysis/TRACE_ANALYSIS.md) |
 | Results data | [results/](results/) |
