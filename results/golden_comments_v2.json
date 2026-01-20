@@ -1,0 +1,1491 @@
+{
+  "version": "2.0",
+  "generated_date": "2026-01-20",
+  "source": "ground_truth_validation/run_2026-01-15 + revalidation",
+  "stats": {
+    "total_repos": 5,
+    "total_prs": 47,
+    "total_bugs": 137,
+    "bugs_by_verdict": {
+      "confirmed": 82,
+      "modified": 51
+    },
+    "bugs_by_type": {
+      "runtime_error": 34,
+      "data_corruption": 2,
+      "logic_bug": 69,
+      "security": 11,
+      "documentation": 4,
+      "race_condition": 10,
+      "performance": 3,
+      "test_bug": 1,
+      "dead_code": 1
+    },
+    "bugs_by_severity": {
+      "high": 35,
+      "medium": 84,
+      "low": 16
+    }
+  },
+  "repos": {
+    "sentry": {
+      "pr_count": 10,
+      "bug_count": 26,
+      "prs": [
+        {
+          "pr_number": 6,
+          "pr_title": "Enhanced Pagination Performance for High-Volume Audit Logs",
+          "bug_count": 4,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/api/endpoints/organization_auditlogs.py",
+              "line": 71,
+              "description": "organization_context.member is optional (can be None), so organization_context.member.has_global_access can raise AttributeError for requests without a membership context (e.g., org auth token / missing user_id context).",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "src/sentry/api/paginator.py",
+              "line": 182,
+              "description": "BasePaginator.get_result can slice a Django QuerySet with a negative start_offset when cursor.is_prev is true (start_offset = offset), which Django does not support and can raise an exception (500) for crafted cursor offsets.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 3,
+              "file": "src/sentry/api/paginator.py",
+              "line": 877,
+              "description": "OptimizedCursorPaginator.get_result explicitly enables negative offsets (start_offset = cursor.offset) and then slices a Django QuerySet with a negative start, which Django does not support and can raise an exception.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 4,
+              "file": "src/sentry/api/paginator.py",
+              "line": 840,
+              "description": "OptimizedCursorPaginator.get_item_key assumes the ordering key is numeric and calls math.floor/math.ceil on it; when used for audit logs ordered by the datetime field, this raises TypeError (datetime is not a real number).",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            }
+          ]
+        },
+        {
+          "pr_number": 7,
+          "pr_title": "Optimize spans buffer insertion with eviction during insert",
+          "bug_count": 7,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/spans/consumers/process/factory.py",
+              "line": 141,
+              "description": "process_batch indexes val['end_timestamp_precise'] from the ingested span payload; if the key is missing for any event variant/backfill, the consumer raises KeyError and drops/crashes the batch.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "src/sentry/api/endpoints/organization_auditlogs.py",
+              "line": 71,
+              "description": "organization_context.member is declared as Optional and can be None; accessing organization_context.member.has_global_access will raise AttributeError for contexts without membership.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 3,
+              "file": "src/sentry/api/paginator.py",
+              "line": 184,
+              "description": "BasePaginator.get_result can pass a negative start_offset into a Django QuerySet slice (queryset[start:stop]) when cursor.is_prev and cursor.offset is negative, which triggers Django's 'Negative indexing is not supported' AssertionError.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 4,
+              "file": "src/sentry/api/paginator.py",
+              "line": 882,
+              "description": "OptimizedCursorPaginator.get_result explicitly sets start_offset=cursor.offset for negative offsets when enable_advanced_features is on; slicing a Django QuerySet with a negative start will raise AssertionError.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 5,
+              "file": "src/sentry/scripts/spans/add-buffer.lua",
+              "line": 47,
+              "description": "The Lua script merges ZSETs via ZUNIONSTORE without specifying AGGREGATE; Redis defaults to SUM, so if any member exists in both inputs its timestamp score will be summed/corrupted, breaking ordering/eviction semantics.",
+              "severity": "medium",
+              "bug_type": "data_corruption"
+            },
+            {
+              "id": 6,
+              "file": "src/sentry/spans/buffer.py",
+              "line": 197,
+              "description": "This PR migrates span buffer storage from Redis SETs (SADD/SCARD/SUNIONSTORE) to ZSETs (ZADD/ZCARD/ZUNIONSTORE). Existing keys created by the previous version will be type SET, so ZADD/ZUNIONSTORE on them will raise WRONGTYPE until those keys expire/are cleared.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 7,
+              "file": "src/sentry/api/paginator.py",
+              "line": 838,
+              "description": "OptimizedCursorPaginator.get_item_key applies math.floor/ceil to the order_by field value; when the paginator is used with a datetime sort key (e.g. order_by='-datetime'), math.floor(datetime) raises TypeError.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            }
+          ]
+        },
+        {
+          "pr_number": 8,
+          "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 2,
+              "file": "src/sentry/api/endpoints/organization_events_stats.py",
+              "line": 218,
+              "description": "_get_event_stats() calls is_errors_query_for_error_upsampled_projects(..., dataset, request) using the outer 'dataset' variable, but the query is executed against the 'scoped_dataset' argument; when these differ (e.g. dashboard discover-split paths), the upsampling decision can be computed against the wrong dataset.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 9,
+          "pr_title": "feat(ecosystem): Implement cross-system issue synchronization",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/integrations/github/integration.py",
+              "line": 503,
+              "description": "GitHubInstallation compares pipeline.fetch_state('github_authenticated_user') to integration.metadata['sender']['login'] without checking that metadata contains 'sender' (or that it has 'login'); integrations without sender metadata will raise KeyError/TypeError and 500 the install flow.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 3,
+              "file": "src/sentry/integrations/github/integration.py",
+              "line": 402,
+              "description": "OAuthLoginView uses state = pipeline.signature, where Pipeline.signature is a deterministic md5 of the pipeline view class names; this makes the OAuth 'state' value predictable rather than per-flow random, weakening CSRF protection.",
+              "severity": "high",
+              "bug_type": "security"
+            }
+          ]
+        },
+        {
+          "pr_number": 10,
+          "pr_title": "Replays Self-Serve Bulk Delete System",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+              "line": 118,
+              "description": "fetch_error_details zips error_ids with nodestore.backend.get_multi(...).values(); get_multi returns a dict whose values order can differ from the input id_list (e.g., mixed cached/uncached IDs), so error IDs can be paired with the wrong event payload.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "src/sentry/workflow_engine/endpoints/validators/base/detector.py",
+              "line": 64,
+              "description": "BaseDetectorTypeValidator.update reads validated_data['detector_type'], but the serializer field is named 'type'; as a result, PUT /organization-detectors/{id} cannot update a detector's type (it falls back to instance.group_type).",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 11,
+          "pr_title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+          "bug_count": 5,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/spans/consumers/process/flusher.py",
+              "line": 199,
+              "description": "SpanFlusher.main emits metrics with inconsistent tag keys: 'spans.buffer.flusher.produce' and 'spans.buffer.segment_size_bytes' use tags={'shard': shard_tag}, but 'spans.buffer.flusher.wait_produce' uses tags={'shards': shard_tag}; this splits/loses aggregation for shard-tagged dashboards.",
+              "severity": "low",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "src/sentry/spans/consumers/process/flusher.py",
+              "line": 254,
+              "description": "In _ensure_processes_alive, processes are created via multiprocessing.get_context('spawn').Process (SpawnProcess), but the kill path is guarded by isinstance(process, multiprocessing.Process), which is False for SpawnProcess; as a result, hung/crashed processes are not killed before restarting, leading to orphan/duplicate flusher processes.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "tests/sentry/spans/consumers/process/test_consumer.py",
+              "line": 15,
+              "description": "test_basic monkeypatches time.sleep to a no-op (test_consumer.py:15), then later calls time.sleep(0.1) (test_consumer.py:62) expecting to give the flusher time to process; the sleep is still monkeypatched, so the delay never happens and the test can remain racy/flaky.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 5,
+              "file": "src/sentry/spans/consumers/process/flusher.py",
+              "line": 339,
+              "description": "SpanFlusher.join iterates processes and breaks the loop when the deadline is exceeded, which skips termination for any remaining processes; this can leave child flusher processes running past join(timeout=...).",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 6,
+              "file": "src/sentry/spans/consumers/process/flusher.py",
+              "line": 346,
+              "description": "SpanFlusher.join uses isinstance(process, multiprocessing.Process) before calling terminate(); because spawned processes are SpawnProcess and isinstance(..., multiprocessing.Process) is False, terminate() is never called and processes may outlive shutdown.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 12,
+          "pr_title": "GitHub OAuth Security Enhancement",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/integrations/services/assignment_source.py",
+              "line": 18,
+              "description": "AssignmentSource.queued uses queued: datetime = timezone.now(), which is evaluated once at import/class-definition time; all AssignmentSource instances created without an explicit queued value will share the same timestamp instead of capturing the creation time.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 13,
+          "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/monitors/logic/incident_occurrence.py",
+              "line": 168,
+              "description": "get_monitor_environment_context() copies monitor_environment.monitor.config into a local `config` dict and updates schedule_type to a display value, but then returns `monitor_environment.monitor.config` instead of the modified `config`, so the returned monitor context is missing the intended schedule_type transformation.",
+              "severity": "low",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 14,
+          "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+              "line": 86,
+              "description": "OffsetTracker.get_committable_offsets returns the last processed offset (e.g. 100) rather than the next offset to read (101), but the commit callbacks in this PR expect Kafka-style commit semantics (next offset). This makes commits lag by 1 and can stall progress in the presence of gaps/out-of-order offsets.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 15,
+          "pr_title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "src/sentry/incidents/grouptype.py",
+              "line": 11,
+              "description": "MetricAlertDetectorHandler subclasses StatefulDetectorHandler but does not implement required abstract members (counter_names, get_dedupe_value, get_group_key_values, build_occurrence_and_event_data), so it cannot be instantiated (TypeError: Can't instantiate abstract class...) if a detector of type metric_alert_fire is ever evaluated.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "src/sentry/workflow_engine/processors/detector.py",
+              "line": 230,
+              "description": "StatefulDetectorHandler.evaluate returns a dict[DetectorGroupKey, DetectorEvaluationResult], but its docstring still says it returns a list of DetectorEvaluationResult.",
+              "severity": "low",
+              "bug_type": "documentation"
+            }
+          ]
+        }
+      ]
+    },
+    "grafana": {
+      "pr_count": 9,
+      "bug_count": 21,
+      "prs": [
+        {
+          "pr_number": 1,
+          "pr_title": "Anonymous: Add configurable device limit",
+          "bug_count": 3,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+              "line": 115,
+              "description": "CreateOrUpdateDevice enforces AnonymousDeviceLimit via a non-atomic count-then-insert/update (TOCTOU); concurrent requests can exceed the configured device limit.",
+              "severity": "high",
+              "bug_type": "race_condition"
+            },
+            {
+              "id": 2,
+              "file": "pkg/services/anonymous/anonimpl/client.go",
+              "line": 44,
+              "description": "Anonymous Authenticate() returns an error (blocking anonymous login for that request) when TagDevice returns ErrDeviceLimitReached, enabling a practical DoS against new anonymous sessions once the device limit is saturated.",
+              "severity": "medium",
+              "bug_type": "security"
+            },
+            {
+              "id": 4,
+              "file": "pkg/services/anonymous/anonimpl/impl.go",
+              "line": 147,
+              "description": "TagDevice now returns the error from tagDeviceUI (including device-limit/db errors) instead of best-effort logging-and-continuing, changing authentication behavior for anonymous requests.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 2,
+          "pr_title": "Advanced SQL Analytics Framework",
+          "bug_count": 3,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/services/authz/rbac/service.go",
+              "line": 131,
+              "description": "Check() trusts cached positive permissions (permCache hit) and returns Allowed=true without consulting the DB; after a permission revocation, the stale cached grant can continue to authorize access until cache expiry, while cache-miss/negative results explicitly fall back to the DB.",
+              "severity": "high",
+              "bug_type": "security"
+            },
+            {
+              "id": "new_2",
+              "file": "pkg/services/authz/rbac/service_test.go",
+              "line": 981,
+              "description": "Test does not actually prove permDenialCache precedence because the permCache entry is set to false despite a comment claiming it should allow.",
+              "severity": "low",
+              "bug_type": "logic_bug",
+              "newly_discovered": true
+            },
+            {
+              "id": "fp_reversed_3",
+              "file": "",
+              "line": null,
+              "description": "The test comment says the cached permissions 'allow access', but the map stores false for dashboards:uid:dash1, so checkPermission will still treat this scope as not allowed.",
+              "severity": "medium",
+              "bug_type": "unknown",
+              "from_reversed_false_positive": true
+            }
+          ]
+        },
+        {
+          "pr_number": 3,
+          "pr_title": "Plugins: Chore: Renamed instrumentation middleware to metrics middleware",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/plugins/log/fake.go",
+              "line": 46,
+              "description": "TestLogger.FromContext always returns a fresh TestLogger, so callers like LoggerMiddleware that do logger.FromContext(ctx).Info(...) log into a different instance than the test holds, breaking log capture/inspection.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 5,
+          "pr_title": "Notification Rule Processing Engine",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "public/app/features/alerting/unified/rule-list/components/RuleActionsButtons.V2.tsx",
+              "line": 104,
+              "description": "In the list view, RuleActionsButtons.V2 is invoked with only promRule, so clicking 'Silence notifications' toggles showSilenceDrawer but the drawer render is gated on rulerRuleType.grafana.alertingRule(rule) (requires a RulerGrafanaRuleDTO), meaning the SilenceGrafanaRuleDrawer never renders.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 6,
+          "pr_title": "Dual Storage Architecture",
+          "bug_count": 5,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+              "line": 97,
+              "description": "DualWriterMode3.Delete builds an enriched logger (with name/kind/method) but attaches ctx to the base d.Log instead, so downstream storage/legacy calls that derive logging from context lose those request-specific fields.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+              "line": 166,
+              "description": "DualWriterMode3.DeleteCollection measures legacy delete duration (startLegacy) but records it into the storage duration histogram via recordStorageDuration, polluting storage metrics and leaving legacy duration unreported.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+              "line": 45,
+              "description": "On storage Create() failure, DualWriterMode3 records the duration into the legacy duration histogram (recordLegacyDuration) even though the timed operation was storage.Create, misreporting metrics.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+              "line": 129,
+              "description": "On storage Update() failure, DualWriterMode3 records the duration into the legacy duration histogram (recordLegacyDuration) instead of the storage duration histogram.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 5,
+              "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+              "line": 106,
+              "description": "On successful Delete(), DualWriterMode3 records storage duration with the object's name in the \"kind\" label position, causing unbounded label cardinality in the prometheus histogram (potentially one time series per object name).",
+              "severity": "high",
+              "bug_type": "performance"
+            }
+          ]
+        },
+        {
+          "pr_number": 7,
+          "pr_title": "Database Performance Optimizations",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+              "line": 534,
+              "description": "CleanAnnotations/CleanOrphanedAnnotationTags log routine cleanup progress at Error level (including full ID batches and SQL condition strings) even when no error occurred, which can cause noisy error logs and high log volume.",
+              "severity": "low",
+              "bug_type": "performance"
+            },
+            {
+              "id": 2,
+              "file": "pkg/services/cleanup/cleanup.go",
+              "line": 77,
+              "description": "CleanUpService.Run() schedules the full cleanup job loop every 1 minute (down from 10 minutes on the base branch), potentially running DB-intensive cleanup (including annotation cleanup) up to 10x more frequently and keeping the instance under constant cleanup load.",
+              "severity": "medium",
+              "bug_type": "performance"
+            }
+          ]
+        },
+        {
+          "pr_number": 8,
+          "pr_title": "Frontend Asset Optimization",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/api/webassets/webassets.go",
+              "line": 48,
+              "description": "GetWebAssets reads the cache under RLock, but after acquiring the write lock it does not re-check whether another goroutine has already populated entryPointAssetsCache; as a result, concurrent callers that initially observed nil can redundantly re-load and re-parse the manifest (file/CDN) even though the cache is now filled.",
+              "severity": "medium",
+              "bug_type": "race_condition"
+            },
+            {
+              "id": 2,
+              "file": "pkg/api/webassets/webassets.go",
+              "line": 69,
+              "description": "GetWebAssets assigns entryPointAssetsCache = result even when err != nil and/or result is nil; with concurrent callers (and no cache re-check after acquiring the write lock), a later caller can fail to load assets and overwrite a valid cached entry with nil, forcing future requests to reload and potentially returning errors.",
+              "severity": "medium",
+              "bug_type": "race_condition"
+            }
+          ]
+        },
+        {
+          "pr_number": 9,
+          "pr_title": "Advanced SQL Analytics Framework",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/expr/reader.go",
+              "line": 194,
+              "description": "enableSqlExpressions negates the FlagSqlExpressions feature flag and then returns false in both branches, so SQL expressions are always treated as disabled; as a result, the QueryTypeSQL branch always returns an error (\"sqlExpressions is not implemented\") even when the flag is enabled.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "pkg/expr/sql/db.go",
+              "line": 24,
+              "description": "NewInMemoryDB returns a DB whose methods (RunCommands, QueryFramesInto, TablesList) all return \"not implemented\" errors, so SQL parsing (TablesList -> RunCommands) and execution (SQLCommand.Execute -> QueryFramesInto) will fail immediately.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 10,
+          "pr_title": "Unified Storage Performance Optimizations",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "pkg/storage/unified/search/bleve.go",
+              "line": 72,
+              "description": "BuildIndex is no longer serialized (cacheMu lock was moved from the start of BuildIndex to only around the final cache write), so concurrent callers can build the same key in parallel and then overwrite b.cache[key] with the last writer; the overwritten bleve.Index is never closed, leading to wasted work and potential resource leaks.",
+              "severity": "medium",
+              "bug_type": "race_condition"
+            },
+            {
+              "id": 2,
+              "file": "pkg/storage/unified/search/bleve.go",
+              "line": 144,
+              "description": "TotalDocs ranges over b.cache without any lock; if BuildIndex (or any other writer) updates b.cache concurrently, Go can panic with \"concurrent map iteration and map write\" during metrics collection.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            }
+          ]
+        }
+      ]
+    },
+    "keycloak": {
+      "pr_count": 9,
+      "bug_count": 18,
+      "prs": [
+        {
+          "pr_number": 1,
+          "pr_title": "Fixing Re-authentication with passkeys",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+              "line": 115,
+              "description": "UsernamePasswordForm only calls webauthnAuth.fillContextForm() when isConditionalPasskeysEnabled(context.getUser()) is true, but isConditionalPasskeysEnabled requires user != null; during initial (id-less) passkey login context.getUser() is null, so the form never gets WebAuthn challenge/ENABLE_WEBAUTHN_CONDITIONAL_UI attributes and conditional passkey authentication is broken.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 2,
+          "pr_title": "Implement recovery key support for user storage providers",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+              "line": 381,
+              "description": "OrganizationCacheTest registers cleanup for created identity providers using the literal alias \"alias\" (instead of the actual created alias like \"idp-alias-\" + i), so the created IDPs are not removed after the test, causing test pollution/flakiness.",
+              "severity": "medium",
+              "bug_type": "test_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 3,
+          "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+              "line": 114,
+              "description": "concatenatedRSToASN1DER() has two standalone calls to ASN1Encoder.create().write(...) whose results are discarded; the DER sequence is built using separate encoder instances below, so these two writes are dead code.",
+              "severity": "low",
+              "bug_type": "dead_code"
+            }
+          ]
+        },
+        {
+          "pr_number": 5,
+          "pr_title": "Add Groups resource type and scopes to authorization schema",
+          "bug_count": 4,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/AdminPermissions.java",
+              "line": 77,
+              "description": "AdminPermissions.registerListener() only performs permission cleanup when Profile.Feature.ADMIN_FINE_GRAINED_AUTHZ (v1) is enabled; when ADMIN_FINE_GRAINED_AUTHZ_V2 is enabled (and v1 is not), Role/Client/Group removal events will not disable corresponding fine-grained permissions, leaving stale authorization state.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+              "line": 214,
+              "description": "ClientPermissionsV2 resource lookups pass the wrong ownerId: resourceStore.findByName(server, client.getId(), server.getId()) (and the global hasPermission(String) variant) use ResourceServer.getId() as owner, but ResourceStore's default owner for resource-server-owned resources is resourceServer.getClientId(); as a result, lookups for per-client resources and the type-level Clients resource can fail, causing permission evaluation to ignore grants.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+              "line": 138,
+              "description": "ClientPermissionsV2.getClientsWithPermission() iterates resources via resourceStore.findByType(server, AdminPermissionsSchema.CLIENTS_RESOURCE_TYPE, ...) which only yields resources that have their type set to \"Clients\"; however, per-client resources created via AdminPermissionsSchema.getResourceObjectResource() use ResourceStore.create(resourceServer, name, owner) without assigning a type, so per-client resources won't be discovered and the method will miss granted clients.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+              "line": 217,
+              "description": "ClientPermissionsV2.hasPermission(ClientModel, ...) does not null-check the fallback resource returned by AdminPermissionsSchema.SCHEMA.getResourceTypeResource(...); when it returns null (e.g., schema unsupported or the type resource not yet created), policyStore.findByResource(server, resource) and later resource.getScopes() will throw NullPointerException.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            }
+          ]
+        },
+        {
+          "pr_number": 6,
+          "pr_title": "Add Groups resource type and scopes to authorization schema",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+              "line": 70,
+              "description": "GroupPermissionsV2.canManage() treats the 'view' scope as sufficient for manage access on the Groups resource type, so endpoints that call requireManage() (e.g., creating top-level groups) can be reached with view-only permissions.",
+              "severity": "high",
+              "bug_type": "security"
+            },
+            {
+              "id": 2,
+              "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+              "line": 122,
+              "description": "getGroupIdsWithViewPermission passes the authorization resource id to hasPermission (which looks up by resource name), and returns authorization resource ids instead of group ids; downstream user queries treat these values as group ids and incorrectly return 0 results.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 7,
+          "pr_title": "Add HTML sanitizer for translated message resources",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties",
+              "line": 101,
+              "description": "messages_lt.properties contains an Italian TOTP instruction (totpStep1), indicating a locale string mismatch.",
+              "severity": "low",
+              "bug_type": "documentation"
+            },
+            {
+              "id": 2,
+              "file": "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties",
+              "line": 112,
+              "description": "messages_zh_CN.properties includes Traditional Chinese characters (e.g., totpStep1 uses '\u624b\u6a5f', '\u61c9\u7528\u7a0b\u5f0f'), which is inconsistent with the Simplified Chinese locale.",
+              "severity": "low",
+              "bug_type": "documentation"
+            }
+          ]
+        },
+        {
+          "pr_number": 8,
+          "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+              "line": 73,
+              "description": "AccessTokenContext constructor checks grantType twice and never null-checks rawTokenId; rawTokenId may be null and error message is also incorrect.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+              "line": 483,
+              "description": "isAccessTokenId() extracts the grant shortcut using substring(3,5) instead of the correct (4,6) for the 6-char encoded context, and it returns false when the extracted shortcut equals the expected value (inverted check), so the matcher fails to enforce the expected grant.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 9,
+          "pr_title": "Implement recovery key support for user storage providers",
+          "bug_count": 3,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+              "line": 19,
+              "description": "RecoveryAuthnCodeInputLoginBean dereferences Optional values via credentialModelOpt.get() and getNextRecoveryAuthnCode().get() without presence checks, which can throw NoSuchElementException if the recovery-codes credential is missing or has no remaining codes.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+              "line": 235,
+              "description": "BackwardsCompatibilityUserStorage#getCredentials assigns myUser = getMyUser(user) and then dereferences myUser.recoveryCodes/myUser.otp without a null check; if the backing users map has no entry for the username, this throws NullPointerException.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 3,
+              "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+              "line": 237,
+              "description": "getCredentials() reconstructs a RecoveryAuthnCodesCredentialModel via RecoveryAuthnCodesCredentialModel.createFromValues(...), but createFromValues does not set an id; the returned model therefore lacks the persisted credential id from myUser.recoveryCodes.",
+              "severity": "low",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 10,
+          "pr_title": "Fix concurrent group access to prevent NullPointerException",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+              "line": 275,
+              "description": "GroupAdapter.getSubGroupsCount() can return null when modelSupplier.get() returns null, violating the GroupModel#getSubGroupsCount contract (\"never returns null\") and risking NPEs in callers.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+              "line": 138,
+              "description": "Test starts a background reader thread but never joins it; the test can assert before the thread finishes (or leaks past the test), making failures nondeterministic.",
+              "severity": "medium",
+              "bug_type": "race_condition"
+            }
+          ]
+        }
+      ]
+    },
+    "discourse": {
+      "pr_count": 9,
+      "bug_count": 34,
+      "prs": [
+        {
+          "pr_number": 1,
+          "pr_title": "FEATURE: Can edit category/host relationships for embedding",
+          "bug_count": 3,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "app/models/optimized_image.rb",
+              "line": 149,
+              "description": "OptimizedImage defines self.downsize twice; the later (dimensions, opts) definition overrides the earlier (max_width, max_height, opts) signature, so existing callers like resize_emoji.rb pass 4 args + opts and crash with ArgumentError.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "app/assets/javascripts/discourse/lib/utilities.js",
+              "line": 182,
+              "description": "Client-side upload validation hardcodes maxSizeKB = 10*1024 for both images and attachments, ignoring Discourse.SiteSettings max_image_size_kb/max_attachment_size_kb and potentially allowing uploads larger than admin-configured limits (and preventing uploads when configured limits are higher).",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "app/controllers/uploads_controller.rb",
+              "line": 67,
+              "description": "UploadsController attempts to downsize oversized images by calling OptimizedImage.downsize(..., \"80%\", allow_animation: ...); for GIFs with allow_animation enabled this routes to gifsicle --resize-fit with an invalid '80%' geometry string, causing the resize command to fail (exit != 0) and downsizing to silently not occur.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            }
+          ]
+        },
+        {
+          "pr_number": 2,
+          "pr_title": "FEATURE: Localization fallbacks (server-side)",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "app/controllers/topics_controller.rb",
+              "line": 107,
+              "description": "TopicUser.find_by(...) can return nil when the user has no TopicUser row for the topic (common for default/regular state); dereferencing tu.notification_level raises NoMethodError in the unsubscribe action.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            }
+          ]
+        },
+        {
+          "pr_number": 4,
+          "pr_title": "Enhance embed URL handling and validation system",
+          "bug_count": 9,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "app/jobs/scheduled/poll_feed.rb",
+              "line": 29,
+              "description": "Uses open-uri open(SiteSetting.feed_polling_url) without scheme/host/private-network validation, enabling SSRF (and potentially local file reads via file://) if this setting is attacker-influenced.",
+              "severity": "high",
+              "bug_type": "security"
+            },
+            {
+              "id": 2,
+              "file": "app/models/topic_embed.rb",
+              "line": 48,
+              "description": "import_remote fetches remote content with open(url).read without validating scheme/redirect targets or blocking private IP ranges; even though some call paths constrain host, redirects can still enable SSRF.",
+              "severity": "high",
+              "bug_type": "security"
+            },
+            {
+              "id": 3,
+              "file": "app/assets/javascripts/embed.js",
+              "line": 17,
+              "description": "Message handler uses discourseUrl.indexOf(e.origin) for origin validation, which can be bypassed by an attacker-controlled origin that is a prefix of discourseUrl (e.g., https://discourse.example.co matching https://discourse.example.com/), allowing untrusted postMessage to resize the iframe.",
+              "severity": "medium",
+              "bug_type": "security"
+            },
+            {
+              "id": 4,
+              "file": "app/models/topic_embed.rb",
+              "line": 13,
+              "description": "TopicEmbed.import calls contents << ...; if contents is nil (e.g., missing RSS item content or Readability::Document content), this raises NoMethodError.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 5,
+              "file": "app/models/topic_embed.rb",
+              "line": 13,
+              "description": "Appends raw HTML containing <a href='#{url}'>#{url}</a> into contents, and later stores it as raw_html without escaping/sanitization; a crafted URL containing quotes can inject attributes/HTML and lead to XSS in embedded content.",
+              "severity": "high",
+              "bug_type": "security"
+            },
+            {
+              "id": 6,
+              "file": "app/views/embed/best.html.erb",
+              "line": 6,
+              "description": "Template contains '<%- end if %>', which is invalid Ruby/ERB syntax and will raise a template compilation error.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 7,
+              "file": "spec/controllers/embed_controller_spec.rb",
+              "line": 43,
+              "description": "The controller enqueues Jobs.enqueue(:retrieve_topic, ...) when no embed exists, but the spec expects TopicRetriever.new(...).retrieve; as written, the spec does not match implementation and should fail.",
+              "severity": "low",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": "new_8",
+              "file": "app/views/layouts/embed.html.erb",
+              "line": 11,
+              "description": "postMessage targetOrigin uses the full referer URL instead of an origin, which can break embed resizing (DOMException or message dropped).",
+              "severity": "medium",
+              "bug_type": "logic_bug",
+              "newly_discovered": true
+            },
+            {
+              "id": "fp_reversed_9",
+              "file": "",
+              "line": null,
+              "description": "postMessage targetOrigin should be the origin (scheme+host+port), not the full referrer URL; using the full URL will cause the message to be dropped and prevent resizing.",
+              "severity": "medium",
+              "bug_type": "unknown",
+              "from_reversed_false_positive": true
+            }
+          ]
+        },
+        {
+          "pr_number": 5,
+          "pr_title": "Optimize header layout performance with flexbox mixins",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "app/assets/stylesheets/common/foundation/mixins.scss",
+              "line": 121,
+              "description": "The flexbox align-items mixin includes an invalid CSS property (-ms-align-items), so the intended IE vendor-prefixed rule is wrong; the correct IE rule (-ms-flex-align) is already present, so this is mostly a correctness/quality issue.",
+              "severity": "low",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "app/assets/stylesheets/common/base/header.scss",
+              "line": 35,
+              "description": "PR removes float:right from .d-header .panel and relies on flexbox alignment, but the server-rendered header partial (app/views/application/_header.html.erb) nests .panel inside a .row that is not a flex container, so margin-left:auto won't right-align it and the non-JS header layout regresses.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 6,
+          "pr_title": "UX: show complete URL path if website domain is same as instance domain",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "app/serializers/user_serializer.rb",
+              "line": 153,
+              "description": "`include_website_name` is misnamed; ActiveModel::Serializer looks for `include_website_name?`, so `website_name` is always serialized and bypasses the `untrusted_attributes`/`restrict_user_fields?` gating used for `website`, potentially exposing website-derived data to anonymous viewers.",
+              "severity": "high",
+              "bug_type": "security"
+            },
+            {
+              "id": 3,
+              "file": "app/serializers/user_serializer.rb",
+              "line": 144,
+              "description": "The sibling-subdomain heuristic compares only `split('.')[1..]` when label counts match, which misclassifies domains under multi-level public suffixes (e.g. `foo.co.uk` vs `bar.co.uk`) as the same and incorrectly includes the full path.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 7,
+          "pr_title": "Enhance embed URL handling and validation system",
+          "bug_count": 4,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "app/assets/stylesheets/desktop/topic-post.scss",
+              "line": 291,
+              "description": "In .topic-meta-data h5 a, the light-theme color was changed from scale-color($primary, $lightness: 30%) to dark-light-choose(...$lightness: 70%...) while most other changes preserve the original light-theme lightness; this appears to invert the intended contrast/weight for the light theme.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "app/assets/stylesheets/mobile/modal.scss",
+              "line": 103,
+              "description": "Mobile .custom-message-length changes light-theme lightness from 70% to 30%, while desktop keeps 70% (but with dark-light-choose), creating an inconsistent appearance between desktop and mobile for the same UI element.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "app/assets/stylesheets/desktop/user.scss",
+              "line": 522,
+              "description": "In desktop user.scss, .group-member-info .name changes from scale-color($primary, $lightness: 30%) to a 50% lightness value, removing the intended visual distinction from .title and deviating from the typical pattern of preserving light-theme values when wrapping with dark-light-choose.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "app/assets/stylesheets/mobile/user.scss",
+              "line": 497,
+              "description": "In mobile user.scss, .group-member-info .name changes from 30% to 50% lightness, mirroring the desktop issue and making name/title styling uniform where it previously differed.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 8,
+          "pr_title": "FIX: proper handling of group memberships",
+          "bug_count": 4,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "app/assets/javascripts/discourse/models/group.js",
+              "line": 21,
+              "description": "findMembers() returns undefined when group name is blank; any caller that chains (e.g. findMembers().then(...)) will throw a TypeError.",
+              "severity": "low",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "app/controllers/admin/groups_controller.rb",
+              "line": 22,
+              "description": "Admin::GroupsController#create does not apply alias_level from params, but update does; the client sends alias_level in asJSON, so creates cannot set it (defaults), diverging from updates.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "spec/controllers/admin/groups_controller_spec.rb",
+              "line": 115,
+              "description": "The controller spec invokes remove_member with PUT, but routes define remove_member on DELETE /admin/groups/:group_id/members; the spec doesn't reflect the real HTTP method/route.",
+              "severity": "low",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 5,
+              "file": "app/assets/javascripts/admin/controllers/admin-group.js.es6",
+              "line": 32,
+              "description": "The next-page offset is capped at user_count (not the last valid start offset), so it can set offset == user_count, yielding an empty page; totalPages is also computed with floor(...)+1, which overcounts when user_count is an exact multiple of limit.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 9,
+          "pr_title": "FEATURE: per-topic unsubscribe option in emails",
+          "bug_count": 1,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "lib/freedom_patches/translate_accelerator.rb",
+              "line": 62,
+              "description": "I18n.ensure_loaded! initializes and reads @loaded_locales outside the LOAD_MUTEX (via ||= and include?), which is a data race under concurrent requests and can cause redundant locale loads / lost initialization array, though load_locale itself is synchronized.",
+              "severity": "low",
+              "bug_type": "race_condition"
+            }
+          ]
+        },
+        {
+          "pr_number": 10,
+          "pr_title": "FEATURE: Can edit category/host relationships for embedding",
+          "bug_count": 8,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+              "line": 11,
+              "description": "Migration assumes the embed_category lookup returns at least one row; when it doesn't, execute(...)[0] is nil and ['id'] raises (NoMethodError/TypeError depending on adapter).",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+              "line": 25,
+              "description": "Migration builds raw SQL with host value interpolated into a quoted string; a host containing a quote can break the statement and can be used for SQL injection.",
+              "severity": "medium",
+              "bug_type": "security"
+            },
+            {
+              "id": 3,
+              "file": "spec/fabricators/category_fabricator.rb",
+              "line": 1,
+              "description": "The fabricator definitions are swapped: category_fabricator.rb defines Fabricator(:embeddable_host) while embeddable_host_fabricator.rb defines Fabricator(:category), so callers of Fabricator(:category) via the expected file fail or build the wrong model.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "app/assets/javascripts/discourse/models/store.js.es6",
+              "line": 201,
+              "description": "In _hydrateEmbedded, the plural *_ids branch always deletes the original ids key after mapping, even if some ids could not be resolved (yielding undefined entries). The singular *_id branch only deletes when hydration succeeds, so behavior is inconsistent and information is lost.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 5,
+              "file": "app/models/embeddable_host.rb",
+              "line": 6,
+              "description": "before_validation unconditionally calls sub! on self.host; if host is nil (e.g., missing/blank params), validations trigger a NoMethodError before errors can be added.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 6,
+              "file": "app/controllers/admin/embeddable_hosts_controller.rb",
+              "line": 10,
+              "description": "update/destroy use where(...).first without handling the not-found case; update passes nil into save_host and destroy calls host.destroy on nil, both causing NoMethodError.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 7,
+              "file": "app/models/embeddable_host.rb",
+              "line": 17,
+              "description": "record_for_host queries lower(host) = ? but passes the raw host parameter; if the stored host includes uppercase characters, the lookup may fail because the RHS isn't downcased.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 8,
+              "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+              "line": 25,
+              "description": "Migration inserts hosts directly via SQL, bypassing EmbeddableHost's before_validation normalization that strips protocol/path; records migrated with http(s):// or paths can be stored unnormalized and later fail to match record_for_host (which uses uri.host).",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        }
+      ]
+    },
+    "cal_dot_com": {
+      "pr_count": 10,
+      "bug_count": 38,
+      "prs": [
+        {
+          "pr_number": 1,
+          "pr_title": "feat: add calendar cache status and actions (#22532)",
+          "bug_count": 4,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "packages/trpc/server/routers/viewer/bookings.tsx",
+              "line": 553,
+              "description": "Async callback passed to bookingRefsFiltered.forEach() is never awaited, so calendar/video deletions can run after the mutation continues (and any rejection becomes unhandled).",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "packages/features/bookings/lib/handleCancelBooking.ts",
+              "line": 460,
+              "description": "In the recurring booking path, an async forEach is used for per-credential deletions; its async work is not awaited and pushed values are resolved results (not promises), so later Promise.all(...) does not reliably wait for the deletes.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "packages/app-store/vital/lib/reschedule.ts",
+              "line": 125,
+              "description": "Async callback passed to bookingRefsFiltered.forEach() is not awaited; the surrounding try/catch will not catch async rejections and the function can return before deletions complete.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "packages/app-store/wipemycalother/lib/reschedule.ts",
+              "line": 125,
+              "description": "Async callback passed to bookingRefsFiltered.forEach() is not awaited; deletions run fire-and-forget and errors will not be caught by the outer try/catch.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 2,
+          "pr_title": "feat: 2fa backup codes",
+          "bug_count": 4,
+          "bugs": [
+            {
+              "id": 3,
+              "file": "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+              "line": 50,
+              "description": "In the disable endpoint, the missing-encryption-key log message says 'backup code login', which is misleading in this disable flow.",
+              "severity": "low",
+              "bug_type": "documentation"
+            },
+            {
+              "id": 4,
+              "file": "packages/features/auth/lib/next-auth-options.ts",
+              "line": 144,
+              "description": "Backup-code validation uses an exact indexOf match on credentials.backupCode with only '-' stripped; if users enter A-F in a different case (or otherwise normalized differently), the code will be rejected even if it should be treated case-insensitively.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 5,
+              "file": "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+              "line": 61,
+              "description": "Backup-code validation in the disable endpoint uses an exact indexOf match on req.body.backupCode with only '-' stripped; users entering hex letters with different casing can be rejected unexpectedly.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 6,
+              "file": "packages/features/auth/lib/next-auth-options.ts",
+              "line": 148,
+              "description": "Backup code consumption is non-atomic: concurrent authorize() calls can both decrypt the same backupCodes list, both find the same code, and both update the user record, allowing a single backup code to be used more than once.",
+              "severity": "high",
+              "bug_type": "race_condition"
+            }
+          ]
+        },
+        {
+          "pr_number": 3,
+          "pr_title": "Fixed some minor bugs that caused console errors",
+          "bug_count": 5,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "packages/core/EventManager.ts",
+              "line": 119,
+              "description": "If evt.location is Google Meet and destinationCalendar is empty/undefined, mainHostDestinationCalendar is undefined and `mainHostDestinationCalendar.integration` throws.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+              "line": 254,
+              "description": "In updateEvent(), when externalCalendarId is falsy the fallback does `find(cal.externalId === externalCalendarId)` (i.e., === undefined), so selectedCalendar becomes undefined and the update targets an invalid calendarId.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+              "line": 315,
+              "description": "In deleteEvent(), when externalCalendarId is falsy the fallback does `find(cal.externalId === externalCalendarId)` (i.e., === undefined), so calendarId becomes undefined and the code falls back to deleting on the primary calendar even if the event was created on a different calendar.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "packages/trpc/server/routers/viewer/organizations/create.handler.ts",
+              "line": 151,
+              "description": "When IS_TEAM_BILLING_ENABLED is true, the handler still sets `slug` on the created organization while also setting `metadata.requestedSlug`; elsewhere (e.g. teams create) billing-enabled flow stores the requested slug in metadata and omits `slug`, so this conditional is inverted/incorrect.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 5,
+              "file": "packages/app-store/larkcalendar/lib/CalendarService.ts",
+              "line": 125,
+              "description": "TypeScript contract mismatch: `Calendar.createEvent(event, credentialId)` is required (packages/types/Calendar.d.ts), but LarkCalendarService implements `createEvent(event)` without the credentialId parameter, causing interface-implementation incompatibility.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 4,
+          "pr_title": "feat: convert InsightsBookingService to use Prisma.sql raw queries",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "packages/lib/server/service/insightsBooking.ts",
+              "line": 68,
+              "description": "getAuthorizationConditions() always returns a Prisma.Sql (including NOTHING_CONDITION), so authConditions is always truthy; therefore the `else if (filterConditions)` and final `else` branches in getBaseConditions() are unreachable dead code.",
+              "severity": "low",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "packages/lib/server/service/insightsBooking.ts",
+              "line": 157,
+              "description": "buildOrgAuthorizationCondition() only queries memberships when teamsFromOrg.length > 0; for orgs with no child teams, it skips fetching memberships for the orgId itself, leaving userIdsFromOrg empty and omitting the userId-based condition (excluding org members' non-team bookings).",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 5,
+          "pr_title": "Advanced date override handling and timezone compatibility improvements",
+          "bug_count": 3,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "packages/trpc/server/routers/viewer/workflows.tsx",
+              "line": 574,
+              "description": "remindersToUpdate.forEach(async ...) is not awaited, and deleteScheduledEmailReminder/deleteScheduledSMSReminder are invoked without await; reminder cancellations run fire-and-forget and can race with subsequent workflow edits/reminder scheduling.",
+              "severity": "medium",
+              "bug_type": "race_condition"
+            },
+            {
+              "id": 2,
+              "file": "packages/features/ee/workflows/api/scheduleEmailReminders.ts",
+              "line": 44,
+              "description": "scheduleEmailReminders queries cancelled reminders without restricting to EMAIL and without filtering out null referenceIds, then unconditionally calls SendGrid scheduled_sends cancel with batch_id = reminder.referenceId; this can attempt to cancel non-email reminders and/or send a null batch_id, causing the cancellation loop to fail (caught) and leaving reminders un-cancelled.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 3,
+              "file": "packages/features/ee/workflows/lib/reminders/emailReminderManager.ts",
+              "line": 213,
+              "description": "In deleteScheduledEmailReminder(), when immediateDelete is true it cancels the SendGrid batch and returns without deleting or updating the corresponding prisma.workflowReminder record, leaving stale reminders in the database.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 6,
+          "pr_title": "Advanced date override handling and timezone compatibility improvements",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "packages/trpc/server/routers/viewer/slots.ts",
+              "line": 114,
+              "description": "All-day date override detection compares two Dayjs objects with ===, which is always false, causing all-day overrides to be ignored and returning availability incorrectly.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "packages/trpc/server/routers/viewer/slots.ts",
+              "line": 141,
+              "description": "Working-hours validation calculates `end` from `slotStartTime` instead of `slotEndTime`, so it fails to reject slots whose end time exceeds `workingHour.endTime`.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 7,
+          "pr_title": "OAuth credential sync and app integration enhancements",
+          "bug_count": 9,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "apps/web/pages/api/webhook/app-credential.ts",
+              "line": 25,
+              "description": "Node/Next lowercases incoming header names; indexing req.headers with a mixed/upper-case CALCOM_WEBHOOK_HEADER_NAME will miss the header and incorrectly reject valid webhook requests.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+              "line": 8,
+              "description": "minimumTokenResponseSchema uses computed object keys derived from z.string().toString(), which become fixed string keys (e.g. \"ZodString\") rather than allowing arbitrary keys; safeParse will fail for normal token responses and throw.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 3,
+              "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+              "line": 26,
+              "description": "When refresh_token is missing, the function sets refreshTokenResponse.data.refresh_token to the literal string \"refresh_token\", which will break subsequent refreshes and stores an invalid token.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+              "line": 29,
+              "description": "parseRefreshTokenResponse returns the Zod safeParse result object instead of the parsed token payload; callers that expect the token object may persist {success,data,error} into credential storage or treat it as a token.",
+              "severity": "high",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 5,
+              "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+              "line": 96,
+              "description": "SalesforceCalendarService calls prisma.credential.update without importing prisma in this file, causing a ReferenceError at runtime during client initialization/token refresh.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 6,
+              "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+              "line": 106,
+              "description": "After refreshing tokens, the jsforce.Connection is constructed with accessToken: credentialKey.access_token (stale) rather than the refreshed access token from accessTokenParsed.data.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 7,
+              "file": "packages/app-store/zoho-bigin/lib/CalendarService.ts",
+              "line": 93,
+              "description": "refreshOAuthTokens expects a Cal.com userId for credential sync payloads, but Zoho Bigin passes credentialId; if sync is enabled the endpoint receives the wrong calcomUserId.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 8,
+              "file": "packages/app-store/_utils/oauth/refreshOAuthTokens.ts",
+              "line": 15,
+              "description": "When sync is enabled, refreshOAuthTokens returns the raw fetch Response; many callers treat the return value like an axios response/object with .data, causing undefined access and runtime errors.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 9,
+              "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+              "line": 94,
+              "description": "GoogleCalendarService assumes refreshOAuthTokens returns an object with .data; under sync mode it returns a fetch Response so res?.data is undefined and token.access_token/token.expiry_date access will throw.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            }
+          ]
+        },
+        {
+          "pr_number": 8,
+          "pr_title": "SMS workflow reminder retry count tracking",
+          "bug_count": 3,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+              "line": 29,
+              "description": "The deleteMany filter uses an OR where the retryCount>1 branch is not scoped to SMS (or any other constraints), so it can delete WorkflowReminder rows for other methods (and/or future reminders) as soon as retryCount exceeds 1.",
+              "severity": "medium",
+              "bug_type": "data_corruption"
+            },
+            {
+              "id": 2,
+              "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+              "line": 184,
+              "description": "On the scheduleSMS failure path, retryCount is updated using the previously-read reminder.retryCount + 1, which is a non-atomic read-modify-write; concurrent runs can overwrite each other and lose increments.",
+              "severity": "medium",
+              "bug_type": "race_condition"
+            },
+            {
+              "id": 3,
+              "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+              "line": 195,
+              "description": "In the catch block, retryCount is also updated via reminder.retryCount + 1 (non-atomic), so concurrent updates can clobber each other and undercount retries.",
+              "severity": "medium",
+              "bug_type": "race_condition"
+            }
+          ]
+        },
+        {
+          "pr_number": 9,
+          "pr_title": "Add guest management functionality to existing bookings",
+          "bug_count": 4,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+              "line": 46,
+              "description": "isTeamAdminOrOwner uses (isTeamAdmin && isTeamOwner), which incorrectly requires both roles; this can wrongly deny access when a user is an admin OR an owner.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 2,
+              "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+              "line": 77,
+              "description": "BLACKLISTED_GUEST_EMAILS entries are lowercased, but guest emails are compared without normalization (blacklistedGuestEmails.includes(guest)), allowing case-variant bypass (e.g., Foo@bar.com).",
+              "severity": "medium",
+              "bug_type": "security"
+            },
+            {
+              "id": 3,
+              "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+              "line": 168,
+              "description": "sendAddGuestsEmails is called with the raw input guests array instead of the filtered uniqueGuests list, which can misclassify who is newly added (and include blacklisted/existing emails) when deciding which attendee email template to send.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            },
+            {
+              "id": 4,
+              "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+              "line": 74,
+              "description": "uniqueGuests is computed via guests.filter(...) but does not remove duplicates within the guests input; duplicate addresses can be inserted via createMany and/or lead to repeated notifications.",
+              "severity": "medium",
+              "bug_type": "logic_bug"
+            }
+          ]
+        },
+        {
+          "pr_number": 10,
+          "pr_title": "feat: add calendar cache status and actions (#22532)",
+          "bug_count": 2,
+          "bugs": [
+            {
+              "id": 1,
+              "file": "scripts/test-gcal-webhooks.sh",
+              "line": 68,
+              "description": "Script uses BSD sed in-place syntax (sed -i ''), which fails under GNU sed on Linux, causing the env file update step to error and the script to fail.",
+              "severity": "medium",
+              "bug_type": "runtime_error"
+            },
+            {
+              "id": 2,
+              "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+              "line": 1024,
+              "description": "`SelectedCalendarRepository.updateManyByCredentialId(this.credential.id, {})` passes an empty `data` object to Prisma `updateMany`, which can throw a Prisma validation error and will not bump `@updatedAt` as intended.",
+              "severity": "high",
+              "bug_type": "runtime_error"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

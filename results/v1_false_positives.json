@@ -1,0 +1,259 @@
+{
+  "total": 28,
+  "confirmed_false_positives": 26,
+  "reversed_to_real_bugs": 2,
+  "false_positives": [
+    {
+      "repo": "sentry",
+      "pr_number": 6,
+      "pr_title": "Enhanced Pagination Performance for High-Volume Audit Logs",
+      "original_comment": "Importing non-existent OptimizedCursorPaginator",
+      "original_reasoning": "OptimizedCursorPaginator exists in src/sentry/api/paginator.py at line 819. The import is valid.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: OptimizedCursorPaginator is defined in src/sentry/api/paginator.py (class starts at line 821), so the import in organization_auditlogs.py is valid."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 8,
+      "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+      "original_comment": "sample_rate = 0.0 is falsy and skipped",
+      "original_reasoning": "No code in the PR's changed files checks sample_rate with a falsy comparison. The sample_rate handling in event_manager.py (which uses strict inequality) is not part of this PR.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Searched the PR's changed files for 'sample_rate' and found no occurrences; nothing in this PR introduces a falsy check on sample_rate."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 10,
+      "pr_title": "Replays Self-Serve Bulk Delete System",
+      "original_comment": "Breaking changes in error response format",
+      "original_reasoning": "This is an API improvement, not a bug. The endpoint is marked PRIVATE so breaking changes are acceptable. Adding structured error responses is better for debugging.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: BrowserReportingCollectorEndpoint is publish_status PRIVATE (src/sentry/issues/endpoints/browser_reporting_collector.py:83). Returning structured 422 bodies for validation failures is not inherently a bug and is acceptable for a private/experimental collector endpoint."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 11,
+      "pr_title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+      "original_comment": "Fixed sleep in tests can be flaky; wait on condition instead",
+      "original_reasoning": "This is a code quality/style suggestion, not a bug. Tests work correctly with the current sleep-based approach.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: the comment is a style/testing robustness suggestion, not a concrete correctness bug by itself. (Separately, this PR does introduce a real test issue where time.sleep is monkeypatched to a no-op; that is captured as bug #4.)"
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 12,
+      "pr_title": "GitHub OAuth Security Enhancement",
+      "original_comment": "The method name has a typo: test_from_dict_inalid_data should be test_from_dict_invalid_data.",
+      "original_reasoning": "This is a test method naming typo, not a functional bug. Test method names don't affect runtime behavior.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed in tests/sentry/integrations/services/test_assignment_source.py: test_from_dict_inalid_data is misspelled but still discovered/executed (it starts with 'test_'); naming typo is not a functional bug."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 12,
+      "pr_title": "GitHub OAuth Security Enhancement",
+      "original_comment": "Method name says 'empty_array' but tests empty dict - consider renaming to 'test_from_dict_empty_dict' for clarity.",
+      "original_reasoning": "This is a naming clarity issue in test code, not a functional bug. The test logic is correct.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed in tests/sentry/integrations/services/test_assignment_source.py: test_from_dict_empty_array uses data = {}. This is a clarity issue only; test behavior is correct."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 13,
+      "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+      "original_comment": "The code fetches MonitorCheckIn objects by ID when the required data already exists in previous_checkins. This creates an unnecessary database query.",
+      "original_reasoning": "Not a bug - the re-query is necessary because previous_checkins contains SimpleCheckIn dicts from .values(), not full ORM objects. create_incident_occurrence requires MonitorCheckIn objects to access attributes like .monitor_environment and .trace_id. There is a minor optimization opportunity when failure_issue_threshold==1, but this is not a bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed in src/sentry/monitors/logic/incidents.py:37-40 and 93-102. previous_checkins is built via .values(\"id\", \"date_added\", \"status\") for performance when threshold > 1, so it does not include fields needed by create_incident_occurrence (e.g., failed_checkin.trace_id, failed_checkin.monitor_environment). The extra query could be avoided for failure_issue_threshold==1, but that is an optimization, not a bug."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 14,
+      "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+      "original_comment": "The queue.shutdown() method with 'immediate=False' parameter may not exist in the standard Python queue module.",
+      "original_reasoning": "queue.shutdown() was added in Python 3.13, and Sentry requires Python 3.13+. The method exists.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: repo declares python_requires = >=3.13 (setup.cfg:24), and the code already depends on Python 3.13 queue APIs (queue.ShutDown / Queue.shutdown)."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 14,
+      "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+      "original_comment": "The magic number 50 for max_wait is used repeatedly throughout the tests.",
+      "original_reasoning": "No 'max_wait' or '50' appears anywhere in the test file. The referenced code doesn't exist.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed false positive (style/nit, not a bug), but the draft reasoning is incorrect: max_wait = 50 appears multiple times in tests/sentry/uptime/consumers/test_results_consumer.py (e.g. lines 1718, 1765, 1812)."
+    },
+    {
+      "repo": "sentry",
+      "pr_number": 14,
+      "pr_title": "feat(uptime): Add ability to use queues to manage parallelism",
+      "original_comment": "The test test_thread_queue_parallel_error_handling has a docstring that doesn't match the test implementation.",
+      "original_reasoning": "The test 'test_thread_queue_parallel_error_handling' does not exist in this PR.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed false positive (docstring mismatch claim is not a functional bug), but the draft reasoning is incorrect: test_thread_queue_parallel_error_handling exists at tests/sentry/uptime/consumers/test_results_consumer.py:1874 and its docstring matches the test intent."
+    },
+    {
+      "repo": "grafana",
+      "pr_number": 1,
+      "pr_title": "Anonymous: Add configurable device limit",
+      "original_comment": "This call won't compile: dbSession.Exec(args...) is given a []interface{} where the first element is the query, but Exec's signature requires a first parameter of type string (not an interface{} splat).",
+      "original_reasoning": "The pattern 'args = append([]interface{}{query}, args...); dbSession.Exec(args...)' is already used in the codebase at pkg/services/sqlstore/session.go lines 150-151. DBSession embeds xorm.Session which accepts variadic interface{} for Exec. The code compiles correctly.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified: pkg/services/sqlstore/session.go uses `sqlOrArgs := append([]any{query}, args...); res, err := sess.Exec(sqlOrArgs...)`, so the variadic call pattern is valid."
+    },
+    {
+      "repo": "grafana",
+      "pr_number": 1,
+      "pr_title": "Anonymous: Add configurable device limit",
+      "original_comment": "Time window calculation inconsistency: Using device.UpdatedAt.UTC().Add(-anonymousDeviceExpiration) as the lower bound but device.UpdatedAt as the current time may not match the intended logic.",
+      "original_reasoning": "device.UpdatedAt is set to time.Now() when creating the device (impl.go:139), so using device.UpdatedAt.UTC() is effectively the same as time.Now().UTC(). The time window logic (30 days back, 1 minute forward) is intentional for finding non-expired devices with clock skew tolerance.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified: Tagged device sets UpdatedAt = time.Now() (impl.go:141) and DB comparisons use UTC consistently; the 1-minute forward skew is documented in usageStatFn()."
+    },
+    {
+      "repo": "grafana",
+      "pr_number": 2,
+      "pr_title": "Advanced SQL Analytics Framework",
+      "original_comment": "The test comment says the cached permissions 'allow access', but the map stores false for dashboards:uid:dash1, so checkPermission will still treat this scope as not allowed.",
+      "original_reasoning": "This is a misleading test comment, not a functional bug. The test's intent is to prove permDenialCache takes precedence over permCache. Since permDenialCache is checked first and returns denial immediately, the permCache is never reached - whether it stores true or false is irrelevant to the test outcome. The test logic is correct; only the explanatory comment is confusing.",
+      "verdict": "actually_real_bug",
+      "notes": "In pkg/services/authz/rbac/service_test.go:981-983, the comment says the permCache should allow access to prove it isn't checked, but it sets dashboards:uid:dash1 to false. With false, the test would still deny even if permDenialCache precedence were broken, so this test does not validate the intended ordering/precedence."
+    },
+    {
+      "repo": "grafana",
+      "pr_number": 4,
+      "pr_title": "Advanced Query Processing Architecture",
+      "original_comment": "The applyTemplateVariables method is called with request.filters as the third parameter, but this parameter is not used in the corresponding test setup.",
+      "original_reasoning": "This is a test coverage observation, not an actual bug. The filters parameter is optional in applyTemplateVariables (adhocFilters?: AdHocVariableFilter[]). The production code correctly passes request.filters - whether it's undefined or has actual filters is handled by the function. There are separate tests in datasource.test.ts that specifically test the adhocFilters functionality. The new tests in this PR correctly verify that template variable interpolation works, which is the primary purpose of the change.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified on pr-4: runSplitQuery() and runShardSplitQuery() now pass request.filters into LokiDatasource.applyTemplateVariables(target, scopedVars, adhocFilters?). The adhocFilters arg is optional, and addAdHocFilters() returns the original expression when filters are undefined/empty. Adhoc filter behavior is covered separately in public/app/plugins/datasource/loki/datasource.test.ts (\"When using adhoc filters\" tests)."
+    },
+    {
+      "repo": "grafana",
+      "pr_number": 5,
+      "pr_title": "Notification Rule Processing Engine",
+      "original_comment": "The rendered GrafanaRuleListItem is missing the required key prop for React list items. This can cause rendering issues when the list order changes.",
+      "original_reasoning": "The key prop IS present: `key={promRule.uid}` in GrafanaGroupLoader.tsx. The golden comment is incorrect.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified on pr-5: GrafanaGroupLoader renders <GrafanaRuleListItem key={promRule.uid} ... /> (public/app/features/alerting/unified/rule-list/GrafanaGroupLoader.tsx)."
+    },
+    {
+      "repo": "keycloak",
+      "pr_number": 1,
+      "pr_title": "Fixing Re-authentication with passkeys",
+      "original_comment": "ConditionalPasskeysEnabled() called without UserModel parameter",
+      "original_reasoning": "This comment is unclear and doesn't describe a real bug. The method isConditionalPasskeysEnabled(UserModel user) IS called with a parameter (context.getUser()). The comment seems to be a poorly worded version of the second golden comment about user being null.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: isConditionalPasskeysEnabled(UserModel user) exists and is invoked with context.getUser(). The real issue (captured as bug #1) is that the implementation requires user != null, which prevents conditional passkeys setup for initial login."
+    },
+    {
+      "repo": "keycloak",
+      "pr_number": 2,
+      "pr_title": "Implement recovery key support for user storage providers",
+      "original_comment": "Recursive caching call using session instead of delegate",
+      "original_reasoning": "Not a bug. The pattern of using session.identityProviders().getById() in getForLogin() is intentional design that leverages individual IDP caching. The getById() method correctly uses idpDelegate for uncached lookups. This is a code style observation at best, not a Critical severity bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified in InfinispanIdentityProviderStorageProvider: getForLogin/getByOrganization cache the ID list, then resolve each IDP via session.identityProviders().getById(id), which hits the caching layer and delegates to JPA on cache misses; there is no infinite recursion and this matches the intended per-IDP caching design."
+    },
+    {
+      "repo": "keycloak",
+      "pr_number": 3,
+      "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+      "original_comment": "Returns wrong provider (default keystore instead of BouncyCastle)",
+      "original_reasoning": "This is intentional design for a lightweight crypto provider. WildFlyElytronProvider returns null for the same method. The fallback behavior in BouncyIntegration handles non-BC providers gracefully. AuthzClientCryptoProvider has order 100, so it's only selected when BC providers aren't available. This is a design choice, not a bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Verified: CryptoIntegration now prefers highest order providers (Default/FIPS/Elytron have order=200; AuthzClientCryptoProvider has order=100) so this provider is only selected when others aren't on the classpath. In authz-client code, getBouncyCastleProvider() is not referenced directly; BouncyIntegration also tolerates null by falling back to the first JCA provider. Not a functional bug in this PR."
+    },
+    {
+      "repo": "keycloak",
+      "pr_number": 7,
+      "pr_title": "Add HTML sanitizer for translated message resources",
+      "original_comment": "The anchor sanitization logic has a potential issue where it consumes English matcher groups without proper validation. If the translated text has more anchor tags than the English text, this could lead to incorrect validation results.",
+      "original_reasoning": "The code correctly handles the case where translation has more anchors than English. When englishMatcher.find() returns false (no more English anchors), the else branch adds an appropriate error message. The validation result is correct.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-checked VerifyMessageProperties.santizeAnchors: it iterates anchors in the translation and, if the English matcher runs out (englishMatcher.find() == false) or tags differ, it records an error and breaks; extra translated anchors are therefore detected."
+    },
+    {
+      "repo": "keycloak",
+      "pr_number": 8,
+      "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+      "original_comment": "Javadoc mentions \"usually like 3-letters shortcut\" but some implementations use 2-letter shortcuts",
+      "original_reasoning": "Documentation inconsistency, not a functional bug. Does not cause runtime errors or incorrect behavior.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: this is documentation wording in OAuth2GrantTypeFactory#getShortcut Javadoc (line 30). Even if implementations use 2-letter shortcuts, it does not affect runtime behavior."
+    },
+    {
+      "repo": "keycloak",
+      "pr_number": 8,
+      "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+      "original_comment": "Catching generic RuntimeException is too broad",
+      "original_reasoning": "Code quality suggestion for test code. Test still works correctly as IllegalArgumentException extends RuntimeException.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: DefaultTokenContextEncoderProviderTest.testIncorrectGrantType catches RuntimeException (line 82). This is a test-only broad catch; it still validates the failure path and does not introduce functional issues in production code."
+    },
+    {
+      "repo": "discourse",
+      "pr_number": 2,
+      "pr_title": "FEATURE: Localization fallbacks (server-side)",
+      "original_comment": "Typo in property name: 'stopNotificiationsText' should be 'stopNotificationsText' (missing 'n' in 'Notifications')",
+      "original_reasoning": "The typo is consistent in both the controller and template files, so the code works correctly. This is a code quality issue, not a functional bug. Additionally, the description is incorrect - it's an extra 'i', not a missing 'n'.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Re-verified: app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6 defines stopNotificiationsText, and app/assets/javascripts/discourse/templates/topic/unsubscribe.hbs references {{{stopNotificiationsText}}}, so it resolves at runtime despite the typo."
+    },
+    {
+      "repo": "discourse",
+      "pr_number": 3,
+      "pr_title": "Add comprehensive email validation for blocked users",
+      "original_comment": "Regex pattern @(#{domains}) only matches domain suffixes, not full domains. evil.example.com would match whitelist entry example.com.",
+      "original_reasoning": "This is incorrect. The regex @(example\\.com) does NOT match evil.example.com because the @ must immediately precede the domain. Verified by testing: 'user@evil.example.com' =~ /@(example\\.com)/i returns nil. The existing test 'should not reject partial matches' confirms the regex works correctly.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed by inspection: EmailValidator builds /@(#{domains})/i (with dots escaped) so it only matches when '@' is immediately followed by the listed domain; 'user@evil.example.com' does not contain '@example.com'."
+    },
+    {
+      "repo": "discourse",
+      "pr_number": 4,
+      "pr_title": "Enhance embed URL handling and validation system",
+      "original_comment": "postMessage targetOrigin should be the origin (scheme+host+port), not the full referrer URL; using the full URL will cause the message to be dropped and prevent resizing.",
+      "original_reasoning": "Technically incorrect - postMessage with full URL as targetOrigin still works; browser extracts origin. The message is NOT dropped if origin matches.",
+      "verdict": "actually_real_bug",
+      "notes": "The embed layout uses request.referer (a full URL, including path) as targetOrigin: app/views/layouts/embed.html.erb:11. targetOrigin is required to be an origin (scheme+host+port), so this can throw or prevent the resize message from being delivered."
+    },
+    {
+      "repo": "discourse",
+      "pr_number": 4,
+      "pr_title": "Enhance embed URL handling and validation system",
+      "original_comment": "The code sets X-Frame-Options: ALLOWALL which completely disables clickjacking protection...",
+      "original_reasoning": "This is intentional for an embed endpoint. The purpose IS to be embedded in iframes. X-Frame-Options: ALLOWALL is correct. Referer cannot be spoofed by JavaScript.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: ensure_embeddable intentionally sets X-Frame-Options=ALLOWALL for the embed endpoint (app/controllers/embed_controller.rb)."
+    },
+    {
+      "repo": "discourse",
+      "pr_number": 7,
+      "pr_title": "Enhance embed URL handling and validation system",
+      "original_comment": "In topic-post.css the original code used $lightness: 70% but the replacement uses $lightness: 30% for the light theme. This makes the text significantly darker than intended.",
+      "original_reasoning": "The claim is factually incorrect. After examining the full diff of topic-post.scss, no change goes from 70% to 30% for light theme. The notable change (.topic-meta-data h5 a) goes the opposite direction (30% to 70%). The golden comment has the values reversed.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: in app/assets/stylesheets/desktop/topic-post.scss the notable change is 30% -> 70% for the light-theme side (line 291), not 70% -> 30%."
+    },
+    {
+      "repo": "cal_dot_com",
+      "pr_number": 1,
+      "pr_title": "feat: add calendar cache status and actions (#22532)",
+      "original_comment": "Consider adding try-catch around the await to handle import failures gracefully",
+      "original_reasoning": "The code already handles missing/invalid app lookups gracefully with null checks and log.warn. The await on appStore[key] won't throw - it returns undefined for missing keys. This is a speculative/defensive suggestion without a concrete bug.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Verified in multiple call sites (e.g., getCalendar/handlePayment): `await appStore[missingKey]` resolves to undefined (no throw), and the subsequent `if (!(app && ...))` guard handles the missing app case. Only a rejected dynamic import would throw, which is not evidenced by the PR/code."
+    },
+    {
+      "repo": "cal_dot_com",
+      "pr_number": 3,
+      "pr_title": "Fixed some minor bugs that caused console errors",
+      "original_comment": "The optional chaining on mainHostDestinationCalendar?.integration is redundant since you already check mainHostDestinationCalendar in the ternary condition.",
+      "original_reasoning": "False positive - the actual code does NOT use optional chaining on mainHostDestinationCalendar.integration. The code accesses .integration directly without optional chaining, which is the actual bug that droid identified.",
+      "verdict": "confirmed_false_positive",
+      "notes": "Confirmed: EventManager.ts uses `mainHostDestinationCalendar.integration` (no optional chaining), so the comment's premise doesn't match the code."
+    }
+  ]
+}
