@@ -1,0 +1,56 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 7,
+  "pr_title": "Database Performance Optimizations",
+  "validations": [
+    {
+      "comment_id": 2743652496,
+      "file": "pkg/services/annotations/annotationsimpl/cleanup_test.go",
+      "line": 120,
+      "droid_claim": "[P1] Subtest cleanup is registered too late, risking cascading DB pollution\n\nIn `t.Run`, the test inserts rows and asserts counts before registering `t.Cleanup` to delete from `annotation`/`annotation_tag`. If a failure happens before the cleanup is registered (including leftover rows from an earlier subtest), the DB stays dirty and subsequent subtests can fail (e.g., duplicate primary keys from hardcoded IDs starting at 1). Register cleanup at the start of each subtest (or use a fresh DB per subtest) so it always runs.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "If createTestAnnotations or assertAnnotationCount fails before t.Cleanup is registered, the shared test DB won't be cleaned, causing subsequent subtests to fail with duplicate primary keys since IDs are hardcoded starting at 1.",
+      "reasoning": "The test code at lines 113-121 calls createTestAnnotations (which inserts rows with hardcoded IDs like int64(i+1)), then assertAnnotationCount and assertAnnotationTagCount, and only then registers t.Cleanup at line 120. If any of these pre-cleanup lines fail (e.g., require.NoError panics), t.Cleanup never gets registered, leaving rows in the shared fakeSQL database. Since all subtests share the same DB instance (initialized once at line 24) and createTestAnnotations uses hardcoded IDs starting at 1, subsequent subtests will encounter duplicate primary keys. Moving t.Cleanup to the start of each subtest (before createTestAnnotations) would fix this.",
+      "code_evidence": "Lines 113-120:\n  createTestAnnotations(t, fakeSQL, test.createAnnotationsNum, test.createOldAnnotationsNum)\n  assertAnnotationCount(t, fakeSQL, \"\", int64(test.createAnnotationsNum))\n  assertAnnotationTagCount(t, fakeSQL, 2*int64(test.createAnnotationsNum))\n\n  t.Cleanup(func() { ... DELETE FROM annotation ... DELETE FROM annotation_tag ... })\n\ncreateTestAnnotations uses: ID: int64(i + 1) — hardcoded IDs that will collide across subtests.",
+      "files_explored": [
+        "pkg/services/annotations/annotationsimpl/cleanup_test.go"
+      ]
+    },
+    {
+      "comment_id": 2743652497,
+      "file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+      "line": 535,
+      "droid_claim": "[P1] Cleanup logs use Error level for non-error events\n\nThe cleanup code logs normal batch progress (e.g., IDs selected for deletion and rows affected) via `r.log.Error(...)`. This will surface as errors in production and can trigger false alerts / hide real errors; these should be `Debug`/`Info` and reserve `Error` for actual failures.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Normal annotation cleanup progress is logged at Error level in production, which will trigger false alerts in monitoring systems and obscure real errors in log aggregation.",
+      "reasoning": "The PR introduces 6 new r.log.Error() calls in CleanAnnotations and CleanOrphanedAnnotationTags for routine operational messages like 'Annotations to clean by time', 'cleaned annotations by time', 'Annotations to clean by count', 'cleaned annotations by count', 'Tags to clean', and 'cleaned tags'. These are informational progress messages about normal batch cleanup operations, not error conditions. The annotation cleanup job runs periodically in production, so every successful batch will emit Error-level log lines.",
+      "code_evidence": "Lines 532-535 (CleanAnnotations maxAge path):\n  r.log.Error(\"Annotations to clean by time\", \"count\", len(ids), \"ids\", ids, \"cond\", cond, \"err\", err)\n  x, y := r.deleteByIDs(ctx, \"annotation\", ids)\n  r.log.Error(\"cleaned annotations by time\", \"count\", len(ids), \"affected\", x, \"err\", y)\n\nSimilar pattern repeated for maxCount path and CleanOrphanedAnnotationTags.",
+      "files_explored": [
+        "pkg/services/annotations/annotationsimpl/xorm_store.go"
+      ]
+    },
+    {
+      "comment_id": 2743652502,
+      "file": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+      "line": 535,
+      "droid_claim": "[P2] Logging full ID lists can create very large log entries\n\nThe cleanup logs include `\"ids\", ids`, which can be thousands of integers per batch and will repeat until completion. This can bloat logs and increase CPU/IO; prefer logging only `count` (and maybe first/last ID) or guard full ID logging behind debug-only sampling.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "performance",
+      "impact": "With batch sizes up to 32767 (as shown in the test), each cleanup cycle logs the full list of integer IDs twice per batch (once before delete, once after), repeated until all annotations are cleaned. This can produce extremely large log entries and significant I/O overhead in production.",
+      "reasoning": "The code passes the full ids slice to the logger via `\"ids\", ids` in 6 different log statements across CleanAnnotations and CleanOrphanedAnnotationTags. The batch size is configurable via AnnotationCleanupJobBatchSize, and the test shows it can be set to 32767. Each batch iteration logs ids twice (before and after deletion), and untilDoneOrCancelled loops until no more IDs are found. For a large annotation table, this could produce thousands of log lines each containing tens of thousands of integer IDs.",
+      "code_evidence": "Example at line 532:\n  r.log.Error(\"Annotations to clean by time\", \"count\", len(ids), \"ids\", ids, \"cond\", cond, \"err\", err)\n\nTest shows batch size can be 32767:\n  annotationCleanupJobBatchSize: 32767,\n  createAnnotationsNum: 40003,",
+      "files_explored": [
+        "pkg/services/annotations/annotationsimpl/xorm_store.go",
+        "pkg/services/annotations/annotationsimpl/cleanup_test.go"
+      ]
+    }
+  ]
+}

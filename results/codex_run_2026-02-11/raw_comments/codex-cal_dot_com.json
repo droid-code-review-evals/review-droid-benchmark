@@ -1,0 +1,221 @@
+{
+  "repo": "codex-cal_dot_com",
+  "fetched_by": "chatgpt-codex-connector[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "Async import of the appStore packages",
+      "review_comments": [
+        {
+          "id": 2785182408,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Await recurring calendar deletions before Promise.all**\n\nIn the recurring-event branch, the async `forEach` awaits `getCalendar` before pushing `deleteEvent` promises into `apiDeletes`, but the loop itself is not awaited. That means `apiDeletes` can be empty (or incomplete) when later `Promise.all(prismaPromises.concat(apiDeletes))` runs, so deletions for recurring calendar references may be skipped or finish after the request completes. This only occurs when `bookingToDelete.eventType?.recurringEvent` and `allRemainingBookings` are true, and it regressed with the new async `getCalendar` because the push now happens after an `await`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/features/bookings/lib/handleCancelBooking.ts",
+          "line": 464,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:25:06Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/1#discussion_r2785182408"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "feat: 2fa backup codes",
+      "review_comments": [
+        {
+          "id": 2785189269,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Fire onEnable when dialog is dismissed outside the Close button**\n\nAfter a successful enable, the flow only advances to `DisplayBackupCodes` and `onEnable` is invoked exclusively from the \u201cClose\u201d button handler. Because the Dialog can be dismissed via overlay click or Escape, those paths will close the modal without calling `onEnable` or `resetState`, leaving parent UI stale (2FA already enabled on the server) and potentially reopening the modal on the backup-code step. Consider invoking `onEnable`/`resetState` from `onOpenChange` when the dialog closes, or wiring a close guard for the backup-codes step.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "apps/web/components/settings/EnableTwoFactorModal.tsx",
+          "line": 270,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:27:20Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/2#discussion_r2785189269"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "actual_pr_number": 3,
+      "title": "fix: handle collective multiple host on destinationCalendar",
+      "review_comments": [
+        {
+          "id": 2785181066,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Use destination calendar when externalCalendarId is missing**\n\nWhen `externalCalendarId` is omitted (which is common when the caller relies on the event\u2019s destination calendar), the fallback now runs `find((cal) => cal.externalId === externalCalendarId)` with `externalCalendarId` undefined. That returns undefined even if `event.destinationCalendar` contains a valid calendar, so `calendarId` becomes undefined and the update call will target an invalid calendar ID (likely failing or updating the wrong calendar). This is a regression from the prior behavior that used the destination calendar directly.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 256,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:24:28Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/3#discussion_r2785181066"
+        },
+        {
+          "id": 2785181069,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Deletions fall back to primary instead of destination calendar**\n\nWhen `externalCalendarId` is not provided, the code now tries to match `externalCalendarId` (undefined) against `event.destinationCalendar`, which yields undefined and falls back to `primary`. That means events created on a non-primary destination calendar won\u2019t be deleted from their actual calendar; the delete will hit `primary`, and the 404 is swallowed, leaving the real event intact. This is a behavioral regression for multi-calendar bookings.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 317,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:24:29Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/3#discussion_r2785181069"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "feat: convert InsightsBookingService to use Prisma.sql raw queries",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Comprehensive workflow reminder management for booking lifecycle events",
+      "review_comments": [
+        {
+          "id": 2785186144,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Await reminder cancellations to avoid orphaned sends**\n\nThe new `deleteScheduledEmailReminder`/`deleteScheduledSMSReminder` functions perform async DB updates and external cancellations, but they are now invoked without `await` and are no longer included in `Promise.all`. In Next.js API/serverless contexts, the handler can finish before these promises settle, leaving reminders still scheduled (or not marked `cancelled`) and potentially sending emails/SMS after a booking is cancelled. Previously the Prisma deletes were awaited, so this is a regression in cancellation reliability; consider collecting these promises and awaiting them alongside the other deletes.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/features/bookings/lib/handleCancelBooking.ts",
+          "line": 489,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:26:22Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/5#discussion_r2785186144"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Advanced date override handling and timezone compatibility improvements",
+      "review_comments": [
+        {
+          "id": 2785183292,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use slot end time when enforcing working hours**\n\nThe new working-hours guard compares both `start` and `end` using `slotStartTime`, so only the slot start is validated. For any event length > 0, a slot that starts inside working hours but ends after `workingHour.endTime` will still be treated as available (e.g., 16:30\u201317:30 with working hours ending at 17:00). This regresses availability filtering and can expose slots that extend past a host\u2019s configured hours; `end` should be derived from `slotEndTime` instead.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/trpc/server/routers/viewer/slots.ts",
+          "line": 144,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:25:27Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/6#discussion_r2785183292"
+        },
+        {
+          "id": 2785183294,
+          "body": "**<sub><sub>![P3 Badge](https://img.shields.io/badge/P3-lightgrey?style=flat)</sub></sub>  Dayjs object equality never matches for date overrides**\n\nThe override logic attempts to detect `start === end` by comparing two Dayjs objects with `===`, which is always false for distinct instances. That makes the short\u2011circuit branch unreachable and allows a slot exactly at the override start to be treated as available even when an override represents a zero\u2011length/unavailable day. Use `isSame` (or compare timestamps) so start==end overrides correctly block availability.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/trpc/server/routers/viewer/slots.ts",
+          "line": 115,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:25:27Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/6#discussion_r2785183294"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "OAuth credential sync and app integration enhancements",
+      "review_comments": [
+        {
+          "id": 2785184960,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Fix minimum token schema to accept real token payloads**\n\nWhen credential sharing is enabled, `parseRefreshTokenResponse` uses `minimumTokenResponseSchema` to validate the sync endpoint response. The computed keys (`[z.string().toString()]`) create a required property literally named like `\"ZodString\"`, so real OAuth token payloads (which won\u2019t include that property) will always fail validation and throw. This means any refresh will error as soon as `APP_CREDENTIAL_SHARING_ENABLED` and `CALCOM_CREDENTIAL_SYNC_ENDPOINT` are set.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+          "line": 9,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:26:03Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/7#discussion_r2785184960"
+        },
+        {
+          "id": 2785184965,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Store parsed token data, not SafeParseReturn**\n\nIn the Google Calendar refresh flow, `parseRefreshTokenResponse` returns a Zod `safeParse` result, but the code stores that object directly as the credential key. That changes the persisted shape to `{ success, data }` instead of the token fields expected by `googleCredentialSchema`, so subsequent uses of the credential will fail to parse or use `access_token`/`expiry_date` correctly.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 98,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:26:03Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/7#discussion_r2785184965"
+        },
+        {
+          "id": 2785184970,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Do not overwrite refresh_token with a placeholder**\n\nWhen the sync endpoint omits `refresh_token` (as implied by the comment in `refreshOAuthTokens`), `parseRefreshTokenResponse` replaces it with the literal string \"refresh_token\". Callers like Zoom/Hubsot update the stored credential with this value, which will break the next refresh attempt because the persisted refresh token is no longer valid.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+          "line": 26,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:26:03Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/7#discussion_r2785184970"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "SMS workflow reminder retry count tracking",
+      "review_comments": [
+        {
+          "id": 2785182771,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Scope retry-count purge to SMS reminders**\n\nThe new `OR` clause deletes any `WorkflowReminder` with `retryCount > 1` regardless of method, so if retryCount is ever set for EMAIL/WHATSAPP reminders (the field now exists on the shared model), this cron will silently delete those reminders instead of delivering them. If the intention is only to stop retrying SMS workflows, the filter should be constrained to `method: SMS` alongside the retryCount condition.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+          "line": 41,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:25:14Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/8#discussion_r2785182771"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "Add guest management functionality to existing bookings",
+      "review_comments": [
+        {
+          "id": 2785184670,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Allow team admins or owners to add guests**\n\nThe permission gate currently treats team admin and team owner as a conjunction: `isTeamAdmin` and `isTeamOwner` must both be true. In practice users have one role, so a team admin (or owner) who is neither the organizer nor an attendee will always hit the `FORBIDDEN` path. This blocks legitimate team-level management of bookings; any admin trying to add guests to a teammate\u2019s booking will be denied. Consider using an OR check consistent with other team role checks so either admin or owner can proceed.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+          "line": 48,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:25:58Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/9#discussion_r2785184670"
+        },
+        {
+          "id": 2785184674,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Normalize guest emails before blacklist check**\n\nThe blacklist is lowercased, but the filter compares it directly against the raw `guest` input. This makes the blacklist case-sensitive: a blocked email like `foo@bar.com` can bypass the check by submitting `Foo@Bar.com`, which will not match and will be added. This weakens the intended blocklist. Normalize guest emails (and ideally strip plus-addressing as elsewhere in the codebase) before comparing to the blacklist.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+          "line": 77,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:25:58Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/9#discussion_r2785184674"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "feat: add calendar cache status and actions (#22532)",
+      "review_comments": [
+        {
+          "id": 2785183785,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Provide update data when calling updateMany**\n\nPassing an empty object to `updateMany` won\u2019t actually touch any rows and, in Prisma, can raise a runtime error because no update data is supplied; either way the `@updatedAt` trigger won\u2019t run. That means every time `refreshAvailabilityAndSetCache` completes, this call will either throw (aborting the refresh flow for all Google Calendar availability refreshes) or silently do nothing, so `SelectedCalendar.updatedAt` never reflects the cache refresh. If the intent is to bump timestamps, this should set a real field (e.g., `updatedAt: new Date()`) or be removed.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 1024,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:25:38Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-cal_dot_com/pull/10#discussion_r2785183785"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

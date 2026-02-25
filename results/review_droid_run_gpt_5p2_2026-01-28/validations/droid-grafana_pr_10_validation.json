@@ -1,0 +1,24 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 10,
+  "pr_title": "Unified Storage Performance Optimizations",
+  "validations": [
+    {
+      "comment_id": 2743655812,
+      "file": "pkg/storage/unified/search/bleve.go",
+      "line": 137,
+      "droid_claim": "[P0] Concurrent index builds can corrupt file-based indexes and leak resources\n\nBy moving the lock from the start of BuildIndex to only protect the final cache write, multiple goroutines can now build the same index concurrently. The caller `getOrCreateIndex` checks `GetIndex`, and if nil, calls `build`; without a per-key guard, two goroutines can both see nil and proceed to build. For file-based indexes, both will call `bleve.New(dir, mapper)` on the same directory, which can fail or corrupt the index. When both complete, the second write to `b.cache[key]` overwrites the first, orphaning the first index without closing it (resource leak). Use per-key synchronization (e.g., singleflight or keyed mutex) so only one build per key proceeds while still allowing concurrent builds for different keys.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "race_condition",
+      "impact": "Concurrent requests for the same NamespacedResource can trigger parallel index builds on the same disk directory, causing bleve.New errors or index corruption, and the losing goroutine's index is orphaned without Close (resource leak).",
+      "reasoning": "The diff removes the mutex lock that previously wrapped the entire BuildIndex method and moves it to only protect the final cache assignment. The caller getOrCreateIndex (search.go:287-307) performs a check-then-act: it calls GetIndex (RLock only), and if nil, calls build which invokes BuildIndex. Without the original lock, two goroutines can both observe nil from GetIndex for the same key and both enter BuildIndex concurrently. For file-based indexes (size > FileThreshold), both goroutines call bleve.New on the same directory path, which will fail or corrupt the index. When both complete, the second b.cache[key] = idx overwrites the first, orphaning the first bleveIndex without calling Close on it. The TODO comment at line 288-290 in search.go even acknowledges this gap: 'We want to block while building the index and return the same index for the key'.",
+      "code_evidence": "bleve.go diff: lock moved from wrapping entire BuildIndex to only lines 136-138 (cache write). search.go:287-307 getOrCreateIndex does unsynchronized check-then-build:\n  idx, err := s.search.GetIndex(ctx, key)  // RLock only\n  if idx == nil {\n    idx, _, err = s.build(ctx, key, 10, 0)  // no per-key guard\n  }\nbleve.go:98-99 for file indexes: dir := filepath.Join(...); index, err = bleve.New(dir, mapper) — two concurrent calls on same dir will conflict.",
+      "files_explored": [
+        "pkg/storage/unified/search/bleve.go",
+        "pkg/storage/unified/resource/search.go"
+      ]
+    }
+  ]
+}

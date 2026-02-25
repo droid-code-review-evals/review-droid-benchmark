@@ -1,0 +1,46 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 3,
+  "pr_title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+  "validations": [
+    {
+      "comment_id": 2743676340,
+      "file": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+      "line": 53,
+      "droid_claim": "[P1] getBouncyCastleProvider() returns a non-BouncyCastle provider\n\n`getBouncyCastleProvider()` currently returns the Provider from the JVM default KeyStore (e.g., SunJSSE/SUN), not the BouncyCastle provider the interface contract implies. Callers expecting BC-specific behavior may misbehave or silently run with the wrong provider; consider returning the actual BC provider when present, or fail fast/explicitly (e.g., throw UnsupportedOperationException) if this minimal provider cannot supply it.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "When AuthzClientCryptoProvider is the only CryptoProvider on the classpath (standalone authz-client usage), getBouncyCastleProvider() returns a non-BC provider (e.g., SUN), violating the interface contract. Callers like BouncyIntegration.PROVIDER will report the wrong provider name, and any code relying on BC-specific algorithms or behavior will silently use the wrong provider.",
+      "reasoning": "The interface CryptoProvider.getBouncyCastleProvider() is documented as returning 'BouncyCastle security provider. Can be either non-FIPS or FIPS based provider'. AuthzClientCryptoProvider.getBouncyCastleProvider() at line 53 does KeyStore.getInstance(KeyStore.getDefaultType()).getProvider(), which returns the JVM's default KeyStore provider (typically SUN), not BouncyCastle. This is a clear contract violation. BouncyIntegration.loadProvider() calls this method to set the PROVIDER name used throughout Keycloak's crypto layer. In standalone authz-client scenarios where this is the only CryptoProvider (order=100, lower than the 200 of DefaultCryptoProvider/Elytron/FIPS), this would be selected and return incorrect provider information.",
+      "code_evidence": "AuthzClientCryptoProvider.java line 53:\n  public Provider getBouncyCastleProvider() {\n      try {\n          return KeyStore.getInstance(KeyStore.getDefaultType()).getProvider();\n      } catch (KeyStoreException e) {\n          throw new IllegalStateException(e);\n      }\n  }\n\nCryptoProvider.java interface contract:\n  /**\n   * @return BouncyCastle security provider. Can be either non-FIPS or FIPS based provider\n   */\n  Provider getBouncyCastleProvider();",
+      "files_explored": [
+        "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+        "common/src/main/java/org/keycloak/common/crypto/CryptoProvider.java",
+        "common/src/main/java/org/keycloak/common/util/BouncyIntegration.java",
+        "common/src/main/java/org/keycloak/common/crypto/CryptoIntegration.java"
+      ]
+    },
+    {
+      "comment_id": 2743676341,
+      "file": "common/src/main/java/org/keycloak/common/crypto/CryptoIntegration.java",
+      "line": 55,
+      "droid_claim": "[P1] Non-deterministic crypto provider selection when order() ties\n\n`detectProvider()` now sorts by `CryptoProvider.order()` only; if multiple providers report the same order, the chosen provider depends on ServiceLoader iteration/classpath order, which is not guaranteed to be stable. In this PR, DefaultCryptoProvider, WildFlyElytronProvider, and FIPS1402Provider all return 200, so environments with >1 on the classpath can pick different providers across runs; add a deterministic tie-breaker (e.g., class name) or enforce/document unique order values.",
+      "verdict": "true_positive",
+      "confidence": "medium",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "If multiple CryptoProviders with the same order value are on the classpath, the selected provider is non-deterministic across runs, potentially causing inconsistent cryptographic behavior. Previously, having multiple providers caused a clear exception; now it silently picks one.",
+      "reasoning": "Confirmed that DefaultCryptoProvider, WildFlyElytronProvider, and FIPS1402Provider all return order() = 200. The PR changes detectProvider() from throwing an IllegalStateException when multiple providers are found to sorting by order() and silently picking the first. Comparator.comparingInt() is a stable sort in Java, but ServiceLoader iteration order is not guaranteed by the spec. If two providers share order 200 and are both on the classpath, the winner depends on ServiceLoader/classpath ordering which can vary. In practice these three providers are in separate Maven modules and are unlikely to coexist, but the code regression from 'fail-fast on multiple providers' to 'silently pick one with potential non-determinism' is a real behavior change that could cause subtle issues.",
+      "code_evidence": "CryptoIntegration.java diff shows old code:\n  } else if (foundProviders.size() > 1) {\n      throw new IllegalStateException(\"Multiple crypto providers loaded...\");\nNew code:\n  .sorted(Comparator.comparingInt(CryptoProvider::order).reversed())\n  .collect(Collectors.toList());\n  // silently picks foundProviders.get(0)\n\nOrder values: DefaultCryptoProvider=200, WildFlyElytronProvider=200, FIPS1402Provider=200, AuthzClientCryptoProvider=100",
+      "files_explored": [
+        "common/src/main/java/org/keycloak/common/crypto/CryptoIntegration.java",
+        "crypto/default/src/main/java/org/keycloak/crypto/def/DefaultCryptoProvider.java",
+        "crypto/elytron/src/main/java/org/keycloak/crypto/elytron/WildFlyElytronProvider.java",
+        "crypto/fips1402/src/main/java/org/keycloak/crypto/fips/FIPS1402Provider.java",
+        "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java"
+      ]
+    }
+  ]
+}

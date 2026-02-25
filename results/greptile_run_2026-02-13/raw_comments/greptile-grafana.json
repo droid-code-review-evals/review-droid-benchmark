@@ -1,0 +1,320 @@
+{
+  "repo": "greptile-grafana",
+  "fetched_by": "greptile-apps[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "Anonymous: Add configurable device limit",
+      "review_comments": [
+        {
+          "id": 2806482108,
+          "body": "Race condition (TOCTOU): multiple concurrent requests can bypass the device limit. Between `CountDevices` check on line 110 and the actual insert on line 149-153, other requests can create devices, allowing total count to exceed the limit.\n\nWrap the count check and insert in a transaction with appropriate isolation level, or use database constraints to enforce the limit atomically.",
+          "path": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+          "line": 117,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:15Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/1#discussion_r2806482108"
+        },
+        {
+          "id": 2806482150,
+          "body": "Returning `ErrDeviceLimitReached` when `rowsAffected == 0` is misleading - zero rows affected could mean the device doesn't exist OR the `updated_at` is outside the time window (line 81). This conflates \"device not found\" with \"limit reached\".",
+          "path": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+          "line": 96,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:16Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/1#discussion_r2806482150"
+        },
+        {
+          "id": 2806482190,
+          "body": "Time window constraint (`updated_at BETWEEN ? AND ?`) means devices that haven't been active in the last 30 days cannot be updated even if they exist. This will incorrectly return `ErrDeviceLimitReached` for dormant devices trying to reconnect.",
+          "path": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+          "line": 82,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:17Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/1#discussion_r2806482190"
+        },
+        {
+          "id": 2806482257,
+          "body": "Changed from async goroutine to synchronous call blocks the authentication flow. If device tagging has database latency or errors, users experience slower authentication. The previous async pattern with timeout was better for performance.\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "pkg/services/anonymous/anonimpl/client.go",
+          "line": 50,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:18Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/1#discussion_r2806482257"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "AuthZService: improve authz caching",
+      "review_comments": [
+        {
+          "id": 2806482306,
+          "body": "logic issue: when cached permissions exist but the specific permission is denied (permission not in cache map), the code falls through to fetch from database instead of using cached denial\n\nThe logic at line 131-135 only returns early if `allowed` is true, but if the cached permissions exist and the check returns `allowed=false`, it falls through to line 139 to fetch fresh permissions from the database. This defeats the purpose of the permission cache for denial cases.\n\nThis should either:\n1. Return immediately when cached permissions are found (whether allowed or denied), OR\n2. Set the denial cache here before falling through",
+          "path": "pkg/services/authz/rbac/service.go",
+          "line": 136,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:20Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/2#discussion_r2806482306"
+        },
+        {
+          "id": 2806482357,
+          "body": "logic issue: test comment is misleading and the permission cache setup doesn't \"allow access\"\n\nThe comment says \"Allow access to the dashboard to prove this is not checked\", but the code sets `map[string]bool{\"dashboards:uid:dash1\": false}`. In the `checkPermission` method (service.go:558), the logic checks `if scopeMap[t.scope(req.Name)]`, which would evaluate to `false` since the value is `false`. This would deny access, not allow it.\n\nTo properly test that the denial cache takes precedence, this should be:\n```suggestion\n\t\t// Set permission cache to allow access to prove denial cache is checked first\n\t\ts.permCache.Set(ctx, userPermCacheKey(\"org-12\", \"test-uid\", \"dashboards:read\"), map[string]bool{\"dashboards:uid:dash1\": true})\n```",
+          "path": "pkg/services/authz/rbac/service_test.go",
+          "line": 982,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:21Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/2#discussion_r2806482357"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "actual_pr_number": 3,
+      "title": "Plugins: Chore: Renamed instrumentation middleware to metrics middleware",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "Advanced Query Processing Architecture",
+      "review_comments": [
+        {
+          "id": 2806484183,
+          "body": "Double interpolation bug: queries are interpolated here AND again inside `runSplitQuery` (line 163). This causes template variables to be replaced twice.\n\nIn the baseline, `runShardSplitQuery` called `interpolateVariablesInQueries` once, and `runSplitQuery` did NOT interpolate. Now both functions call `applyTemplateVariables`, leading to double interpolation.\n\nFix: Remove the `.map()` line here since `runSplitQuery` will handle interpolation.",
+          "path": "public/app/plugins/datasource/loki/shardQuerySplitting.ts",
+          "line": 52,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:17Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/4#discussion_r2806484183"
+        },
+        {
+          "id": 2806484220,
+          "body": "Changed expectation from 1 to 5 calls, reflecting that `applyTemplateVariables` is now called multiple times due to double interpolation in both `runShardSplitQuery` and `runSplitQuery`.",
+          "path": "public/app/plugins/datasource/loki/shardQuerySplitting.test.ts",
+          "line": 112,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:18Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/4#discussion_r2806484220"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Notification Rule Processing Engine",
+      "review_comments": [
+        {
+          "id": 2806486600,
+          "body": "potential runtime error if `groups` array is empty - `.at(0)` returns undefined, then accessing `.rules` will throw\n\n```suggestion\n      {promResponse.data.groups.at(0)?.rules?.map((promRule) => {\n```",
+          "path": "public/app/features/alerting/unified/rule-list/GrafanaGroupLoader.tsx",
+          "line": 68,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:25:35Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/5#discussion_r2806486600"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Dual Storage Architecture",
+      "review_comments": [
+        {
+          "id": 2806481568,
+          "body": "`recordLegacyDuration` called when Storage fails, should be `recordStorageDuration`\n\n```suggestion\n\t\td.recordStorageDuration(true, mode3Str, options.Kind, method, startStorage)\n```",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 45,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:02Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/6#discussion_r2806481568"
+        },
+        {
+          "id": 2806481598,
+          "body": "`name` used instead of `options.Kind` in metrics - inconsistent with other methods\n\n```suggestion\n\td.recordStorageDuration(false, mode3Str, options.Kind, method, startStorage)\n```",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 106,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:03Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/6#discussion_r2806481598"
+        },
+        {
+          "id": 2806481623,
+          "body": "`d.Log` used instead of `log` variable - inconsistent with other methods and loses context values\n\n```suggestion\n\tctx = klog.NewContext(ctx, log)\n```",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 97,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:04Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/6#discussion_r2806481623"
+        },
+        {
+          "id": 2806481653,
+          "body": "`recordLegacyDuration` called when Storage fails, should be `recordStorageDuration`\n\n```suggestion\n\t\td.recordStorageDuration(true, mode3Str, options.Kind, method, startStorage)\n```",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 129,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:05Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/6#discussion_r2806481653"
+        },
+        {
+          "id": 2806481704,
+          "body": "`recordStorageDuration` called for legacy operation - should be `recordLegacyDuration`\n\n```suggestion\n\t\td.recordLegacyDuration(err != nil, mode3Str, options.Kind, method, startLegacy)\n```",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 166,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:06Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/6#discussion_r2806481704"
+        },
+        {
+          "id": 2806481747,
+          "body": "`defer cancel()` placed after starting legacy timer - cancel will be deferred until after metrics recorded\n\n```suggestion\n\tgo func() {\n\t\tctx, cancel := context.WithTimeoutCause(ctx, time.Second*10, errors.New(\"legacy update timeout\"))\n\t\tdefer cancel()\n\n\t\tstartLegacy := time.Now()\n```",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 138,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:07Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/6#discussion_r2806481747"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "Database Performance Optimizations",
+      "review_comments": [
+        {
+          "id": 2806481629,
+          "body": "using `log.Error` for non-error informational messages - should be `log.Debug` or `log.Info`\n\n```suggestion\n\t\t\tr.log.Debug(\"Annotations to clean by time\", \"count\", len(ids), \"ids\", ids, \"cond\", cond)\n```",
+          "path": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+          "line": 534,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:05Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/7#discussion_r2806481629"
+        },
+        {
+          "id": 2806481663,
+          "body": "using `log.Error` for non-error informational messages - should be `log.Debug` or `log.Info`\n\n```suggestion\n\t\t\tr.log.Debug(\"cleaned annotations by time\", \"count\", len(ids), \"affected\", x, \"err\", y)\n```",
+          "path": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+          "line": 537,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:06Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/7#discussion_r2806481663"
+        },
+        {
+          "id": 2806481707,
+          "body": "using `log.Error` for non-error informational messages - should be `log.Debug` or `log.Info`\n\n```suggestion\n\t\t\tr.log.Debug(\"Annotations to clean by count\", \"count\", len(ids), \"ids\", ids, \"cond\", cond)\n```",
+          "path": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+          "line": 554,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:07Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/7#discussion_r2806481707"
+        },
+        {
+          "id": 2806481759,
+          "body": "using `log.Error` for non-error informational messages - should be `log.Debug` or `log.Info`\n\n```suggestion\n\t\t\tr.log.Debug(\"cleaned annotations by count\", \"count\", len(ids), \"affected\", x, \"err\", y)\n```",
+          "path": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+          "line": 557,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:08Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/7#discussion_r2806481759"
+        },
+        {
+          "id": 2806481806,
+          "body": "using `log.Error` for non-error informational messages - should be `log.Debug` or `log.Info`\n\n```suggestion\n\t\tr.log.Debug(\"Tags to clean\", \"count\", len(ids), \"ids\", ids, \"cond\", cond)\n```",
+          "path": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+          "line": 576,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:09Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/7#discussion_r2806481806"
+        },
+        {
+          "id": 2806481845,
+          "body": "using `log.Error` for non-error informational messages - should be `log.Debug` or `log.Info`\n\n```suggestion\n\t\tr.log.Debug(\"cleaned tags\", \"count\", len(ids), \"affected\", x, \"err\", y)\n```",
+          "path": "pkg/services/annotations/annotationsimpl/xorm_store.go",
+          "line": 579,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:09Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/7#discussion_r2806481845"
+        },
+        {
+          "id": 2806481892,
+          "body": "cleanup interval changed from 10 minutes to 1 minute - 10x increase in frequency\n\n```suggestion\n\tticker := time.NewTicker(time.Minute * 10)\n```\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "pkg/services/cleanup/cleanup.go",
+          "line": 77,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:11Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/7#discussion_r2806481892"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "Frontend Asset Optimization",
+      "review_comments": [
+        {
+          "id": 2806483227,
+          "body": "missing double-check after acquiring write lock - multiple goroutines can pass the initial check at line 45 and queue here, causing redundant asset loads\n\n```suggestion\n\tentryPointAssetsCacheMu.Lock()\n\tdefer entryPointAssetsCacheMu.Unlock()\n\t// Re-check cache after acquiring write lock\n\tif cfg.Env != setting.Dev && entryPointAssetsCache != nil {\n\t\treturn entryPointAssetsCache, nil\n\t}\n```",
+          "path": "pkg/api/webassets/webassets.go",
+          "line": 49,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:48Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/8#discussion_r2806483227"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "Advanced SQL Analytics Framework",
+      "review_comments": [
+        {
+          "id": 2806486149,
+          "body": "function `enableSqlExpressions` always returns false regardless of the feature flag state - the negation logic on line 195 is inverted and the function returns false in both branches\n\n```suggestion\nfunc enableSqlExpressions(h *ExpressionQueryReader) bool {\n\treturn h.features.IsEnabledGlobally(featuremgmt.FlagSqlExpressions)\n}\n```",
+          "path": "pkg/expr/reader.go",
+          "line": 200,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:25:21Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/9#discussion_r2806486149"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "Unified Storage Performance Optimizations",
+      "review_comments": [
+        {
+          "id": 2806485270,
+          "body": "Narrowing the lock scope improves concurrency, but creates a potential race: if two goroutines call `BuildIndex` for the same key simultaneously (via `getOrCreateIndex`), both will build the index concurrently and the second write will overwrite the first. Consider adding per-key locks or checking the cache again inside the write lock.",
+          "path": "pkg/storage/unified/search/bleve.go",
+          "line": 139,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:54Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-grafana/pull/10#discussion_r2806485270"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

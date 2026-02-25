@@ -1,0 +1,41 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 1,
+  "pr_title": "FEATURE: automatically downsize large images",
+  "validations": [
+    {
+      "comment_id": 2743680319,
+      "file": "app/models/optimized_image.rb",
+      "line": 147,
+      "droid_claim": "[P0] Duplicate `downsize` definition overwrites the 4-arg API and breaks existing callers\n\n`downsize` is defined twice with different signatures; the later `downsize(from, to, dimensions, opts={})` overrides the earlier `downsize(from, to, max_width, max_height, opts={})`. Any existing call sites passing width/height (e.g., `downsize(path, path, 100, 100, opts)`) will now bind `dimensions=100` and `opts=100` (dropping the real opts hash), causing incorrect processing or crashes. Rename the new overload (e.g., `downsize_by_percent`) or keep a single `downsize` that accepts both forms and dispatches safely.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "The existing caller in app/jobs/regular/resize_emoji.rb calls downsize(path, path, 100, 100, opts) which will bind dimensions=100 and opts=100 (an integer, not a hash), causing incorrect image processing or a crash when opts is accessed as a hash.",
+      "reasoning": "Ruby does not support method overloading. The second def self.downsize(from, to, dimensions, opts={}) on line 149 completely replaces the first def self.downsize(from, to, max_width, max_height, opts={}) on line 145. The existing caller in resize_emoji.rb:14 calls OptimizedImage.downsize(path, path, 100, 100, opts) with 5 arguments. With only the 3-arg+opts definition remaining, Ruby binds: from=path, to=path, dimensions=100, opts=100 — the actual opts hash is silently dropped and opts becomes the integer 100. This will cause failures when opts[:allow_animation] or opts[:force_aspect_ratio] is accessed.",
+      "code_evidence": "optimized_image.rb lines 145-152 define downsize twice. resize_emoji.rb:14 calls: OptimizedImage.downsize(path, path, 100, 100, opts). With the second definition winning, dimensions=100 and opts=100 (not the hash).",
+      "files_explored": [
+        "app/models/optimized_image.rb",
+        "app/jobs/regular/resize_emoji.rb",
+        "app/controllers/uploads_controller.rb"
+      ]
+    },
+    {
+      "comment_id": 2743680322,
+      "file": "app/assets/javascripts/discourse/lib/utilities.js",
+      "line": 182,
+      "droid_claim": "[P0] Hardcoded upload limit bypasses site settings\n\nThis change replaces the dynamic lookup of `Discourse.SiteSettings['max_' + type + '_size_kb']` with a hardcoded `10 * 1024` (10MB). The original code correctly distinguished between `max_image_size_kb` for images and `max_attachment_size_kb` for attachments based on the `type` parameter. This hardcoded value breaks admin configurability defined in `config/site_settings.yml`, ignores per-type limits, and causes existing behavior/tests that rely on the configurable setting to regress.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "Admins can no longer control upload size limits per type (image vs attachment) via site settings. All uploads are capped at a hardcoded 10MB regardless of configuration, breaking admin configurability and potentially allowing oversized uploads or rejecting valid ones.",
+      "reasoning": "The diff shows line 182 changed from `Discourse.SiteSettings['max_' + type + '_size_kb']` to `10 * 1024`. The original code dynamically looked up the correct per-type setting (max_image_size_kb or max_attachment_size_kb) based on the `type` parameter. The hardcoded value ignores whatever admins configure. Additionally, the 413 error handler on line 246 was similarly hardcoded, replacing `Discourse.SiteSettings.max_image_size_kb` with `10 * 1024`.",
+      "code_evidence": "utilities.js diff: line 182 changed from `var maxSizeKB = Discourse.SiteSettings['max_' + type + '_size_kb'];` to `var maxSizeKB = 10 * 1024; // 10MB`. Line 246 similarly hardcoded from `Discourse.SiteSettings.max_image_size_kb` to `10 * 1024`.",
+      "files_explored": [
+        "app/assets/javascripts/discourse/lib/utilities.js"
+      ]
+    }
+  ]
+}

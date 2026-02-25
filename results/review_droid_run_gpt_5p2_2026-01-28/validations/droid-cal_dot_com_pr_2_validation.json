@@ -1,0 +1,55 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 2,
+  "pr_title": "feat: 2fa backup codes",
+  "validations": [
+    {
+      "comment_id": 2743670838,
+      "file": "apps/web/pages/api/auth/two-factor/totp/disable.ts",
+      "line": 57,
+      "droid_claim": "[P1] Missing type guard before calling string methods on `backupCode`\n\nThe handler calls `req.body.backupCode.replaceAll(...)` without validating that `backupCode` is a string. A malformed JSON body (e.g. `backupCode: null`/number/object) will throw a TypeError and turn into a 500. Validate `typeof backupCode === 'string' && backupCode.length > 0` (and normalize) before using it.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "A malformed JSON request body with backupCode set to a non-string value (e.g. number, object, array) would cause a TypeError on .replaceAll() and result in an unhandled 500 error.",
+      "reasoning": "The code at line 50 checks `req.body.backupCode` with a truthy check, which guards against null, undefined, empty string, and 0, but does not guard against non-string truthy values like numbers > 0, objects, or arrays. Line 63 then calls `.replaceAll('-', '')` which would throw TypeError on non-string types. Since this is a Next.js API route accepting arbitrary JSON bodies, an attacker or buggy client could send `{\"backupCode\": 123}` and trigger a 500.",
+      "code_evidence": "Line 50: `if (user.twoFactorEnabled && req.body.backupCode) {`\nLine 63: `const index = backupCodes.indexOf(req.body.backupCode.replaceAll(\"-\", \"\"));`\nNo typeof check between these lines.",
+      "files_explored": [
+        "apps/web/pages/api/auth/two-factor/totp/disable.ts"
+      ]
+    },
+    {
+      "comment_id": 2743670841,
+      "file": "apps/web/components/settings/EnableTwoFactorModal.tsx",
+      "line": 99,
+      "droid_claim": "[P1] Backup codes blob URL is never revoked (memory leak)\n\n`URL.createObjectURL()` is used to build `backupCodesUrl`, but that URL is only revoked when a new URL is created; it is not revoked on modal close/reset or component unmount. Revoke it in `resetState()` and/or add a `useEffect` cleanup that calls `URL.revokeObjectURL(backupCodesUrl)` when the URL changes/unmounts.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "performance",
+      "impact": "Each time the user goes through the 2FA setup flow, a blob URL is created and never revoked on modal close or component unmount, causing a small memory leak. The blob URL is only revoked if the user sets up 2FA again in the same session (line 96 revokes the old one before creating a new one).",
+      "reasoning": "At line 96-98, `URL.createObjectURL(textBlob)` creates a blob URL that is stored in state. The `resetState()` function (line 78-82) resets password, error, and step but does NOT call `URL.revokeObjectURL(backupCodesUrl)`. There is no useEffect cleanup. When the modal closes via onCancel (which calls resetState) or when the component unmounts, the blob URL remains in memory. The only revocation happens at line 96 when a new URL is about to be created.",
+      "code_evidence": "Line 96-98:\n  if (backupCodesUrl) URL.revokeObjectURL(backupCodesUrl);\n  setBackupCodesUrl(URL.createObjectURL(textBlob));\n\nresetState() at lines 78-82:\n  const resetState = () => {\n    setPassword(\"\");\n    setErrorMessage(null);\n    setStep(SetupStep.ConfirmPassword);\n  };\n// No URL.revokeObjectURL call, no useEffect cleanup",
+      "files_explored": [
+        "apps/web/components/settings/EnableTwoFactorModal.tsx"
+      ]
+    },
+    {
+      "comment_id": 2743670843,
+      "file": "packages/features/auth/lib/next-auth-options.ts",
+      "line": 144,
+      "droid_claim": "[P1] Missing type guard before calling string methods on `credentials.backupCode`\n\nThe authorize flow calls `credentials.backupCode.replaceAll(...)` without ensuring it is a string. While typical form submissions provide strings, unexpected credential shapes can cause a runtime TypeError. Add a guard (e.g. `if (typeof credentials.backupCode !== 'string') throw new Error(ErrorCode.IncorrectBackupCode);`) before using it.",
+      "verdict": "false_positive",
+      "confidence": "medium",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No functional bug. NextAuth's CredentialsProvider defines backupCode as an input field with type 'input', and the credentials object passed to authorize() always contains string values for defined fields. The form submission path and NextAuth's internal handling ensure credentials.backupCode is always a string when present.",
+      "reasoning": "The CredentialsProvider at lines 69-74 defines `backupCode: { label: 'Backup Code', type: 'input', placeholder: '...' }`. NextAuth internally parses the sign-in request and constructs the credentials object from form data, which always yields string values. Unlike the raw API endpoint (disable.ts) which accepts arbitrary JSON via req.body, the NextAuth authorize callback receives pre-processed credentials that conform to the defined schema. The Droid's claim acknowledges this ('While typical form submissions provide strings') but the scenario of non-string values reaching this point is not practically reachable through NextAuth's flow.",
+      "code_evidence": "Line 69-74 (credentials definition):\n  credentials: {\n    backupCode: { label: \"Backup Code\", type: \"input\", placeholder: \"Two-factor backup code\" },\n  }\nLine 131: `if (user.twoFactorEnabled && credentials.backupCode) {`\nLine 144: `const index = backupCodes.indexOf(credentials.backupCode.replaceAll(\"-\", \"\"));`",
+      "files_explored": [
+        "packages/features/auth/lib/next-auth-options.ts"
+      ]
+    }
+  ]
+}

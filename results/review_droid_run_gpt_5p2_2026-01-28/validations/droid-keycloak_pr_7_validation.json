@@ -1,0 +1,55 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 7,
+  "pr_title": "Add HTML sanitizer for translated message resources",
+  "validations": [
+    {
+      "comment_id": 2743702342,
+      "file": "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties",
+      "line": 101,
+      "droid_claim": "[P1] Wrong language string in Lithuanian locale\n\n`totpStep1` is now Italian (\"Installa una delle seguenti applicazioni sul tuo cellulare:\") in the Lithuanian `messages_lt.properties`. This will surface the wrong language to lt users; it should be translated to Lithuanian (or restored to the prior Lithuanian text) while keeping the intended meaning.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Lithuanian users will see an Italian string for the TOTP setup step 1 instruction instead of Lithuanian text.",
+      "reasoning": "Line 101 of messages_lt.properties shows totpStep1=Installa una delle seguenti applicazioni sul tuo cellulare: which is clearly Italian text. All surrounding strings are in Lithuanian. This is a copy-paste error where the wrong locale's translation was inserted.",
+      "code_evidence": "messages_lt.properties line 101:\ntotpStep1=Installa una delle seguenti applicazioni sul tuo cellulare:",
+      "files_explored": [
+        "themes/src/main/resources-community/theme/base/account/messages/messages_lt.properties"
+      ]
+    },
+    {
+      "comment_id": 2743702343,
+      "file": "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties",
+      "line": 112,
+      "droid_claim": "[P2] zh_CN message contains Traditional Chinese characters\n\n`totpStep1` uses Traditional Chinese (e.g., \"手機\", \"應用程式\") inside the Simplified Chinese `messages_zh_CN.properties`. For the zh_CN locale this should be consistent Simplified Chinese (e.g., \"手机\", \"应用程序\").",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "Simplified Chinese (zh_CN) users will see Traditional Chinese characters for the TOTP step 1 instruction, which is inconsistent with the rest of the locale and may confuse mainland Chinese users.",
+      "reasoning": "Line 112 of messages_zh_CN.properties shows totpStep1=在您的手機上安裝以下應用程式之一： which contains Traditional Chinese characters: 手機 (should be 手机), 安裝 (should be 安装), 應用程式 (should be 应用程序). The surrounding strings in the file use Simplified Chinese consistently.",
+      "code_evidence": "messages_zh_CN.properties line 112:\ntotpStep1=在您的手機上安裝以下應用程式之一：\nTraditional chars: 手機, 安裝, 應用程式 should be Simplified: 手机, 安装, 应用程序",
+      "files_explored": [
+        "themes/src/main/resources-community/theme/base/account/messages/messages_zh_CN.properties"
+      ]
+    },
+    {
+      "comment_id": 2743702347,
+      "file": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+      "line": 110,
+      "droid_claim": "[P1] Possible StringIndexOutOfBoundsException when building diff snippet\n\nThe mismatch reporting tries to trim identical prefix/suffix and then prints `value.substring(start, value.length() - end)` and `sanitized.substring(start, sanitized.length() - end)`. If the matching prefix and suffix overlap (i.e., `start + end > value.length()` or `> sanitized.length()`), these substring bounds become invalid (e.g., `value=\"a\"`, `sanitized=\"aXa\"` leads to `value.substring(1, 0)`). Add a guard to cap `end` (or skip trimming) so `start <= endIndex` for both strings before calling substring.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "The theme verifier Maven plugin will crash with StringIndexOutOfBoundsException when processing certain sanitization mismatches where the original value is short and shares prefix/suffix characters with the sanitized version, preventing the build verification from completing.",
+      "reasoning": "Lines 100-110 of VerifyMessageProperties.java compute start (matching prefix length) and end (matching suffix length) independently. The while loops for start and end each check bounds against both strings' lengths, but they don't account for overlap with each other. With value=\"a\" and sanitized=\"aXa\": start becomes 1 (both start with 'a'), end becomes 1 (both end with 'a'). Then value.substring(1, 1-1) = value.substring(1, 0) throws StringIndexOutOfBoundsException since beginIndex > endIndex. There is no guard ensuring start <= value.length() - end.",
+      "code_evidence": "Lines 100-110:\nint start = 0;\nwhile (start < sanitized.length() && start < value.length() && value.charAt(start) == sanitized.charAt(start)) {\n    start++;\n}\nint end = 0;\nwhile (end < sanitized.length() && end < value.length() && value.charAt(value.length() - end - 1) == sanitized.charAt(sanitized.length() - end - 1)) {\n    end++;\n}\nmessages.add(\"...\" + value.substring(start, value.length() - end) + \"' vs. '\" + sanitized.substring(start, sanitized.length() - end) + \"'\");",
+      "files_explored": [
+        "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java"
+      ]
+    }
+  ]
+}

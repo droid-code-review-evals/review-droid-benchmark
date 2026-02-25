@@ -1,0 +1,165 @@
+{
+  "repo": "codex-keycloak",
+  "fetched_by": "chatgpt-codex-connector[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "Fixing Re-authentication with passkeys",
+      "review_comments": [
+        {
+          "id": 2785202512,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve conditional passkeys for unidentified users**\n\nThe new `isConditionalPasskeysEnabled` now requires a non-null user. Both `authenticate()` and the error `challenge()` only call `webauthnAuth.fillContextForm(...)` when this helper returns true. That method is what sets `enableWebAuthnConditionalUI`, which the login templates (e.g. `themes/.../passkeys.ftl`) use to render the passkey/conditional UI. With this change, initial login screens where `context.getUser()` is null will no longer set that attribute, so passkey login/conditional UI is not offered for first-factor authentication, breaking passkey sign-in unless the user is already identified.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+          "line": 161,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:31:52Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/1#discussion_r2785202512"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "Add caching support for IdentityProviderStorageProvider.getForLogin operations",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "actual_pr_number": 3,
+      "title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+      "review_comments": [
+        {
+          "id": 2785204468,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make provider selection deterministic on ties**\n\nWhen more than one `CryptoProvider` is on the classpath, this now sorts by `order()` and silently picks the first provider. In this commit, `DefaultCryptoProvider`, `WildFlyElytronProvider`, and `FIPS1402Provider` all return `200`, so the sort does not break ties and `ServiceLoader` iteration order (which is unspecified) decides the winner. In environments where multiple providers are packaged (e.g., a FIPS setup that still ships the default provider), this can select a non-FIPS provider without any error, which is a behavior regression compared to the previous hard-fail. Consider assigning distinct orders or restoring a tie check to avoid non-deterministic crypto backends.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "common/src/main/java/org/keycloak/common/crypto/CryptoIntegration.java",
+          "line": 58,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:32:43Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/3#discussion_r2785204468"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "Add rolling-updates feature flag and compatibility framework",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Add Client resource type and scopes to authorization schema",
+      "review_comments": [
+        {
+          "id": 2785202906,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Use resourceServer clientId for resource lookup**\n\nThis lookup passes `server.getId()` as the owner, but `ResourceStore.findByName(resourceServer, name)` defaults to `resourceServer.getClientId()` as the owner and resources created by `AdminPermissionsSchema` use that owner. As a result, per-client resources won\u2019t be found, so fine-grained client permissions will be ignored unless an \u201call-clients\u201d permission exists. This will deny access for admins who only have per-client MANAGE/VIEW/CONFIGURE permissions in V2. Consider using the default `findByName(server, client.getId())` (or `server.getClientId()` as owner) to match the stored owner.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+          "line": 214,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:32:02Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/5#discussion_r2785202906"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Add Groups resource type and scopes to authorization schema",
+      "review_comments": [
+        {
+          "id": 2785202139,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Return actual group IDs for view-members filtering**\n\n`getGroupIdsWithViewPermission()` is adding `groupResource.getId()` (the authz resource UUID), but `UserModel.GROUPS` is later used by `JpaUserProvider.groupsWithPermissionsSubquery` to match `UserGroupMembershipEntity.groupId`, which stores Keycloak **group IDs**. This mismatch means group-scoped `VIEW_MEMBERS`/`MANAGE_MEMBERS` permissions won\u2019t surface any users unless an \u201call-groups\u201d permission exists, because the subquery never matches membership rows. You likely want to add `groupResource.getName()` (or otherwise map back to the group id) instead of the resource id when building the set.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+          "line": 124,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:31:41Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/6#discussion_r2785202139"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "Add HTML sanitizer for translated message resources",
+      "review_comments": [
+        {
+          "id": 2785203704,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Read message bundles with UTF-8 to avoid false HTML errors**\n\nThe new HTML check builds `PropertyResourceBundle` directly from a `FileInputStream`, which per JDK docs assumes ISO\u20118859\u20111 encoding. These message `.properties` files are UTF\u20118 in this repo, so non\u2011ASCII translations will be misdecoded (mojibake). That can introduce stray `<`/`>` bytes or alter text such that the sanitizer comparison fails, causing valid translations to be reported as \u201cIllegal HTML\u201d and failing the verifier for some locales. Use an `InputStreamReader` with UTF\u20118 (or `ResourceBundle.Control` with UTF\u20118) so the HTML check runs on the real message text.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+          "line": 69,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:32:21Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/7#discussion_r2785203704"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "Implement access token context encoding framework",
+      "review_comments": [
+        {
+          "id": 2785200117,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Accepts wrong grant in token-id matcher**\n\nThe matcher returns `false` when the encoded grant shortcut matches the expected one and returns `true` when it does not, so correct token IDs will fail assertions and incorrect grants can pass. This is visible in the `if (items[0].substring(3, 5).equals(expectedGrantShortcut)) return false;` branch; with the encoded layout (sessionType+tokenType+grantType) the grant shortcut should be checked for equality and treated as a match. As written, any valid access token id produced with the expected grant will fail tests that use this matcher.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+          "line": 484,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:30:49Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/8#discussion_r2785200117"
+        },
+        {
+          "id": 2785200122,
+          "body": "**<sub><sub>![P3 Badge](https://img.shields.io/badge/P3-lightgrey?style=flat)</sub></sub>  Null rawTokenId is not validated**\n\nThe constructor intends to enforce non-null inputs, but it checks `grantType` twice and never validates `rawTokenId`. This allows `rawTokenId` to be null while still passing validation, which then flows into `encodeTokenId` and creates an invalid token id (e.g., `...:null`) without throwing early. The second `requireNonNull` should guard `rawTokenId` instead.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+          "line": 73,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:30:49Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/8#discussion_r2785200122"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "Implement recovery key support for user storage providers",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "Fix concurrent group access to prevent NullPointerException",
+      "review_comments": [
+        {
+          "id": 2785200695,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve non-null subgroup count contract**\n\nGroupModel\u2019s contract states that `getSubGroupsCount()` \u201cnever returns null\u201d (see server-spi GroupModel javadoc). Returning `null` here when `modelSupplier.get()` is missing breaks that contract and propagates a nullable value into `GroupRepresentation.setSubGroupCount`, which is treated as a number by admin UI code (e.g., comparisons against `0`). In scenarios where the cache entry is accessed after invalidation and `modelSupplier` yields `null`, this can trigger unexpected UI behavior or downstream NPEs when callers unbox the count. Consider returning `0` or falling back to a safe count instead of `null`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+          "line": 275,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:31:03Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-keycloak/pull/10#discussion_r2785200695"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

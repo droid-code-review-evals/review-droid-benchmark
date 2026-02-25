@@ -1,0 +1,26 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 9,
+  "pr_title": "FEATURE: Localization fallbacks (server-side)",
+  "validations": [
+    {
+      "comment_id": 2743705468,
+      "file": "config/initializers/i18n.rb",
+      "line": 17,
+      "droid_claim": "[P1] Potential boot-time NoMethodError when default_locale is nil\n\n`SiteSetting.default_locale.to_sym` will raise if `default_locale` is `nil` (e.g., early boot before settings are available or misconfiguration). The later `.compact` does not help because the exception happens first. Use `SiteSetting.default_locale&.to_sym` (or otherwise guard for nil) so fallbacks still work safely in all initialization contexts.",
+      "verdict": "false_positive",
+      "confidence": "high",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "No functional bug. SiteSetting.default_locale has a hardcoded default of 'en' in site_settings.yml and the SiteSettingExtension framework always returns the default when no DB value is set. The FallbackLocaleList#[] method is called lazily (not at boot), so SiteSetting is fully initialized by the time it runs.",
+      "reasoning": "The Droid claims SiteSetting.default_locale can be nil during early boot or misconfiguration. However: (1) FallbackLocaleList#[] is only invoked lazily when I18n.fallbacks[locale] is accessed during translation lookups, not during the initializer itself — the initializer only assigns the FallbackLocaleList instance. (2) In site_settings.yml, default_locale is defined with `default: 'en'`. (3) The SiteSettingExtension#setting method stores defaults and returns them when no DB override exists: `current_value = current.has_key?(name) ? current[name] : default`. Even if the DB is unreachable at startup, the default 'en' is set in memory. (4) Calling 'en'.to_sym is safe. The nil scenario the Droid describes cannot occur under the SiteSetting framework's design.",
+      "code_evidence": "config/site_settings.yml:\n  default_locale:\n    default: 'en'\n    enum: 'LocaleSiteSetting'\n\nlib/site_setting_extension.rb setting method:\n  current_value = current.has_key?(name) ? current[name] : default\n\nconfig/initializers/i18n.rb line 17:\n  [locale, SiteSetting.default_locale.to_sym, :en].uniq.compact",
+      "files_explored": [
+        "config/initializers/i18n.rb",
+        "config/site_settings.yml",
+        "lib/site_setting_extension.rb",
+        "app/models/site_setting.rb"
+      ]
+    }
+  ]
+}

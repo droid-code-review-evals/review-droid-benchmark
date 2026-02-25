@@ -1,0 +1,25 @@
+{
+  "repo": "droid-sentry",
+  "pr_number": 15,
+  "pr_title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+  "validations": [
+    {
+      "comment_id": 2743649698,
+      "file": "src/sentry/incidents/grouptype.py",
+      "line": 9,
+      "droid_claim": "[P0] MetricAlertDetectorHandler is now abstract and will crash on instantiation\n\n`MetricAlertDetectorHandler` now subclasses `StatefulDetectorHandler` but doesn't implement its required abstract API (`counter_names`, `get_dedupe_value`, `get_group_key_values`, `build_occurrence_and_event_data`). Since `Detector.detector_handler` instantiates via `group_type.detector_handler(self)`, any detector using `MetricAlertFire` will raise `TypeError: Can't instantiate abstract class ...` at runtime. Either implement the required methods or keep this handler on `DetectorHandler` until the stateful implementation is ready.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "Any detector with type 'metric_alert_fire' will crash with TypeError when its handler is instantiated, because MetricAlertDetectorHandler inherits 4 abstract methods from StatefulDetectorHandler without implementing any of them.",
+      "reasoning": "The PR diff shows MetricAlertDetectorHandler was changed from extending DetectorHandler (which only requires evaluate()) to extending StatefulDetectorHandler (which requires counter_names, get_dedupe_value, get_group_key_values, and build_occurrence_and_event_data). The class body is just 'pass', implementing none of them. In Detector.detector_handler (detector.py line 88), the handler is instantiated via group_type.detector_handler(self), which would call MetricAlertDetectorHandler(self) and raise TypeError because Python cannot instantiate a class with unimplemented abstract methods.",
+      "code_evidence": "grouptype.py diff: changed from 'class MetricAlertDetectorHandler(DetectorHandler[QuerySubscriptionUpdate])' with evaluate() implemented, to 'class MetricAlertDetectorHandler(StatefulDetectorHandler[QuerySubscriptionUpdate]): pass'. StatefulDetectorHandler in detector.py defines @abc.abstractmethod for counter_names, get_dedupe_value, get_group_key_values, build_occurrence_and_event_data. Detector.detector_handler at line 88: 'return group_type.detector_handler(self)' triggers instantiation.",
+      "files_explored": [
+        "src/sentry/incidents/grouptype.py",
+        "src/sentry/workflow_engine/processors/detector.py",
+        "src/sentry/workflow_engine/models/detector.py"
+      ]
+    }
+  ]
+}

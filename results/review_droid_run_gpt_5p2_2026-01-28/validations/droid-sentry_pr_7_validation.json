@@ -1,0 +1,24 @@
+{
+  "repo": "droid-sentry",
+  "pr_number": 7,
+  "pr_title": "Optimize spans buffer insertion with eviction during insert",
+  "validations": [
+    {
+      "comment_id": 2743650112,
+      "file": "src/sentry/api/paginator.py",
+      "line": 180,
+      "droid_claim": "[P1] BasePaginator can still pass a negative start index for prev cursors\n\n`BasePaginator.get_result()` now clamps `offset` only when `cursor.is_prev` is false; when `cursor.is_prev` is true it uses `start_offset = offset` unchanged. If the decoded cursor contains a negative `offset`, this will attempt `queryset[start_offset:stop]` with a negative start and raise `AssertionError` instead of returning a controlled pagination error. Validate/reject negative offsets at cursor decode time or in `get_result()`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "A crafted cursor string with a negative offset and is_prev=True (e.g. '100:-5:1') will cause Django QuerySet to raise AssertionError('Negative indexing is not supported'), resulting in a 500 error.",
+      "reasoning": "Line 180 of paginator.py: `start_offset = max(0, offset) if not cursor.is_prev else offset`. When cursor.is_prev is True, the offset is used directly without clamping. Cursor.from_string in cursors.py parses user-supplied cursor strings and accepts any integer for offset (including negative). The comment on line 29 of cursors.py even explicitly says 'Allow negative offsets for advanced pagination scenarios'. So a request with a prev cursor containing a negative offset reaches queryset[negative_value:stop] on line 181, which raises AssertionError from Django ORM.",
+      "code_evidence": "paginator.py line 180:\n  start_offset = max(0, offset) if not cursor.is_prev else offset\n  stop = start_offset + limit + extra\n  results = list(queryset[start_offset:stop])\n\ncursors.py Cursor.from_string:\n  return Cursor(value, int(bits[1]), int(bits[2]))  # no validation on offset sign\n\ncursors.py line 29 comment:\n  # Performance optimization: Allow negative offsets for advanced pagination scenarios",
+      "files_explored": [
+        "src/sentry/api/paginator.py",
+        "src/sentry/utils/cursors.py"
+      ]
+    }
+  ]
+}

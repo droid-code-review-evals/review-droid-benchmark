@@ -1,0 +1,41 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 9,
+  "pr_title": "Implement recovery key support for user storage providers",
+  "validations": [
+    {
+      "comment_id": 2743703901,
+      "file": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+      "line": 19,
+      "droid_claim": "[P1] Unsafe Optional.get() can crash the auth page\n\n`RecoveryAuthnCodesUtils.getCredential(user)` returns an `Optional`, but the bean calls `credentialModelOpt.get()` (and `getNextRecoveryAuthnCode().get()`) without checking presence. If the recovery-codes credential is missing (or if there is no next code), this will throw `NoSuchElementException` while rendering the login step instead of producing a controlled error/challenge.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "If the recovery codes credential is removed between the configuredFor check and page rendering, or if all codes are used up (getNextRecoveryAuthnCode returns empty), the login page will crash with NoSuchElementException instead of showing a user-friendly error.",
+      "reasoning": "RecoveryAuthnCodeInputLoginBean constructor at line 18-21 calls credentialModelOpt.get() and getNextRecoveryAuthnCode().get() without any isPresent() checks. The bean is instantiated from FreeMarkerLoginFormsProvider.java:272 during LOGIN_RECOVERY_AUTHN_CODES_INPUT page rendering. While the authenticator's configuredFor() method checks that recovery codes exist before the flow reaches authenticate(), there is no guard against the credential being removed between that check and rendering, nor against getNextRecoveryAuthnCode() returning empty (all codes used). The pattern of calling .get() on Optional without checking is a genuine unsafe pattern that other code in the same PR (e.g., RecoveryAuthnCodesFormAuthenticator lines 86-89) handles correctly with isPresent() checks.",
+      "code_evidence": "RecoveryAuthnCodeInputLoginBean.java lines 18-21:\n  Optional<CredentialModel> credentialModelOpt = RecoveryAuthnCodesUtils.getCredential(user);\n  RecoveryAuthnCodesCredentialModel recoveryCodeCredentialModel = RecoveryAuthnCodesCredentialModel.createFromCredentialModel(credentialModelOpt.get());\n  this.codeNumber = recoveryCodeCredentialModel.getNextRecoveryAuthnCode().get().getNumber();\n\nCompare with safe pattern in RecoveryAuthnCodesFormAuthenticator.java lines 86-89:\n  Optional<CredentialModel> optUserCredentialFound = RecoveryAuthnCodesUtils.getCredential(authenticatedUser);\n  if (optUserCredentialFound.isPresent()) { ... }",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+        "services/src/main/java/org/keycloak/forms/login/freemarker/FreeMarkerLoginFormsProvider.java",
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/RecoveryAuthnCodesFormAuthenticator.java"
+      ]
+    },
+    {
+      "comment_id": 2743703904,
+      "file": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+      "line": 232,
+      "droid_claim": "[P1] NullPointerException in getCredentials() when user is not in backing map\n\n`getCredentials()` assigns `var myUser = getMyUser(user);` and then dereferences `myUser.recoveryCodes` / `myUser.otp` without a null guard. If `getMyUser` returns null (user not present in the `users` map), this will NPE; other methods in this class explicitly check for null after fetching the user.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "runtime_error",
+      "impact": "If getCredentials() is called for a user not in the backing map, a NullPointerException will be thrown. This is a test provider so production impact is minimal, but it's inconsistent with other methods in the same class.",
+      "reasoning": "getCredentials() at line 231 calls getMyUser(user) which returns users.get(translateUserName(user.getUsername())), and this can return null if the user is not in the map. Line 234 then accesses myUser.recoveryCodes without a null check, which would throw NPE. Other methods in the same class handle this correctly: getDisableableCredentialTypesStream (line 250) checks 'if (myUser != null && myUser.otp != null)', and isConfiguredFor (line 258) checks 'if (myUser == null) return false'. The inconsistency confirms this is a genuine missing null guard.",
+      "code_evidence": "getCredentials() lines 231-247:\n  var myUser = getMyUser(user);\n  ...\n  if (myUser.recoveryCodes != null) {  // NPE if myUser is null\n\nCompare with getDisableableCredentialTypesStream() line 250:\n  MyUser myUser = getMyUser(user);\n  if (myUser != null && myUser.otp != null) {\n\nAnd isConfiguredFor() line 258:\n  MyUser myUser = getMyUser(user);\n  if (myUser == null) return false;",
+      "files_explored": [
+        "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java"
+      ]
+    }
+  ]
+}

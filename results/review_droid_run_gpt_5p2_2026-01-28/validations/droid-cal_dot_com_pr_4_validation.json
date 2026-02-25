@@ -1,0 +1,6 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 4,
+  "pr_title": "feat: convert InsightsBookingService to use Prisma.sql raw queries",
+  "validations": []
+}

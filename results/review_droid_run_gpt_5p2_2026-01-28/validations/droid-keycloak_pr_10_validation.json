@@ -1,0 +1,40 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 10,
+  "pr_title": "Fix concurrent group access to prevent NullPointerException",
+  "validations": [
+    {
+      "comment_id": 2743689930,
+      "file": "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+      "line": 275,
+      "droid_claim": "[P1] Contract violation: getSubGroupsCount() can return null\n\n`GroupModel.getSubGroupsCount()` is documented to never return `null`, but this implementation returns `null` when `modelSupplier.get()` returns `null`. That violates the interface contract and can introduce NPEs in callers that rely on non-null. Consider following the existing adapter pattern and throwing `IllegalStateException(\"Not found in database\")` (as done by `getDelegateForUpdate()` / `isUpdated()`) or otherwise guaranteeing a non-null `Long`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Callers of getSubGroupsCount() that rely on the non-null contract (as documented in GroupModel.java: \"Never returns {@code null}\") will get a NullPointerException when the underlying model has been concurrently deleted.",
+      "reasoning": "The GroupModel interface at line 298 explicitly documents getSubGroupsCount() with '@return The number of groups beneath this group. Never returns {@code null}.' The PR changes GroupAdapter.getSubGroupsCount() from 'return getGroupModel().getSubGroupsCount()' to 'return model == null ? null : model.getSubGroupsCount()', which explicitly returns null when modelSupplier.get() returns null. This violates the interface contract. Other methods in the same class (like getSubGroupsStream at line 237-246) handle the null case by calling getDelegateForUpdate() instead of returning null. The Droid's suggestion to throw IllegalStateException or follow the existing pattern is correct.",
+      "code_evidence": "GroupModel.java lines 293-299:\n/**\n * Returns the number of groups contained beneath this group.\n * @return The number of groups beneath this group. Never returns {@code null}.\n */\ndefault Long getSubGroupsCount() { ... }\n\nGroupAdapter.java lines 272-276 (PR change):\npublic Long getSubGroupsCount() {\n    if (isUpdated()) return updated.getSubGroupsCount();\n    GroupModel model = modelSupplier.get();\n    return model == null ? null : model.getSubGroupsCount();\n}",
+      "files_explored": [
+        "model/infinispan/src/main/java/org/keycloak/models/cache/infinispan/GroupAdapter.java",
+        "server-spi/src/main/java/org/keycloak/models/GroupModel.java"
+      ]
+    },
+    {
+      "comment_id": 2743690150,
+      "file": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+      "line": 148,
+      "droid_claim": "[P1] Flaky test: spawned reader thread is never joined before asserting\n\nThe test starts a reader thread, sets `deletedAll` to true, and immediately asserts `caughtExceptions` is empty without waiting for the thread to finish. This can miss exceptions thrown after the assertion and can leak a live thread into subsequent tests. Store the thread in a variable and `join()` it (with a timeout) before asserting, and ensure the thread is stopped in a `finally` block so cleanup happens even if deletion fails.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "race_condition",
+      "impact": "The test can pass even when the reader thread encounters exceptions, because the assertion on caughtExceptions runs before the thread finishes its current iteration. The thread is also leaked, potentially interfering with subsequent tests.",
+      "reasoning": "The test at lines 140-158 creates a thread with 'new Thread(...)' without storing the reference. The thread loops while !deletedAll.get(), reading groups. After deletion completes (line 155), deletedAll is set to true (line 156), and the assertion runs immediately (line 158). However, the reader thread may still be mid-request when deletedAll becomes true — if that request throws an exception, it gets added to caughtExceptions after the assertion has already passed. Additionally, the thread reference is never stored, so join() cannot be called. There is no finally block to ensure cleanup if deletion throws.",
+      "code_evidence": "GroupTest.java lines 140-158:\nnew Thread(() -> {\n    while (!deletedAll.get()) {\n        try {\n            managedRealm.admin().groups().groups(null, 0, Integer.MAX_VALUE, true);\n        } catch (Exception e) {\n            caughtExceptions.add(e);\n        }\n    }\n}).start();\n\n// delete groups\ngroupUuuids.forEach(groupUuid -> {\n    managedRealm.admin().groups().group(groupUuid).remove();\n});\ndeletedAll.set(true);\n\nassertThat(caughtExceptions, Matchers.empty());",
+      "files_explored": [
+        "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java"
+      ]
+    }
+  ]
+}

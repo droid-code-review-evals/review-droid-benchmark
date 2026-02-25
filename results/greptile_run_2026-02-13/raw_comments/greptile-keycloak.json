@@ -1,0 +1,202 @@
+{
+  "repo": "greptile-keycloak",
+  "fetched_by": "greptile-apps[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "Fixing Re-authentication with passkeys",
+      "review_comments": [
+        {
+          "id": 2806454582,
+          "body": "missing required parameter `user` - method `isConditionalPasskeysEnabled(UserModel user)` requires a user parameter\n\n```suggestion\n        if (context.getUser() != null && !isConditionalPasskeysEnabled(context.getUser())) {\n```",
+          "path": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernameForm.java",
+          "line": 47,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:23Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/1#discussion_r2806454582"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "Add caching support for IdentityProviderStorageProvider.getForLogin operations",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "actual_pr_number": 3,
+      "title": "Add AuthzClientCryptoProvider for authorization client cryptographic operations",
+      "review_comments": [
+        {
+          "id": 2806461739,
+          "body": "these lines create encoder instances and write data to them, but the results are discarded and never used. They have no effect on the final return value.\n\n```suggestion\n                // These lines are unnecessary - removed dead code\n```",
+          "path": "authz/client/src/main/java/org/keycloak/authorization/client/util/crypto/AuthzClientCryptoProvider.java",
+          "line": 115,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:35Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/3#discussion_r2806461739"
+        },
+        {
+          "id": 2806461800,
+          "body": "string concatenation creates extra trailing comma and space. Use `String.join` for cleaner output\n\n```suggestion\n                String ignoredProviders = foundProviders.subList(1, foundProviders.size()).stream()\n                    .map(p -> p.getClass().getName())\n                    .collect(java.util.stream.Collectors.joining(\", \"));\n                logger.debugf(\"Ignored crypto providers: %s\", ignoredProviders);\n```",
+          "path": "common/src/main/java/org/keycloak/common/crypto/CryptoIntegration.java",
+          "line": 67,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:36Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/3#discussion_r2806461800"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "Add rolling-updates feature flag and compatibility framework",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Add Client resource type and scopes to authorization schema",
+      "review_comments": [
+        {
+          "id": 2806461323,
+          "body": "`canMapRoles` doesn't check if user has `MANAGE` permission, unlike V1 which allows manage to perform all role operations. Consider if users with `MANAGE` should also be able to map roles.\n\nCompare with:\n- `canConfigure` (line 58) checks `canManage(client)` first\n- `canView` (line 77) checks `canView()` and `canConfigure(client)` first\n\nSame applies to `canMapCompositeRoles` and `canMapClientScopeRoles`.",
+          "path": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+          "line": 92,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:30Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/5#discussion_r2806461323"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Add Groups resource type and scopes to authorization schema",
+      "review_comments": [
+        {
+          "id": 2806460464,
+          "body": "incorrect scopes checked in `canManage()` - should check `MANAGE` scope only, not `VIEW`\n\n```suggestion\n        return hasPermission(null, AdminPermissionsSchema.MANAGE);\n```",
+          "path": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+          "line": 69,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:16Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/6#discussion_r2806460464"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "Add HTML sanitizer for translated message resources",
+      "review_comments": [
+        {
+          "id": 2806463804,
+          "body": "logic error in anchor validation - when anchors match, it replaces the English anchor text in the translated value string, which corrupts the value. The function should either strip anchors from both strings for comparison separately, or just validate without modifying the value.\n\nCurrent flow:\n1. Find `<a href=\"X\">` in value (translated)\n2. Find `<a href=\"X\">` in englishValue\n3. If they match \u2192 replace englishValue's anchor IN the value string (wrong!)\n\nThis causes the translated string to have English anchor text removed instead of the translated anchor.",
+          "path": "misc/theme-verifier/src/main/java/org/keycloak/themeverifier/VerifyMessageProperties.java",
+          "line": 162,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:15:07Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/7#discussion_r2806463804"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "Implement access token context encoding framework",
+      "review_comments": [
+        {
+          "id": 2806463204,
+          "body": "Wrong parameter validated - checking `grantType` instead of `rawTokenId`\n\n```suggestion\n        Objects.requireNonNull(rawTokenId, \"Null rawTokenId not allowed\");\n```",
+          "path": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+          "line": 73,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:59Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/8#discussion_r2806463204"
+        },
+        {
+          "id": 2806463246,
+          "body": "Logic inverted - returns false when grant type matches, should return true\n\n```suggestion\n                if (!items[0].substring(4, 6).equals(expectedGrantShortcut)) return false;\n```",
+          "path": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+          "line": 483,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:15:00Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/8#discussion_r2806463246"
+        },
+        {
+          "id": 2806463298,
+          "body": "Grant type shortcut position incorrect - starts at index 4, not 3. Format is `[sessionType:2chars][tokenType:2chars][grantType:2chars]:rawId`\n\n```suggestion\n                if (!items[0].substring(4, 6).equals(expectedGrantShortcut)) return false;\n```",
+          "path": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+          "line": 483,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:15:01Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/8#discussion_r2806463298"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "Implement recovery key support for user storage providers",
+      "review_comments": [
+        {
+          "id": 2806457036,
+          "body": "missing null check before calling `.get()` - will throw `NoSuchElementException` if credential not found\n\n```suggestion\n        Optional<CredentialModel> credentialModelOpt = RecoveryAuthnCodesUtils.getCredential(user);\n        if (credentialModelOpt.isEmpty()) {\n            throw new IllegalStateException(\"Recovery codes credential not found for user\");\n        }\n        RecoveryAuthnCodesCredentialModel recoveryCodeCredentialModel = RecoveryAuthnCodesCredentialModel.createFromCredentialModel(credentialModelOpt.get());\n```",
+          "path": "services/src/main/java/org/keycloak/forms/login/freemarker/model/RecoveryAuthnCodeInputLoginBean.java",
+          "line": 19,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:20Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/9#discussion_r2806457036"
+        },
+        {
+          "id": 2806457191,
+          "body": "comparing raw input directly against stored codes - doesn't use hashing, unlike OTP validation which uses proper verification\n\nrecovery codes should be hashed like in `RecoveryAuthnCodesUtils.hashRawCode()`, but this test implementation stores and compares plain text",
+          "path": "testsuite/integration-arquillian/servers/auth-server/services/testsuite-providers/src/main/java/org/keycloak/testsuite/federation/BackwardsCompatibilityUserStorage.java",
+          "line": 340,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:25Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/9#discussion_r2806457191"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "Fix concurrent group access to prevent NullPointerException",
+      "review_comments": [
+        {
+          "id": 2806456545,
+          "body": "race condition: the main thread may complete all deletions and set `deletedAll` before the reader thread starts, causing the test to pass without actually testing concurrent access. also, the reader thread isn't joined, so the test may complete before the thread finishes\n\n```suggestion\n        AtomicBoolean deletedAll = new AtomicBoolean(false);\n        List<Exception> caughtExceptions = new CopyOnWriteArrayList<>();\n        AtomicBoolean readerStarted = new AtomicBoolean(false);\n        \n        // read groups in a separate thread\n        Thread readerThread = new Thread(() -> {\n            readerStarted.set(true);\n            while (!deletedAll.get()) {\n                try {\n                    // just loading briefs\n                    managedRealm.admin().groups().groups(null, 0, Integer.MAX_VALUE, true);\n                } catch (Exception e) {\n                    caughtExceptions.add(e);\n                }\n            }\n        });\n        readerThread.start();\n        \n        // ensure reader thread starts before deletion\n        while (!readerStarted.get()) {\n            Thread.sleep(10);\n        }\n        \n        // delete groups\n        groupUuuids.forEach(groupUuid -> {\n            managedRealm.admin().groups().group(groupUuid).remove();\n        });\n        deletedAll.set(true);\n        \n        readerThread.join(5000); // wait up to 5 seconds\n```",
+          "path": "tests/base/src/test/java/org/keycloak/tests/admin/group/GroupTest.java",
+          "line": 155,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:09Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-keycloak/pull/10#discussion_r2806456545"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

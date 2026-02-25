@@ -1,0 +1,23 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 6,
+  "pr_title": "UX: show complete URL path if website domain is same as instance domain",
+  "validations": [
+    {
+      "comment_id": 2743758870,
+      "file": "app/serializers/user_serializer.rb",
+      "line": 153,
+      "droid_claim": "[P1] `include_website_name` won't be invoked (missing `?` suffix)\n\nActiveModel::Serializers only recognizes conditional include hooks named `include_<attr>?`. As written, `include_website_name` will never run, so `website_name` may be serialized unconditionally (and will also call `website_name` even when `website` is blank). Rename to `include_website_name?` (and keep the `website.present?` guard).",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "website_name is always serialized even when website is blank, bypassing the intended conditional include guard. This causes unnecessary computation and potentially empty/nil website_name values in the API response.",
+      "reasoning": "Every other conditional include method in user_serializer.rb uses the `?` suffix (e.g., include_email?, include_card_image_badge_id?, include_card_image_badge?, include_stats?, include_suspend_reason?, etc.). The method at line 153 is `include_website_name` without `?`, so ActiveModel::Serializers will not recognize it as a conditional include hook. The `website_name` attribute (declared at line 43) will always be serialized, and the `website.present?` guard at line 154 will never be checked by the framework.",
+      "code_evidence": "Line 153: `def include_website_name` (missing `?`)\nAll other include methods have `?`: line 117 `def include_email?`, line 161 `def include_card_image_badge_id?`, line 169 `def include_card_image_badge?`, line 201 `def include_stats?`, etc.",
+      "files_explored": [
+        "app/serializers/user_serializer.rb"
+      ]
+    }
+  ]
+}

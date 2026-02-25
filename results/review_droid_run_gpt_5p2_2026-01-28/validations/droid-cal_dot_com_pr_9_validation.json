@@ -1,0 +1,106 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 9,
+  "pr_title": "Add guest management functionality to existing bookings",
+  "validations": [
+    {
+      "comment_id": 2743711167,
+      "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "line": 46,
+      "droid_claim": "[P0] Team admin/owner authorization check is incorrect (&& instead of ||)\n\n`isTeamAdminOrOwner` currently requires the user to be BOTH team admin AND team owner, which will incorrectly deny legitimate team admins. Replace the `&&` with `||` (or just call a single helper that checks for either role) so admins or owners can add guests as intended.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "Team admins who are not owners are incorrectly denied permission to add guests to bookings. Only team owners can pass this check because isTeamOwner requires role=OWNER, so the && means admins (role=ADMIN) always fail.",
+      "reasoning": "Line 45-46 uses && between isTeamAdmin() and isTeamOwner(). isTeamAdmin() checks for role ADMIN or OWNER (via OR clause in Prisma query), while isTeamOwner() checks strictly for role=OWNER. With &&, a user with role=ADMIN passes isTeamAdmin but fails isTeamOwner, making the combined result false. Only OWNER role passes both. Should be || so that either admin or owner status grants access.",
+      "code_evidence": "addGuests.handler.ts:45-46:\n  const isTeamAdminOrOwner =\n    (await isTeamAdmin(user.id, booking.eventType?.teamId ?? 0)) &&\n    (await isTeamOwner(user.id, booking.eventType?.teamId ?? 0));\n\nteams/index.ts isTeamAdmin query: OR: [{ role: \"ADMIN\" }, { role: \"OWNER\" }]\nteams/index.ts isTeamOwner query: role: \"OWNER\"",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+        "packages/lib/server/queries/teams/index.ts"
+      ]
+    },
+    {
+      "comment_id": 2743711456,
+      "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "line": 60,
+      "droid_claim": "[P1] Possible server error when booking.userId is null\n\nThe organizer lookup uses `booking.userId || 0` and then `findFirstOrThrow`. If `booking.userId` is null, this queries for `id: 0` and throws, resulting in an unexpected 500 rather than a controlled TRPC error. Add an explicit guard for missing `booking.userId` (and return a meaningful TRPCError) before querying.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "If booking.userId is null (e.g., team event without a specific organizer), the query searches for user with id=0, which doesn't exist, causing findFirstOrThrow to throw an uncontrolled Prisma error resulting in a 500 instead of a meaningful TRPC error.",
+      "reasoning": "Line 58-65: booking.userId is nullable (it's fetched from DB without a non-null assertion). The fallback `booking.userId || 0` queries for id: 0 which will never match a real user. findFirstOrThrow then throws a PrismaClientKnownRequestError which surfaces as an unhandled 500 rather than a controlled TRPCError with a user-friendly message.",
+      "code_evidence": "addGuests.handler.ts:58-65:\n  const organizer = await prisma.user.findFirstOrThrow({\n    where: {\n      id: booking.userId || 0,\n    },\n    ...\n  });",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts"
+      ]
+    },
+    {
+      "comment_id": 2743711711,
+      "file": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+      "line": 77,
+      "droid_claim": "[P2] Guest email blacklist check can be bypassed via casing\n\nBlacklist entries are normalized to lowercase, but input guest emails are compared without normalization. A blacklisted address like `blocked@example.com` can slip through by submitting a different case variant. Lowercase (or otherwise normalize) `guest` before comparing against `blacklistedGuestEmails`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "security",
+      "impact": "A blacklisted email address can be bypassed by using different casing (e.g., Blocked@Example.com), allowing unauthorized guests to be added to bookings.",
+      "reasoning": "Lines 69-71 normalize blacklist entries to lowercase: `.map((email) => email.toLowerCase())`. But line 75 compares `guest` (from user input) without lowercasing: `!blacklistedGuestEmails.includes(guest)`. Since email addresses are case-insensitive per RFC 5321, submitting 'BLOCKED@example.com' would bypass the lowercase blacklist entry 'blocked@example.com'.",
+      "code_evidence": "addGuests.handler.ts:69-77:\n  const blacklistedGuestEmails = process.env.BLACKLISTED_GUEST_EMAILS\n    ? process.env.BLACKLISTED_GUEST_EMAILS.split(\",\").map((email) => email.toLowerCase())\n    : [];\n  const uniqueGuests = guests.filter(\n    (guest) =>\n      !booking.attendees.some((attendee) => guest === attendee.email) &&\n      !blacklistedGuestEmails.includes(guest)  // guest not lowercased\n  );",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts"
+      ]
+    },
+    {
+      "comment_id": 2743711939,
+      "file": "apps/web/components/dialog/AddGuestsDialog.tsx",
+      "line": 55,
+      "droid_claim": "[P1] Empty email fields break validation and prevent submitting valid emails\n\nThe dialog initializes `multiEmailValue` as `[\"\"]` and allows adding more empty fields. `handleAdd` validates the raw array, so a mix like `[\"valid@test.com\", \"\"]` fails `z.string().email()` and blocks adding guests even though there is at least one valid address. Filter out empty/whitespace-only strings before validation/mutation (and consider trimming) to avoid false validation failures.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Users cannot add guests if any email field is left empty, even when other fields contain valid emails. The initial state already contains one empty string, so adding a single valid email alongside it will fail validation.",
+      "reasoning": "multiEmailValue is initialized as [\"\"] (line 34). The validation schema z.array(z.string().email()) requires every element to be a valid email. handleAdd() passes the raw multiEmailValue to safeParse without filtering empty strings. So [\"valid@test.com\", \"\"] fails because \"\" is not a valid email, blocking the entire submission.",
+      "code_evidence": "AddGuestsDialog.tsx:34:\n  const [multiEmailValue, setMultiEmailValue] = useState<string[]>([\"\"]);\n\nAddGuestsDialog.tsx:49-56:\n  const handleAdd = () => {\n    if (multiEmailValue.length === 0) return;\n    const validationResult = ZAddGuestsInputSchema.safeParse(multiEmailValue);\n    if (validationResult.success) {\n      addGuestsMutation.mutate({ bookingId, guests: multiEmailValue });\n    } else {\n      setIsInvalidEmail(true);\n    }\n  };",
+      "files_explored": [
+        "apps/web/components/dialog/AddGuestsDialog.tsx"
+      ]
+    },
+    {
+      "comment_id": 2743712184,
+      "file": "apps/web/components/dialog/AddGuestsDialog.tsx",
+      "line": 59,
+      "droid_claim": "[P2] Validation error can persist when dialog is dismissed via overlay\n\n`isInvalidEmail` is only reset on Cancel, but `Dialog` can also be closed via `onOpenChange` (e.g., clicking outside). If a user previously triggered the error, closing/reopening via the overlay will keep showing the stale error state. Reset `isInvalidEmail` when the dialog transitions from open to closed.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "Users who dismiss the dialog by clicking outside (overlay) instead of clicking Cancel will see a stale validation error message when they reopen the dialog.",
+      "reasoning": "The Cancel button handler (lines 87-91) explicitly resets isInvalidEmail to false. But the Dialog's onOpenChange prop is set to setIsOpenDialog, which only toggles the open state without resetting isInvalidEmail or multiEmailValue. Closing via overlay click triggers onOpenChange but not the Cancel handler, leaving stale state.",
+      "code_evidence": "AddGuestsDialog.tsx:59:\n  <Dialog open={isOpenDialog} onOpenChange={setIsOpenDialog}>\n\nCancel button (lines 87-91) resets state:\n  onClick={() => {\n    setMultiEmailValue([\"\"]);\n    setIsInvalidEmail(false);\n    setIsOpenDialog(false);\n  }}\n\nonOpenChange only calls setIsOpenDialog — no cleanup of isInvalidEmail or multiEmailValue.",
+      "files_explored": [
+        "apps/web/components/dialog/AddGuestsDialog.tsx"
+      ]
+    },
+    {
+      "comment_id": 2743712424,
+      "file": "packages/emails/templates/organizer-add-guests-email.ts",
+      "line": 23,
+      "droid_claim": "[P2] Email sender name ignores EMAIL_FROM_NAME configuration\n\nThis template sets `from` using `APP_NAME`, while other email templates use `EMAIL_FROM_NAME` (which allows overriding the sender name via env). Using `APP_NAME` here makes sender naming inconsistent and ignores the configured `EMAIL_FROM_NAME` value.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "The organizer add-guests email uses APP_NAME as sender name instead of EMAIL_FROM_NAME, making it inconsistent with all other email templates and ignoring any custom EMAIL_FROM_NAME configuration.",
+      "reasoning": "All other email templates (30+ files) import and use EMAIL_FROM_NAME for the from field. The parent class OrganizerScheduledEmail itself uses EMAIL_FROM_NAME. This new template overrides getNodeMailerPayload and incorrectly uses APP_NAME instead. The attendee version (attendee-add-guests-email.ts) uses organizer.name which is a different pattern but acceptable for attendee emails.",
+      "code_evidence": "organizer-add-guests-email.ts:23:\n  from: `${APP_NAME} <${this.getMailerOptions().from}>`,\n\nParent class organizer-scheduled-email.ts:47:\n  from: `${EMAIL_FROM_NAME} <${this.getMailerOptions().from}>`,\n\nAll other templates consistently use EMAIL_FROM_NAME.",
+      "files_explored": [
+        "packages/emails/templates/organizer-add-guests-email.ts",
+        "packages/emails/templates/organizer-scheduled-email.ts",
+        "packages/emails/templates/attendee-add-guests-email.ts"
+      ]
+    }
+  ]
+}

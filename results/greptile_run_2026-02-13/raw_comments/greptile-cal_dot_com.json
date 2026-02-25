@@ -1,0 +1,347 @@
+{
+  "repo": "greptile-cal_dot_com",
+  "fetched_by": "greptile-apps[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "Async import of the appStore packages",
+      "review_comments": [
+        {
+          "id": 2806448868,
+          "body": "`getCalendar` is now async but called synchronously here - this returns a Promise instead of a Calendar object, breaking the calendar initialization\n\n```suggestion\n        const calendar = await getCalendar(credential);\n```",
+          "path": "packages/core/CalendarManager.ts",
+          "line": 28,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:10:06Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/1#discussion_r2806448868"
+        },
+        {
+          "id": 2806449558,
+          "body": "async function in `.forEach()` won't be awaited - calendar deletions will fire-and-forget\n\nReplace with `for...of` or `Promise.all()`:\n```\nfor (const bookingRef of bookingRefsFiltered) {\n  if (bookingRef.uid) {\n    if (bookingRef.type.endsWith(\"_calendar\")) {\n      const calendar = await getCalendar(credentialsMap.get(bookingRef.type));\n      await calendar?.deleteEvent(bookingRef.uid, builder.calendarEvent);\n    } else if (bookingRef.type.endsWith(\"_video\")) {\n      await deleteMeeting(credentialsMap.get(bookingRef.type), bookingRef.uid);\n```",
+          "path": "packages/app-store/vital/lib/reschedule.ts",
+          "line": 131,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:10:18Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/1#discussion_r2806449558"
+        },
+        {
+          "id": 2806449612,
+          "body": "async function in `.forEach()` won't be awaited - calendar deletions will fire-and-forget\n\nReplace with `for...of` or `Promise.all()`:\n```\nfor (const bookingRef of bookingRefsFiltered) {\n  if (bookingRef.uid) {\n    if (bookingRef.type.endsWith(\"_calendar\")) {\n      const calendar = await getCalendar(credentialsMap.get(bookingRef.type));\n      await calendar?.deleteEvent(bookingRef.uid, builder.calendarEvent);\n    } else if (bookingRef.type.endsWith(\"_video\")) {\n      await deleteMeeting(credentialsMap.get(bookingRef.type), bookingRef.uid);\n```",
+          "path": "packages/app-store/wipemycalother/lib/reschedule.ts",
+          "line": 131,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:10:19Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/1#discussion_r2806449612"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "feat: 2fa backup codes",
+      "review_comments": [
+        {
+          "id": 2806448268,
+          "body": "function is named `TwoFactor` but should be `BackupCode` to match the export and actual purpose\n\n```suggestion\nexport default function BackupCode({ center = true }) {\n```",
+          "path": "apps/web/components/auth/BackupCode.tsx",
+          "line": 7,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:53Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/2#discussion_r2806448268"
+        },
+        {
+          "id": 2806448323,
+          "body": "setting array element to `null` instead of removing it creates sparse array with null values that persist in storage\n\n```suggestion\n        backupCodes.splice(index, 1);\n```",
+          "path": "packages/features/auth/lib/next-auth-options.ts",
+          "line": 148,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:54Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/2#discussion_r2806448323"
+        },
+        {
+          "id": 2806448383,
+          "body": "blob URL created but never revoked on component unmount, causing memory leak",
+          "path": "apps/web/components/settings/EnableTwoFactorModal.tsx",
+          "line": 98,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:55Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/2#discussion_r2806448383"
+        },
+        {
+          "id": 2806448455,
+          "body": "revoking URL before checking if it exists will throw error on first call when `backupCodesUrl` is empty string\n\n```suggestion\n        if (backupCodesUrl) URL.revokeObjectURL(backupCodesUrl);\n```",
+          "path": "apps/web/components/settings/EnableTwoFactorModal.tsx",
+          "line": 97,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:56Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/2#discussion_r2806448455"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "actual_pr_number": 3,
+      "title": "fix: handle collective multiple host on destinationCalendar",
+      "review_comments": [
+        {
+          "id": 2806447708,
+          "body": "potential runtime error if `mainHostDestinationCalendar` is `undefined` (when `destinationCalendar` is an empty array or null)\n\n```suggestion\n    if (evt.location === MeetLocationType && mainHostDestinationCalendar?.integration !== \"google_calendar\") {\n```",
+          "path": "packages/core/EventManager.ts",
+          "line": 119,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:43Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/3#discussion_r2806447708"
+        },
+        {
+          "id": 2806447767,
+          "body": "faulty logic - when `externalCalendarId` is truthy, the ternary returns `externalCalendarId` and the `.find()` never executes. when `externalCalendarId` is falsy, the `.find()` compares `cal.externalId === externalCalendarId` (which is always false since `externalCalendarId` is falsy)\n\n```suggestion\n      const selectedCalendar =\n        externalCalendarId ||\n        event.destinationCalendar?.find((cal) => cal.credentialId === this.credential.id)?.externalId;\n```",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 256,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:44Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/3#discussion_r2806447767"
+        },
+        {
+          "id": 2806447840,
+          "body": "same faulty logic as in `updateEvent` - the `.find()` condition will always be false\n\n```suggestion\n      const calendarId =\n        externalCalendarId ||\n        event.destinationCalendar?.find((cal) => cal.credentialId === this.credential.id)?.externalId;\n```",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 317,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:45Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/3#discussion_r2806447840"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "feat: convert InsightsBookingService to use Prisma.sql raw queries",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Comprehensive workflow reminder management for booking lifecycle events",
+      "review_comments": [
+        {
+          "id": 2806446112,
+          "body": "missing null check for `reminder.referenceId` before making API call\n\n```suggestion\n    for (const reminder of remindersToCancel) {\n      if (reminder.referenceId) {\n        await client.request({\n          url: \"/v3/user/scheduled_sends\",\n          method: \"POST\",\n          body: {\n            batch_id: reminder.referenceId,\n            status: \"cancel\",\n          },\n        });\n      }\n```",
+          "path": "packages/features/ee/workflows/api/scheduleEmailReminders.ts",
+          "line": 64,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:08:50Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/5#discussion_r2806446112"
+        },
+        {
+          "id": 2806446142,
+          "body": "`immediateDelete` doesn't delete the database record, only cancels the SendGrid job\n\nWhen `immediateDelete=true`, the function returns early after canceling the SendGrid job but never deletes the `WorkflowReminder` from the database. This leaves orphaned records that are marked as cancelled but never cleaned up.\n\n```suggestion\n    if (immediateDelete) {\n      await client.request({\n        url: \"/v3/user/scheduled_sends\",\n        method: \"POST\",\n        body: {\n          batch_id: referenceId,\n          status: \"cancel\",\n        },\n      });\n      \n      await prisma.workflowReminder.delete({\n        where: {\n          id: reminderId,\n        },\n      });\n      return;\n    }\n```",
+          "path": "packages/features/ee/workflows/lib/reminders/emailReminderManager.ts",
+          "line": 222,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:08:51Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/5#discussion_r2806446142"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Advanced date override handling and timezone compatibility improvements",
+      "review_comments": [
+        {
+          "id": 2806446796,
+          "body": "`end` should be calculated using `slotEndTime` not `slotStartTime`. Currently both `start` and `end` use the same time.\n\n```suggestion\n        const end = slotEndTime.hour() * 60 + slotEndTime.minute();\n```",
+          "path": "packages/trpc/server/routers/viewer/slots.ts",
+          "line": 142,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:13Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/6#discussion_r2806446796"
+        },
+        {
+          "id": 2806446825,
+          "body": "Dayjs object comparison using `===` always returns false. Should use `.isSame()` method for time equality check.\n\n```suggestion\n        if (dayjs(date.start).add(utcOffset, \"minutes\").isSame(dayjs(date.end).add(utcOffset, \"minutes\"))) {\n```",
+          "path": "packages/trpc/server/routers/viewer/slots.ts",
+          "line": 114,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:14Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/6#discussion_r2806446825"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "OAuth credential sync and app integration enhancements",
+      "review_comments": [
+        {
+          "id": 2806451566,
+          "body": "missing import - `prisma` is undefined\n\n```suggestion\nimport prisma from \"@calcom/prisma\";\n```\n\nadd this import at the top of the file",
+          "path": "packages/app-store/salesforce/lib/CalendarService.ts",
+          "line": 96,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:07Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451566"
+        },
+        {
+          "id": 2806451600,
+          "body": "mutating the validated response data after parsing violates type safety - if refresh_token is missing, this will cause issues downstream\n\nConsider including refresh_token as optional in the schema instead",
+          "path": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+          "line": 27,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:08Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451600"
+        },
+        {
+          "id": 2806451622,
+          "body": "timing attack vulnerability - string comparison with !== allows attackers to guess the webhook secret character-by-character\n\nUse a constant-time comparison function instead",
+          "path": "apps/web/pages/api/webhook/app-credential.ts",
+          "line": 28,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:09Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451622"
+        },
+        {
+          "id": 2806451661,
+          "body": "empty string fallback bypasses encryption - if CALCOM_APP_CREDENTIAL_ENCRYPTION_KEY is not set, symmetricDecrypt will fail or use an empty key\n\nThis should fail fast instead of silently using an empty string",
+          "path": "apps/web/pages/api/webhook/app-credential.ts",
+          "line": 59,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:10Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451661"
+        },
+        {
+          "id": 2806451706,
+          "body": "missing error handling - if the fetch fails or returns non-ok status, errors won't be caught\n\nAdditionally, missing Content-Type header may cause the endpoint to reject the request",
+          "path": "packages/app-store/_utils/oauth/refreshOAuthTokens.ts",
+          "line": 14,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:11Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451706"
+        },
+        {
+          "id": 2806451747,
+          "body": "computed property syntax in Zod schemas is invalid and will cause runtime errors - use .passthrough() method instead to allow extra properties",
+          "path": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+          "line": 11,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:12Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451747"
+        },
+        {
+          "id": 2806451798,
+          "body": "type mismatch - parseRefreshTokenResponse returns SafeParseReturnType but code expects the parsed value directly",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 96,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:13Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451798"
+        },
+        {
+          "id": 2806451829,
+          "body": "missing HTTP method check - endpoint should validate req.method === 'POST' before processing",
+          "path": "apps/web/pages/api/webhook/app-credential.ts",
+          "line": 31,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:11:14Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/7#discussion_r2806451829"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "SMS workflow reminder retry count tracking",
+      "review_comments": [
+        {
+          "id": 2806446913,
+          "body": "The `OR` logic deletes reminders that satisfy EITHER condition, which means ALL workflow reminders (SMS and non-SMS) with `retryCount > 1` are deleted regardless of their `scheduledDate` or `method`. This will delete valid reminders from other workflow types.\n\nThe `OR` should be `AND`, and the `retryCount` check should be inside the first condition:\n\n```suggestion\n      OR: [\n        {\n          method: WorkflowMethods.SMS,\n          scheduledDate: {\n            lte: dayjs().toISOString(),\n          },\n          retryCount: {\n            gt: 1,\n          },\n        },\n      ],\n```",
+          "path": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+          "line": 42,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:18Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/8#discussion_r2806446913"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "Add guest management functionality to existing bookings",
+      "review_comments": [
+        {
+          "id": 2806447882,
+          "body": "authorization logic uses AND instead of OR - will always evaluate to false for team bookings\n\n```suggestion\n  const isTeamAdminOrOwner =\n    (await isTeamAdmin(user.id, booking.eventType?.teamId ?? 0)) ||\n    (await isTeamOwner(user.id, booking.eventType?.teamId ?? 0));\n```",
+          "path": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+          "line": 48,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:45Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/9#discussion_r2806447882"
+        },
+        {
+          "id": 2806447941,
+          "body": "filtering doesn't lowercase guest emails before comparison - blacklist bypass if guest email has uppercase letters\n\n```suggestion\n  const uniqueGuests = guests.filter(\n    (guest) =>\n      !booking.attendees.some((attendee) => guest.toLowerCase() === attendee.email.toLowerCase()) &&\n      !blacklistedGuestEmails.includes(guest.toLowerCase())\n  );\n```",
+          "path": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+          "line": 77,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:46Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/9#discussion_r2806447941"
+        },
+        {
+          "id": 2806447987,
+          "body": "allows submitting with empty email array - should validate array has valid emails\n\n```suggestion\n  const handleAdd = () => {\n    const nonEmptyEmails = multiEmailValue.filter(email => email.trim() !== \"\");\n    if (nonEmptyEmails.length === 0) {\n      return;\n    }\n    const validationResult = ZAddGuestsInputSchema.safeParse(nonEmptyEmails);\n```",
+          "path": "apps/web/components/dialog/AddGuestsDialog.tsx",
+          "line": 51,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:47Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/9#discussion_r2806447987"
+        },
+        {
+          "id": 2806448039,
+          "body": "silently swallows email errors without logging details or notifying user - may hide delivery failures",
+          "path": "packages/trpc/server/routers/viewer/bookings/addGuests.handler.ts",
+          "line": 171,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:48Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/9#discussion_r2806448039"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "feat: add calendar cache status and actions (#22532)",
+      "review_comments": [
+        {
+          "id": 2806447187,
+          "body": "Passing an empty object may not trigger Prisma's `@updatedAt` decorator since it only updates the timestamp when actual data changes. Consider explicitly setting `updatedAt`:\n\n```suggestion\n    await SelectedCalendarRepository.updateManyByCredentialId(this.credential.id, { updatedAt: new Date() });\n```",
+          "path": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+          "line": 1024,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:09:27Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-cal_dot_com/pull/10#discussion_r2806447187"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

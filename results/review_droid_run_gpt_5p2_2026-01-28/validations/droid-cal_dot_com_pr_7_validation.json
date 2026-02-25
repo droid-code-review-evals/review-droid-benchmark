@@ -1,0 +1,106 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 7,
+  "pr_title": "OAuth credential sync and app integration enhancements",
+  "validations": [
+    {
+      "comment_id": 2743700919,
+      "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+      "line": 10,
+      "droid_claim": "[P0] Broken Zod schema for token responses\n\n`minimumTokenResponseSchema` uses `[z.string().toString()]` keys, which evaluates to a literal string (e.g. \"ZodString\") rather than matching arbitrary response keys; this will not validate real OAuth token payloads. Use `.passthrough()`/`.catchall(z.unknown())` and explicitly model known fields (e.g. `access_token`, `expires_in`/`expiry_date`) or use `z.record(z.unknown())` + refinement.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "The minimumTokenResponseSchema uses computed property keys like [z.string().toString()] which evaluate to literal strings like 'ZodString', not dynamic matchers. This means the schema will reject valid OAuth token responses that don't have a literal 'ZodString' key, causing parseRefreshTokenResponse to throw 'Invalid refreshed tokens were returned' when APP_CREDENTIAL_SHARING_ENABLED is true.",
+      "reasoning": "Line 7-9: `[z.string().toString()]` evaluates to the string representation of a ZodString schema object, which is a literal string like 'ZodString'. This is used as a computed property key in z.object(), meaning the schema expects a literal property named 'ZodString' with type z.number(), not any arbitrary string key. Similarly line 10 does the same with z.string().optional().toString(). Real OAuth responses have keys like 'expires_in', 'expiry_date', 'token_type' etc., none of which are 'ZodString'. The schema will fail safeParse on valid token responses.",
+      "code_evidence": "Lines 5-11:\nconst minimumTokenResponseSchema = z.object({\n  access_token: z.string(),\n  [z.string().toString()]: z.number(),\n  [z.string().optional().toString()]: z.unknown().optional(),\n});",
+      "files_explored": [
+        "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts"
+      ]
+    },
+    {
+      "comment_id": 2743700915,
+      "file": "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+      "line": 26,
+      "droid_claim": "[P1] Dummy refresh_token assignment breaks refresh flows\n\nWhen `refresh_token` is missing, the code assigns the literal string \"refresh_token\", which will later be treated as a real token and cause confusing auth failures. Instead, either keep the existing stored refresh token (passed in by caller), or throw/handle providers that don't return refresh_token on refresh.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When a provider doesn't return a refresh_token in its response (common for Google which only returns it on initial authorization), the code sets refresh_token to the literal string 'refresh_token'. This corrupted value will be persisted to the database and used in subsequent refresh attempts, causing auth failures.",
+      "reasoning": "Line 26-28: When `refreshTokenResponse.data.refresh_token` is falsy, the code assigns the literal string 'refresh_token' instead of preserving the original refresh token from the credential. Many OAuth providers (e.g., Google) don't return refresh_token on token refresh - only on initial authorization. Storing the literal string 'refresh_token' will corrupt the credential and break future refresh flows.",
+      "code_evidence": "Lines 24-28:\nif (!refreshTokenResponse.data.refresh_token) {\n  refreshTokenResponse.data.refresh_token = \"refresh_token\";\n}",
+      "files_explored": [
+        "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts",
+        "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "packages/app-store/salesforce/lib/CalendarService.ts"
+      ]
+    },
+    {
+      "comment_id": 2743700917,
+      "file": "apps/web/pages/api/webhook/app-credential.ts",
+      "line": 56,
+      "droid_claim": "[P1] Missing try/catch around decrypt + JSON.parse\n\n`symmetricDecrypt(...)` and `JSON.parse(...)` can throw on malformed input; currently this will bubble as a 500. Wrap decryption/parsing in try/catch and return a 400 with a generic error so invalid payloads don't crash the route.",
+      "verdict": "false_positive",
+      "confidence": "medium",
+      "severity": "none",
+      "bug_type": "false_positive",
+      "impact": "While technically symmetricDecrypt and JSON.parse can throw, this is a webhook endpoint protected by a webhook secret header check. Malformed payloads would only come from the trusted credential sync service. The Zod schema validation on req.body (line 34) also ensures the keys field is a string. An unhandled exception would produce a 500, which is acceptable error handling for an internal webhook - it's a hardening suggestion, not a bug.",
+      "reasoning": "The endpoint is already protected by webhook secret validation (lines 26-31) and Zod schema validation (line 34). Only the trusted CALCOM_CREDENTIAL_SYNC service would call this endpoint with the correct secret. A 500 from malformed decrypt input is standard error handling behavior for an internal service endpoint, not a functional bug. The Droid's suggestion is a code quality improvement, not a real bug.",
+      "code_evidence": "Lines 56-58:\nconst keys = JSON.parse(\n  symmetricDecrypt(reqBody.keys, process.env.CALCOM_APP_CREDENTIAL_ENCRYPTION_KEY || \"\")\n);",
+      "files_explored": [
+        "apps/web/pages/api/webhook/app-credential.ts"
+      ]
+    },
+    {
+      "comment_id": 2743700918,
+      "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+      "line": 92,
+      "droid_claim": "[P1] Refreshed Salesforce tokens not used for new Connection\n\nAfter refreshing and persisting the new token, the `jsforce.Connection` is still created from the pre-refresh `credentialKey` values, so it may continue using an expired access token/instance URL. Use `accessTokenParsed.data` (or the merged updated key) when constructing the connection.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "After refreshing the Salesforce OAuth token and persisting the new access token to the database, the jsforce.Connection is constructed using the old credentialKey values (lines 99-105). This means the connection uses the expired/old access_token and potentially stale instance_url, which will cause API calls to fail with auth errors.",
+      "reasoning": "Lines 87-105: The code fetches a new access token, parses it with parseRefreshTokenResponse, and saves it to DB. But then on line 99-105, new jsforce.Connection() uses credentialKey.instance_url and credentialKey.access_token - the OLD values from before the refresh. The refreshed accessTokenParsed.data values are only persisted to DB but not used for the current connection.",
+      "code_evidence": "Lines 92-105:\nconst accessTokenParsed = parseRefreshTokenResponse(accessTokenJson, salesforceTokenSchema);\n...\nawait prisma.credential.update({\n  where: { id: credential.id },\n  data: { key: { ...accessTokenParsed.data, refresh_token: credentialKey.refresh_token } },\n});\n\nreturn new jsforce.Connection({\n  ...\n  instanceUrl: credentialKey.instance_url,  // OLD value\n  accessToken: credentialKey.access_token,   // OLD value\n  ...\n});",
+      "files_explored": [
+        "packages/app-store/salesforce/lib/CalendarService.ts"
+      ]
+    },
+    {
+      "comment_id": 2743700920,
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 95,
+      "droid_claim": "[P0] Saving SafeParseResult instead of credential key\n\n`parseRefreshTokenResponse(...)` returns a Zod safe-parse result object `{ success, data }`, but the code stores that wrapper as `key` in Prisma instead of `key.data`. This will corrupt the credential `key` shape in the DB and likely break later reads/parses. Use the parsed `data` payload when persisting.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "data_corruption",
+      "impact": "The credential key in the database gets overwritten with a Zod SafeParseResult object { success: true, data: {...} } instead of the actual credential data. Subsequent reads of the credential will fail to parse because the key shape is wrong, breaking Google Calendar integration for the user until the credential is re-created.",
+      "reasoning": "parseRefreshTokenResponse (line 31 of that file) returns `refreshTokenResponse` which is the result of `schema.safeParse(response)` - a SafeParseResult with shape { success, data, error }. In GoogleCalendarService line 95, `const key = parseRefreshTokenResponse(googleCredentials, googleCredentialSchema)` stores this SafeParseResult. Then line 96-99 does `prisma.credential.update({ data: { key } })`, persisting the wrapper object instead of `key.data`. The googleCredentialSchema parser will fail on subsequent reads.",
+      "code_evidence": "parseRefreshTokenResponse.ts line 30: return refreshTokenResponse; // returns SafeParseResult\n\nGoogleCalendarService.ts lines 95-99:\nconst key = parseRefreshTokenResponse(googleCredentials, googleCredentialSchema);\nawait prisma.credential.update({\n  where: { id: credential.id },\n  data: { key },\n});",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts",
+        "packages/app-store/_utils/oauth/parseRefreshTokenResponse.ts"
+      ]
+    },
+    {
+      "comment_id": 2743700921,
+      "file": "packages/app-store/salesforce/lib/CalendarService.ts",
+      "line": 88,
+      "droid_claim": "[P0] prisma is used without import\n\nThis file calls `prisma.credential.update(...)` but does not import `prisma` from `@calcom/prisma`, which will throw `ReferenceError: prisma is not defined` at runtime during token refresh. Add the missing import.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "Any Salesforce Calendar token refresh will crash with ReferenceError: prisma is not defined, making Salesforce integration completely broken after the initial access token expires.",
+      "reasoning": "Grep confirmed no import of prisma in the file. Line 95 calls `prisma.credential.update(...)` but the file only imports from jsforce, rrule, zod, calcom libs, and local utils - no prisma import. This will throw ReferenceError at runtime.",
+      "code_evidence": "File imports (lines 1-21) do not include prisma. Line 95 uses: await prisma.credential.update({ where: { id: credential.id }, ... })",
+      "files_explored": [
+        "packages/app-store/salesforce/lib/CalendarService.ts"
+      ]
+    }
+  ]
+}

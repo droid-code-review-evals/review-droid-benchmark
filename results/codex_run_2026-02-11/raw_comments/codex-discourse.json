@@ -1,0 +1,184 @@
+{
+  "repo": "codex-discourse",
+  "fetched_by": "chatgpt-codex-connector[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "FEATURE: automatically downsize large images",
+      "review_comments": [
+        {
+          "id": 2785188907,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Avoid redefining `downsize` with incompatible arity**\n\nThe second `downsize` definition overwrites the first one, so callers that pass `(from, to, max_width, max_height, opts)` now raise `ArgumentError` (e.g., `app/jobs/regular/resize_emoji.rb` calls `OptimizedImage.downsize(path, path, 100, 100, opts)`). This change introduces a runtime failure path for emoji resizing and any other 4-arg uses. Consider keeping only one signature or delegating the 4-arg version to the dimensions form.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/models/optimized_image.rb",
+          "line": 149,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:27:12Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/1#discussion_r2785188907"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "FEATURE: per-topic unsubscribe option in emails",
+      "review_comments": [
+        {
+          "id": 2785188589,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Guard missing TopicUser when handling unsubscribe**\n\n`TopicUser.find_by` can return `nil` (e.g., for a user who receives a notification but does not yet have a `topic_users` row, or if `current_user` is nil due to a logged-out unsubscribe link), and the next line calls `tu.notification_level`, which will raise `NoMethodError`. That makes the unsubscribe endpoint crash for those users instead of toggling the state. Consider creating the record (or bailing out) when `tu` is nil before accessing `notification_level`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/controllers/topics_controller.rb",
+          "line": 108,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:27:06Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/2#discussion_r2785188589"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "actual_pr_number": 3,
+      "title": "Add comprehensive email validation for blocked users",
+      "review_comments": [
+        {
+          "id": 2785191965,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Normalize blocked email lookups to avoid case bypass**\n\nBlockedEmail lookups are currently case-sensitive (`where(email: email)`), so a blocked address stored as `bad@spam.com` will not match user input like `Bad@spam.com`. Discourse already normalizes emails elsewhere (e.g., login uses `Email.downcase`), so users can bypass the block by changing case. Consider normalizing the input (and/or stored values) with `Email.downcase` before querying so blocked emails are enforced consistently.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/models/blocked_email.rb",
+          "line": 13,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:28:02Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/3#discussion_r2785191965"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "Enhance embed URL handling and validation system",
+      "review_comments": [
+        {
+          "id": 2785192990,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use a valid postMessage target origin**\n\nIf the embedding page\u2019s referer includes a path or query (which is the normal case), passing the full URL to `postMessage` makes the targetOrigin invalid in browsers. That causes the resize message to throw/ignore and the iframe never resizes. Use the origin portion (scheme + host + port) or `\"*\"` instead of the full referer so resize works for typical embed URLs.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/views/layouts/embed.html.erb",
+          "line": 11,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:28:22Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/4#discussion_r2785192990"
+        },
+        {
+          "id": 2785192993,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Guard against feeds without content fields**\n\nSome RSS/Atom feeds omit `content` and only provide `description` or `summary`. Calling `i.content.scrub` will raise `NoMethodError` on those feeds, which aborts the poll job and prevents any topics from being imported/updated. Consider falling back to another field or an empty string before calling `scrub`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/jobs/scheduled/poll_feed.rb",
+          "line": 35,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:28:22Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/4#discussion_r2785192993"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Optimize header layout performance with flexbox mixins",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "UX: show complete URL path if website domain is same as instance domain",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "scale-color $lightness must use $secondary for dark themes",
+      "review_comments": [
+        {
+          "id": 2785193562,
+          "body": "**<sub><sub>![P3 Badge](https://img.shields.io/badge/P3-lightgrey?style=flat)</sub></sub>  Keep light-theme helper color unchanged**\n\nIn light themes `dark-light-choose` returns its first argument (see `common/foundation/variables.scss`), so this change makes the light-theme `.custom-message-length` text use `scale-color($primary, $lightness: 30%)` instead of the previous 70%. That noticeably darkens the helper text in light mode, which looks like an accidental regression given the commit intent to adjust dark-theme colors only; consider keeping the first argument at 70% and only shifting the dark-theme value to `$secondary`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/assets/stylesheets/mobile/modal.scss",
+          "line": 103,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:28:33Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/7#discussion_r2785193562"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "FIX: proper handling of group memberships",
+      "review_comments": [
+        {
+          "id": 2785190620,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use ceiling when computing total pages**\n\n`totalPages` currently returns `Math.floor(user_count / limit) + 1`, which over-counts when the total is an exact multiple of the page size (e.g., 100 users with limit 50 yields 3 pages). Because `showingLast` is derived from this value, the \u201cnext\u201d action allows navigating to a final empty page and `findMembers` will request an offset with no results. Using `Math.ceil(user_count / limit)` (or `Math.floor((user_count - 1) / limit) + 1`) prevents the extra blank page.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/assets/javascripts/admin/controllers/admin-group.js.es6",
+          "line": 13,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:27:40Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/8#discussion_r2785190620"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "FEATURE: Localization fallbacks (server-side)",
+      "review_comments": [
+        {
+          "id": 2785190124,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Include parent-locale fallback before default locale**\n\nThis custom fallback list skips the parent locale (e.g., `fr` for `fr_CA`), so lookups that were previously satisfied by a base language will now jump straight to the site default or `:en`. That means users on region-specific locales can see missing/English strings even when a base locale translation exists. This regression happens specifically for locales with regional variants where only the base locale has a translation.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "config/initializers/i18n.rb",
+          "line": 18,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:27:33Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/9#discussion_r2785190124"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "FEATURE: Can edit category/host relationships for embedding",
+      "review_comments": [
+        {
+          "id": 2785190893,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Normalize migrated hosts to avoid breaking existing embeds**\n\nThe migration inserts the raw `embeddable_hosts` setting value directly into `embeddable_hosts.host`. If the existing setting contains entries like `http://example.com` or `example.com/path` (both allowed previously), those strings are persisted verbatim. `EmbeddableHost.record_for_host` later compares `uri.host` (e.g., `example.com`) to the stored value, so these migrated rows will never match and previously allowed embeds will be rejected. This is a regression for any install that used URLs or paths in the old setting; the migration should strip scheme/path before inserting.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+          "line": 26,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:27:44Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/10#discussion_r2785190893"
+        },
+        {
+          "id": 2785190899,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Guard against nil host during validation**\n\nThe `before_validation` hook unconditionally calls `sub!` on `self.host`. If a client submits a blank or missing host (e.g., malformed API usage or bypassing the UI guard), `self.host` will be `nil` and this hook raises `NoMethodError`, returning 500 instead of a validation error. Adding a presence check (or using safe navigation) would preserve the intended validation flow.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "app/models/embeddable_host.rb",
+          "line": 7,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:27:44Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-discourse/pull/10#discussion_r2785190899"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

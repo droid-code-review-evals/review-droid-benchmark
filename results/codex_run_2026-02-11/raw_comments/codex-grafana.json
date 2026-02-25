@@ -1,0 +1,184 @@
+{
+  "repo": "codex-grafana",
+  "fetched_by": "chatgpt-codex-connector[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "Anonymous: Add configurable device limit",
+      "review_comments": [
+        {
+          "id": 2785240964,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Avoid treating no-op UPDATE as device limit breach**\n\nHere `RowsAffected()==0` is used as a proxy for \u201cdevice does not exist\u201d, but MySQL/SQLite can report 0 rows affected when an UPDATE is a no-op (e.g., `updated_at` stored with second precision and two instances update the same device within the same second, or `client_ip`/`user_agent` unchanged). When the limit is reached, that causes `ErrDeviceLimitReached` to be returned for an existing device and the anonymous auth path will reject the request. Consider checking existence separately or only failing when the UPDATE cannot find the `device_id` in the allowed window, rather than relying on `RowsAffected` alone.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+          "line": 95,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:46:44Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/1#discussion_r2785240964"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "AuthZService: improve authz caching",
+      "review_comments": [
+        {
+          "id": 2785234216,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Avoid caching deny before re-checking updated perms**\n\nThis new early return on `permDenialCache` means a previously denied check for a specific resource will keep returning `Allowed: false` until the cache TTL expires, even if the underlying permissions were granted in the meantime. Before this change, a subsequent check would hit `getIdentityPermissions` and observe the updated grant. With the deny cache, permission updates for a resource (e.g., granting access to a dashboard right after a denial) can be ignored for the duration of `shortCacheTTL`, which is a correctness regression for authz decisions.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/services/authz/rbac/service.go",
+          "line": 120,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:44:00Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/2#discussion_r2785234216"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "Advanced Query Processing Architecture",
+      "review_comments": [
+        {
+          "id": 2785239162,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Avoid double-applying template/ad hoc filters in shard splits**\n\nIn the shard-splitting path, `runShardSplitQuery` now pre-applies `applyTemplateVariables` and then `splitQueriesByStreamShard` delegates each subrequest to `runSplitQuery`, which also applies `applyTemplateVariables` (see `querySplitting.ts` around `runSplitQuery`). When sharding is enabled and `request.filters` or template variables are present, this means ad hoc filters and replacements are applied twice, which can duplicate label matchers in the stream selector and yield invalid LogQL or unintended narrowing. Consider skipping the pre-apply here or guarding in `runSplitQuery` to avoid double interpolation.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "public/app/plugins/datasource/loki/shardQuerySplitting.ts",
+          "line": 52,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:45:51Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/4#discussion_r2785239162"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Notification Rule Processing Engine",
+      "review_comments": [
+        {
+          "id": 2785242352,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Guard against empty Grafana groups before mapping rules**\n\nIn GrafanaGroupLoader, `promResponse.data.groups.at(0)?.rules.map(...)` still calls `.map` even when `groups.at(0)` is undefined. If the Prometheus API returns an empty `groups` array (e.g., the group was deleted or contains no rules), this expression becomes `undefined.map(...)` and the component crashes. Consider using `promResponse.data.groups.at(0)?.rules?.map(...)` or defaulting to an empty array to keep the list view stable for empty groups.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "public/app/features/alerting/unified/rule-list/GrafanaGroupLoader.tsx",
+          "line": 69,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:47:25Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/5#discussion_r2785242352"
+        },
+        {
+          "id": 2785242353,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Silence action becomes a no-op for prom-only list items**\n\nGrafanaRuleListItem now renders `RuleActionsButtons` with only `promRule`, so `rulerRule` is undefined for list view items. In RuleActionsButtons the silence drawer is rendered only when `rulerRuleType.grafana.alertingRule(rule)` is true, which never happens for prom-only items. As a result, the \u201cSilence notifications\u201d menu item can appear (abilities are checked via prom rule) but clicking it does nothing because the drawer never mounts. Either hide the silence menu without a ruler rule or update the drawer to accept the prom rule path.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "public/app/features/alerting/unified/rule-list/GrafanaRuleListItem.tsx",
+          "line": 48,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:47:25Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/5#discussion_r2785242353"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Dual Storage Architecture",
+      "review_comments": [
+        {
+          "id": 2785238935,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve storage-updated object when writing legacy**\n\nThe legacy write now reuses `objInfo` directly instead of the object that was just written to storage. If `UpdatedObject` is non-deterministic (timestamps, defaulting, server-side fields) or depends on the current stored object, the legacy update can compute a different payload from what storage accepted, leading to divergence between the two stores in mode 3. This is the exact place where the legacy update is driven by `objInfo` again rather than the storage-updated object.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 139,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:45:46Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/6#discussion_r2785238935"
+        },
+        {
+          "id": 2785238937,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Still attempt legacy delete when storage is NotFound**\n\nDelete now returns immediately on any storage error, so the legacy delete is never attempted. In migration scenarios where the storage layer doesn't have the object yet (e.g., storage returns NotFound) but legacy still does, the request will exit early and leave the legacy record intact, permanently diverging the stores even though a best-effort legacy cleanup is expected for dual writes.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 104,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:45:46Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/6#discussion_r2785238937"
+        },
+        {
+          "id": 2785238941,
+          "body": "**<sub><sub>![P3 Badge](https://img.shields.io/badge/P3-lightgrey?style=flat)</sub></sub>  Record storage delete metrics with kind label**\n\nThe storage delete duration is labeled with the resource name instead of the kind, which makes the `kind` label high-cardinality and breaks aggregation for the histogram. This is inconsistent with all other calls that pass `options.Kind` and will produce misleading metrics for deletions in mode 3.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/apiserver/rest/dualwriter_mode3.go",
+          "line": 106,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:45:47Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/6#discussion_r2785238941"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "Database Performance Optimizations",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "Frontend Asset Optimization",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "Advanced SQL Analytics Framework",
+      "review_comments": [
+        {
+          "id": 2785237201,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Return true when SQL expressions flag is enabled**\n\nThe new `enableSqlExpressions` helper always returns `false`, even when `FlagSqlExpressions` is enabled, because it negates the feature flag and then returns `false` in both branches. That means `QueryTypeSQL` now always errors with \"sqlExpressions is not implemented\" regardless of feature configuration, effectively disabling SQL expressions for all users. If this is intended to gate by the feature flag, the function needs to return `true` when `IsEnabledGlobally` is true.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/expr/reader.go",
+          "line": 198,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:45:08Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/9#discussion_r2785237201"
+        },
+        {
+          "id": 2785237206,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Avoid shipping unimplemented SQL DB methods**\n\nThe new in-memory SQL DB stub returns \"not implemented\" from `QueryFramesInto` (and similarly for `RunCommands`/`TablesList`), but the SQL command path now instantiates this DB for execution. As a result, any SQL expression that gets past the feature check will fail at runtime with a hard error, breaking SQL expression evaluation and table parsing. If the intent was to replace go-duck, this needs a real implementation or a fallback to the previous DB.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/expr/sql/db.go",
+          "line": 21,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:45:08Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/9#discussion_r2785237206"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "Unified Storage Performance Optimizations",
+      "review_comments": [
+        {
+          "id": 2785241364,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Prevent concurrent builds of the same bleve index**\n\nBecause the global `cacheMu` no longer guards the build, two goroutines that both miss the cache (e.g., concurrent `Search`/`Watch` for a resource that isn\u2019t indexed yet) can call `BuildIndex` for the same `NamespacedResource` at the same time. For file-backed indexes this means both will execute `bleve.New(dir, ...)` on the same path, which typically fails for the loser or can leave the index in a partially-initialized state. Consider per-key build locking or an atomic check\u2011then\u2011store so only one build per key proceeds.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "pkg/storage/unified/search/bleve.go",
+          "line": 99,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:46:55Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-grafana/pull/10#discussion_r2785241364"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

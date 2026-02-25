@@ -1,0 +1,76 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 4,
+  "pr_title": "Enhance embed URL handling and validation system",
+  "validations": [
+    {
+      "comment_id": 2743685917,
+      "file": "lib/tasks/disqus.thor",
+      "line": 148,
+      "droid_claim": "[P1] Disqus import reply posts may be cooked incorrectly\n\nThe Disqus import now seeds the topic via `TopicEmbed.import_remote` (raw HTML path), but follow-up posts created in the loop still pass Disqus HTML in `raw` without setting `cook_method: Post.cook_methods[:raw_html]`. Since `PostCreator` ignores a `cooked` opt, this HTML will be run through the normal cooking pipeline and may be mangled. Set `cook_method` (or convert to Markdown) for consistency with the imported OP.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Disqus reply posts will have their HTML mangled by Discourse's normal cooking pipeline, producing incorrectly formatted content in imported threads.",
+      "reasoning": "Verified in PostCreator#setup_post (lib/post_creator.rb:208-216). The `cooked` attribute is NOT in the list of opts passed through to the post instance (line 213-214 only passes :post_type, :no_bump, :cooking_options, :image_sizes, :acting_user, :invalidate_oneboxes). So even though the Disqus import passes `cooked: p[:cooked]` in attrs, PostCreator ignores it. Then at line 105, `post.cooked ||= post.cook(post.raw, cooking_options)` re-cooks the raw HTML through the normal pipeline. The OP is correctly imported via TopicEmbed.import which sets `cook_method: Post.cook_methods[:raw_html]`, but reply posts don't get this treatment.",
+      "code_evidence": "disqus.thor lines 139-148 pass `raw: p[:cooked], cooked: p[:cooked]` but no cook_method.\nPostCreator#setup_post (post_creator.rb:208) creates post with only `raw: @opts[:raw]`.\nLine 213-214: `[:post_type, :no_bump, :cooking_options, :image_sizes, :acting_user, :invalidate_oneboxes].each` — :cooked not included.\nLine 105: `post.cooked ||= post.cook(post.raw, cooking_options)` — will always re-cook since cooked is nil.",
+      "files_explored": [
+        "lib/tasks/disqus.thor",
+        "lib/post_creator.rb",
+        "app/models/topic_embed.rb",
+        "app/models/post.rb"
+      ]
+    },
+    {
+      "comment_id": 2743685920,
+      "file": "app/models/topic_embed.rb",
+      "line": 48,
+      "droid_claim": "[P0] SSRF risk: open-uri follows redirects in import_remote\n\n`Readability::Document.new(open(url).read, ...)` will follow HTTP redirects by default. Even if the initial `@embed_url` host is validated elsewhere, a 30x redirect can send the fetch to internal IPs/metadata endpoints, enabling SSRF. Validate the final URL after redirects and/or disable/limit redirects and disallow private/loopback address ranges.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "security",
+      "impact": "An attacker who controls an embed URL can use HTTP redirects to make the Discourse server fetch internal resources (cloud metadata endpoints, internal services), leaking sensitive data like cloud credentials.",
+      "reasoning": "Verified in topic_embed.rb line 48: `open(url).read` uses Ruby's Kernel#open (with open-uri loaded from other requires in the app). open-uri follows HTTP redirects by default with no restrictions on target IP ranges. There is no validation of the final resolved URL. The url comes from user-controlled sources: RSS feed links (poll_feed.rb) and Disqus thread links (disqus.thor). No SSRF protection middleware or URL validation was found in the codebase for this path.",
+      "code_evidence": "topic_embed.rb:48: `doc = Readability::Document.new(open(url).read, ...)`\nopen-uri is loaded in app/jobs/scheduled/poll_feed.rb:7 and multiple other files.\nNo URL validation or redirect restrictions found in TopicEmbed or its callers.",
+      "files_explored": [
+        "app/models/topic_embed.rb",
+        "app/jobs/scheduled/poll_feed.rb",
+        "lib/tasks/disqus.thor"
+      ]
+    },
+    {
+      "comment_id": 2743685921,
+      "file": "app/views/layouts/embed.html.erb",
+      "line": 11,
+      "droid_claim": "[P0] JavaScript injection via unescaped request.referer\n\n`request.referer` is interpolated into a JS string literal in `parent.postMessage(..., '<%= request.referer %>')` without JS escaping, so a crafted Referer header containing quotes/`</script>` can break out and execute script in the embed frame. Use `j(request.referer)`/`escape_javascript` (or avoid embedding it directly) to prevent XSS.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "security",
+      "impact": "An attacker can craft a Referer header containing JavaScript code that executes in the embed frame, potentially stealing session data or performing actions on behalf of the user viewing the embedded content.",
+      "reasoning": "Verified in embed.html.erb line 11: `parent.postMessage({type: 'discourse-resize', height: document['body'].offsetHeight}, '<%= request.referer %>');`. ERB's `<%= %>` HTML-escapes the output (converting < > \" & to entities), but it does NOT JavaScript-escape it. A referer containing a single quote `'` breaks out of the JS string literal. While `</script>` would be HTML-escaped to `&lt;/script&gt;`, a single quote in the referer (which is valid in URLs) would terminate the string and allow arbitrary JS injection. The `j()` or `escape_javascript` helper is needed here.",
+      "code_evidence": "embed.html.erb:11: `parent.postMessage({type: 'discourse-resize', height: document['body'].offsetHeight}, '<%= request.referer %>');`\nNo escape_javascript or j() helper used. A referer like `http://evil.com/page?x='%2balert(1)%2b'` would break out of the string.",
+      "files_explored": [
+        "app/views/layouts/embed.html.erb"
+      ]
+    },
+    {
+      "comment_id": 2743685924,
+      "file": "app/jobs/scheduled/poll_feed.rb",
+      "line": 35,
+      "droid_claim": "[P1] Possible NoMethodError when feed item lacks content\n\n`i.content.scrub` assumes every RSS/Atom item has `content`; many feeds only provide `description`/`summary`. When `i.content` is nil this will raise and stop the polling job. Coerce to string and/or fall back to other fields before calling `scrub`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Any RSS feed that uses `description` instead of `content` (which is common in RSS 2.0 feeds) will crash the PollFeed scheduled job with NoMethodError, preventing all feed polling from working.",
+      "reasoning": "Verified in poll_feed.rb line 35: `content = CGI.unescapeHTML(i.content.scrub)`. SimpleRSS returns nil for `i.content` when the feed item only has a `description` or `summary` element (which is the standard for RSS 2.0 feeds). Calling `.scrub` on nil raises NoMethodError. The job has `sidekiq_options retry: false` (line 13), so it won't retry and feed polling will be broken until the next scheduled run, which will fail again.",
+      "code_evidence": "poll_feed.rb:35: `content = CGI.unescapeHTML(i.content.scrub)`\npoll_feed.rb:13: `sidekiq_options retry: false`\nSimpleRSS gem returns nil for missing elements. RSS 2.0 spec uses `description`, not `content`.",
+      "files_explored": [
+        "app/jobs/scheduled/poll_feed.rb"
+      ]
+    }
+  ]
+}

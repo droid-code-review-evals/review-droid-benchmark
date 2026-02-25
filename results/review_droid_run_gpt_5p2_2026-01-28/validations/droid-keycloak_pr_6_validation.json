@@ -1,0 +1,41 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 6,
+  "pr_title": "Add Groups resource type and scopes to authorization schema",
+  "validations": [
+    {
+      "comment_id": 2743681002,
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+      "line": 123,
+      "droid_claim": "[P1] Wrong identifier used for group permission evaluation and returned group IDs\n\nIn `getGroupIdsWithViewPermission()`, the loop uses `groupResource.getId()` (authorization resource internal id) both when calling `hasPermission(...)` and when adding to the returned `granted` set. But `hasPermission()` looks up the per-group resource via `resourceStore.findByName(server, groupId)`, where the resource **name** is the group id (see `AdminPermissionsSchema.resolveGroup()` returning `group.getId()`). Passing the internal resource id will miss the per-group resource, fall back to the all-groups resource, and also return the wrong identifiers. Use `groupResource.getName()` (group id) for the permission check and for the `granted` values.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "getGroupIdsWithViewPermission() will never match per-group resources because it passes the internal authorization resource ID to hasPermission(), which looks up by resource name (the actual group ID). It falls back to the all-groups resource and returns wrong identifiers in the granted set.",
+      "reasoning": "In getGroupIdsWithViewPermission() at line 120-123, findByType iterates Resource objects. groupResource.getId() returns the internal authorization resource ID (a UUID assigned by the authz subsystem). However, hasPermission() at line 131 does resourceStore.findByName(server, groupId) — it looks up by name. In AdminPermissionsSchema.getOrCreateResource(), resources are created with name = resolveGroup(session, id), and resolveGroup() returns group.getId() (the Keycloak group UUID). So the resource name is the group's actual ID, not the internal resource ID. Passing getId() (internal resource ID) to findByName will fail to find the per-group resource, causing fallback to the all-groups type resource. Additionally, the granted set collects the wrong identifiers (internal resource IDs instead of group IDs).",
+      "code_evidence": "Line 120-123:\nresourceStore.findByType(server, AdminPermissionsSchema.GROUPS_RESOURCE_TYPE, groupResource -> {\n    if (hasPermission(groupResource.getId(), ...)) {\n        granted.add(groupResource.getId());\n    }\n});\n\nhasPermission line 131: Resource resource = groupId == null ? null : resourceStore.findByName(server, groupId);\n\nresolveGroup returns group.getId() (the group UUID, used as resource name), not the internal resource ID.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/AdminPermissionsSchema.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/store/ResourceStore.java"
+      ]
+    },
+    {
+      "comment_id": 2743681010,
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java",
+      "line": 65,
+      "droid_claim": "[P1] canManage() grants manage when only VIEW is present\n\n`canManage()` currently returns `hasPermission(null, VIEW, MANAGE)`, which makes VIEW sufficient to pass a manage check. That is a privilege escalation risk if callers treat `canManage()` as a write-authorization gate. Restrict the scope check to `MANAGE` (and any other write scopes intended), leaving VIEW-only users to pass `canView()` but not `canManage()`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "security",
+      "impact": "Users with only VIEW permission on groups can pass canManage() checks, potentially allowing write operations (create/update/delete groups) that should require MANAGE permission. This is a privilege escalation.",
+      "reasoning": "canManage() at line 65 calls hasPermission(null, AdminPermissionsSchema.VIEW, AdminPermissionsSchema.MANAGE). The hasPermission method checks if ANY of the provided scopes is granted (line 148-152: if expectedScopes.contains(scope) return true). So having only VIEW scope is sufficient to pass canManage(). Compare with canManage(GroupModel group) at line 73 which correctly only checks MANAGE. Also compare canView() at line 48 which uses the same (VIEW, MANAGE) pair — appropriate for view since manage implies view. The canManage() no-arg overload is clearly a copy-paste bug from canView().",
+      "code_evidence": "Line 65: return hasPermission(null, AdminPermissionsSchema.VIEW, AdminPermissionsSchema.MANAGE);\nLine 73 (correct): return hasPermission(group.getId(), AdminPermissionsSchema.MANAGE);\nLine 48 canView(): return hasPermission(null, AdminPermissionsSchema.VIEW, AdminPermissionsSchema.MANAGE); // same as canManage(), clearly wrong for manage",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/services/resources/admin/permissions/GroupPermissionsV2.java"
+      ]
+    }
+  ]
+}

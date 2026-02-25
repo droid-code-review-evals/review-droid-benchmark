@@ -1,0 +1,40 @@
+{
+  "repo": "droid-sentry",
+  "pr_number": 13,
+  "pr_title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+  "validations": [
+    {
+      "comment_id": 2743647095,
+      "file": "src/sentry/monitors/logic/incidents.py",
+      "line": 51,
+      "droid_claim": "[P1] Incident can trigger before reaching failure_issue_threshold\n\nWhen `failure_issue_threshold > 1`, the code slices up to `failure_issue_threshold` check-ins but never verifies it actually retrieved that many; if a new monitor has fewer total check-ins than the threshold and all are failures, `any(status==OK)` will be false and an incident will be created prematurely. Add a guard like `if len(previous_checkins) < failure_issue_threshold: return False` before creating the incident.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "A new monitor with fewer check-ins than failure_issue_threshold will trigger an incident prematurely if all existing check-ins are failures, even though the threshold count has not been reached.",
+      "reasoning": "In incidents.py lines 38-55, when failure_issue_threshold > 1 the code queries check-ins, slices to [:failure_issue_threshold], then checks if any have status OK. If a monitor has only 1-2 check-ins but threshold is e.g. 3, the slice returns fewer items than the threshold. Since all returned check-ins are failures, the any(OK) check is False and execution proceeds to create the incident. There is no guard verifying len(previous_checkins) >= failure_issue_threshold before proceeding.",
+      "code_evidence": "Lines 38-55:\nprevious_checkins = cast(\n    list[SimpleCheckIn],\n    MonitorCheckIn.objects.filter(\n        monitor_environment=monitor_env, date_added__lte=failed_checkin.date_added\n    )\n    .order_by(\"-date_added\")\n    .values(\"id\", \"date_added\", \"status\"),\n)\nprevious_checkins = list(reversed(previous_checkins[:failure_issue_threshold]))\nif any([checkin[\"status\"] == CheckInStatus.OK for checkin in previous_checkins]):\n    return False\n# No check that len(previous_checkins) == failure_issue_threshold",
+      "files_explored": [
+        "src/sentry/monitors/logic/incidents.py",
+        "src/sentry/monitors/logic/mark_failed.py"
+      ]
+    },
+    {
+      "comment_id": 2743647097,
+      "file": "src/sentry/monitors/logic/incident_occurrence.py",
+      "line": 168,
+      "droid_claim": "[P1] get_monitor_environment_context returns unmodified config\n\nThis function copies `monitor_environment.monitor.config` into `config` and updates `config[\"schedule_type\"]`, but then returns `\"config\": monitor_environment.monitor.config` (the original) instead of the local `config`. As a result, the schedule_type display transformation never takes effect in the emitted context.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "The schedule_type display transformation in the monitor context is silently dropped. The occurrence event data will contain the raw schedule_type integer instead of the human-readable display string.",
+      "reasoning": "In incident_occurrence.py lines 161-173, the function creates a local copy `config = monitor_environment.monitor.config.copy()`, modifies `config[\"schedule_type\"]` to the display value, but then returns `\"config\": monitor_environment.monitor.config` (the original unmodified config) instead of `\"config\": config`. The local copy with the display transformation is discarded.",
+      "code_evidence": "Lines 161-173:\ndef get_monitor_environment_context(monitor_environment: MonitorEnvironment):\n    config = monitor_environment.monitor.config.copy()\n    if \"schedule_type\" in config:\n        config[\"schedule_type\"] = monitor_environment.monitor.get_schedule_type_display()\n\n    return {\n        ...\n        \"config\": monitor_environment.monitor.config,  # BUG: should be `config`\n        ...\n    }",
+      "files_explored": [
+        "src/sentry/monitors/logic/incident_occurrence.py"
+      ]
+    }
+  ]
+}

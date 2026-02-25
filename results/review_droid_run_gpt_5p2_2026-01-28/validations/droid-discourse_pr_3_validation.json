@@ -1,0 +1,42 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 3,
+  "pr_title": "Add comprehensive email validation for blocked users",
+  "validations": [
+    {
+      "comment_id": 2743673472,
+      "file": "app/models/blocked_email.rb",
+      "line": 14,
+      "droid_claim": "[P1] Non-atomic counter update can lose increments\n\n`BlockedEmail.should_block?` uses a read/modify/write (`record.match_count += 1` then `save`) which can lose updates under concurrent signups for the same email (both requests can read the same count and save the same incremented value). Use an atomic update (`increment_counter`, `update_all('match_count = match_count + 1')`, or `increment!`) to avoid lost increments.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "race_condition",
+      "impact": "Concurrent signups using the same blocked email can lose match_count increments due to read-modify-write race, producing inaccurate block statistics.",
+      "reasoning": "Lines 12-16 of blocked_email.rb: `record.match_count += 1` followed by `record.save` is a classic non-atomic read-modify-write. Two concurrent requests can read the same match_count value, both increment to the same new value, and one write is lost. No locking, no atomic SQL update. The Droid's claim is correct.",
+      "code_evidence": "blocked_email.rb lines 12-16:\n  record = BlockedEmail.where(email: email).first\n  if record\n    record.match_count += 1\n    record.last_match_at = Time.zone.now\n    record.save\n  end",
+      "files_explored": [
+        "app/models/blocked_email.rb",
+        "lib/validators/email_validator.rb"
+      ]
+    },
+    {
+      "comment_id": 2743673476,
+      "file": "lib/validators/email_validator.rb",
+      "line": 13,
+      "droid_claim": "[P1] Email validation has DB write side effects\n\n`EmailValidator` calls `BlockedEmail.should_block?`, which updates `match_count`/`last_match_at` as a side effect of validation. Because validations can run multiple times (e.g., `valid?` then `save`, retries, or other failing validations), this can inflate block statistics even when the user isn't actually blocked from signing up. Consider separating the read-only decision from the stats update and only recording stats when the blocked-email error is the cause of the failed signup.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Block statistics (match_count, last_match_at) are inflated because the DB write in should_block? executes every time validation runs, including multiple validation passes, valid? checks, and failed save retries.",
+      "reasoning": "EmailValidator#validate_each (line 13) calls BlockedEmail.should_block? which unconditionally writes to DB (updates match_count and last_match_at) as confirmed in blocked_email.rb lines 13-16. Rails validations commonly run multiple times: calling valid? then save triggers validation twice. There is no guard preventing repeated stat updates. The Droid's claim about DB write side effects during validation is correct.",
+      "code_evidence": "email_validator.rb line 13:\n  if record.errors[attribute].blank? and BlockedEmail.should_block?(value)\n\nblocked_email.rb lines 13-16:\n  record.match_count += 1\n  record.last_match_at = Time.zone.now\n  record.save",
+      "files_explored": [
+        "lib/validators/email_validator.rb",
+        "app/models/blocked_email.rb",
+        "app/models/user.rb"
+      ]
+    }
+  ]
+}

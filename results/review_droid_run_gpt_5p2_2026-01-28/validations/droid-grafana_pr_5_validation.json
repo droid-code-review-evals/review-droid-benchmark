@@ -1,0 +1,23 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 5,
+  "pr_title": "Notification Rule Processing Engine",
+  "validations": [
+    {
+      "comment_id": 2743672484,
+      "file": "public/app/features/alerting/unified/rule-list/FilterView.tsx",
+      "line": 158,
+      "droid_claim": "[P1] Missing `key` prop on GrafanaRuleListItem in list rendering\n\nIn the `rules.map()` rendering switch, the `grafana` case returns `<GrafanaRuleListItem ... />` without a `key` prop, while the other cases pass `key={key}`. This will trigger React key warnings and can cause incorrect reconciliation when the filtered list changes (items added/removed/reordered). Pass `key={key}` (or another stable unique key) to `GrafanaRuleListItem`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "React will use array index as implicit key for GrafanaRuleListItem entries, causing incorrect reconciliation (stale state, wrong DOM reuse) when the filtered rule list changes, plus console warnings.",
+      "reasoning": "In FilterView.tsx lines 150-170, rules.map() destructures { key, rule, groupIdentifier, origin } for each item. The 'datasource' case (line 163) and 'default' case (line 165) both pass key={key}, but the 'grafana' case (line 154-159) omits it. The key variable is available and computed via getRuleKey() which produces a stable unique string like 'grafana-{namespace.uid}-{groupName}-{rule.uid}'. Without it, React falls back to index-based keys, which will cause incorrect component reuse when items are added, removed, or reordered in the filtered list.",
+      "code_evidence": "Lines 150-170:\nrules.map((ruleWithOrigin) => {\n  const { key, rule, groupIdentifier, origin } = ruleWithOrigin;\n  switch (origin) {\n    case 'grafana':\n      return (\n        <GrafanaRuleListItem\n          rule={rule}\n          groupIdentifier={groupIdentifier}\n          namespaceName={ruleWithOrigin.namespaceName}\n          showLocation={true}\n        />  // <-- missing key={key}\n      );\n    case 'datasource':\n      return <DataSourceRuleLoader key={key} ... />;  // has key\n    default:\n      return <UnknownRuleListItem key={key} ... />;  // has key\n  }\n})",
+      "files_explored": [
+        "public/app/features/alerting/unified/rule-list/FilterView.tsx"
+      ]
+    }
+  ]
+}

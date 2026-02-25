@@ -1,0 +1,91 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 6,
+  "pr_title": "Dual Storage Architecture",
+  "validations": [
+    {
+      "comment_id": 2743654296,
+      "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+      "line": 45,
+      "droid_claim": "[P1] Create() records storage failure with legacy metrics\n\nWhen Storage.Create returns an error, the code calls `recordLegacyDuration(...)` instead of `recordStorageDuration(...)`, which will misattribute storage latency/errors to legacy metrics. Switch to `recordStorageDuration(true, ...)` on the storage failure path.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Storage.Create failures are recorded under legacy metrics, corrupting observability data for both storage and legacy metric dashboards.",
+      "reasoning": "Line 45 calls d.recordLegacyDuration(true, mode3Str, options.Kind, method, startStorage) when Storage.Create fails. This is measuring a storage operation but recording it as a legacy duration. The success path on line 47 correctly calls d.recordStorageDuration. The metrics functions (metrics.go:54,59) record to different histogram collectors, so this mislabeling corrupts both metric series.",
+      "code_evidence": "Line 44-46:\n  if err != nil {\n    log.Error(err, \"unable to create object in storage\")\n    d.recordLegacyDuration(true, mode3Str, options.Kind, method, startStorage)\nLine 47 (success): d.recordStorageDuration(false, mode3Str, options.Kind, method, startStorage)",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go",
+        "pkg/apiserver/rest/metrics.go"
+      ]
+    },
+    {
+      "comment_id": 2743654562,
+      "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+      "line": 97,
+      "droid_claim": "[P1] Delete() drops contextual logger fields when storing logger in context\n\n`klog.NewContext(ctx, d.Log)` uses the base logger rather than the enriched `log` (with name/kind/method). Downstream logs using `klog.FromContext` will miss these fields. Use `klog.NewContext(ctx, log)` instead.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "Downstream code using klog.FromContext(ctx) in the Delete path will get a logger missing name, kind, and method fields, making logs harder to correlate. The local 'log' variable is still used for direct logging in this function, so the impact is limited to downstream callees.",
+      "reasoning": "Line 96 creates enriched logger: log := d.Log.WithValues(\"name\", name, \"kind\", options.Kind, \"method\", method). Line 97 stores the base logger: ctx = klog.NewContext(ctx, d.Log). All other methods (Create line 40, Get line 68, List line 82, Update line 121, DeleteCollection line 148) correctly use klog.NewContext(ctx, log). This is clearly a copy-paste bug in Delete().",
+      "code_evidence": "Line 96-97:\n  log := d.Log.WithValues(\"name\", name, \"kind\", options.Kind, \"method\", method)\n  ctx = klog.NewContext(ctx, d.Log)  // should be 'log' not 'd.Log'\n\nCompare with Create line 40:\n  ctx = klog.NewContext(ctx, log)",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go"
+      ]
+    },
+    {
+      "comment_id": 2743654847,
+      "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+      "line": 106,
+      "droid_claim": "[P1] Delete() uses object name as the \"kind\" label in metrics\n\nOn the success path, `recordStorageDuration` is passed `name` where other calls pass `options.Kind`. This creates high-cardinality metrics and inconsistent labeling. Pass `options.Kind` (or the same kind label used on the error path) instead of `name`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Each unique object name creates a new metric label value, causing high-cardinality metrics that can overwhelm monitoring systems (Prometheus, etc.) and make dashboards unusable. The error path correctly uses options.Kind.",
+      "reasoning": "Line 106: d.recordStorageDuration(false, mode3Str, name, method, startStorage) passes 'name' (the object name parameter from the function signature) as the third argument. The metrics function signature (metrics.go:59) takes this as the 'name' parameter which is used as a label. The error path on line 103 correctly passes options.Kind. All other methods consistently pass options.Kind for this parameter.",
+      "code_evidence": "Line 103 (error path): d.recordStorageDuration(true, mode3Str, options.Kind, method, startStorage)\nLine 106 (success path): d.recordStorageDuration(false, mode3Str, name, method, startStorage)  // 'name' is the object name, not Kind",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go",
+        "pkg/apiserver/rest/metrics.go"
+      ]
+    },
+    {
+      "comment_id": 2743655001,
+      "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+      "line": 128,
+      "droid_claim": "[P1] Update() records storage failure with legacy metrics\n\nIf `Storage.Update` fails, the error path calls `recordLegacyDuration(...)` instead of `recordStorageDuration(...)`, which will corrupt latency/outcome metrics. Use `recordStorageDuration(true, ...)` for the unified-store operation failure.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Storage.Update failures are recorded under legacy metrics, same issue as Create(). Corrupts both storage and legacy metric series.",
+      "reasoning": "Line 128: d.recordLegacyDuration(true, mode3Str, options.Kind, method, startStorage) is called when Storage.Update fails. The timer started at startStorage measures the storage operation, but it's recorded as legacy duration. The success path on line 130 correctly calls d.recordStorageDuration. This is the exact same pattern as the Create() bug.",
+      "code_evidence": "Lines 126-130:\n  if err != nil {\n    log.Error(err, \"unable to update in storage\")\n    d.recordLegacyDuration(true, mode3Str, options.Kind, method, startStorage)  // BUG: should be recordStorageDuration\n    return res, async, err\n  }\n  d.recordStorageDuration(false, mode3Str, options.Kind, method, startStorage)",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go",
+        "pkg/apiserver/rest/metrics.go"
+      ]
+    },
+    {
+      "comment_id": 2743655190,
+      "file": "pkg/apiserver/rest/dualwriter_mode3.go",
+      "line": 166,
+      "droid_claim": "[P1] DeleteCollection() legacy goroutine records duration to storage metrics\n\nThe goroutine measuring `Legacy.DeleteCollection` calls `recordStorageDuration(...)` (and uses `startLegacy`). This should be `recordLegacyDuration(...)` so legacy timings/errors don't get mixed into storage metrics.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Legacy DeleteCollection timings and errors are recorded as storage metrics, corrupting both metric series. This is the inverse of the Create/Update bug.",
+      "reasoning": "Line 166: d.recordStorageDuration(err != nil, mode3Str, options.Kind, method, startLegacy) is inside the goroutine that calls d.Legacy.DeleteCollection. The timer startLegacy is correctly named but the recording function is wrong — it should be d.recordLegacyDuration. All other methods' goroutines correctly call recordLegacyDuration for legacy operations (Create line 55, Delete line 113, Update line 138).",
+      "code_evidence": "Lines 161-167 (goroutine):\n  go func() {\n    startLegacy := time.Now()\n    ctx, cancel := context.WithTimeoutCause(ctx, time.Second*10, errors.New(\"legacy deletecollection timeout\"))\n    defer cancel()\n    _, err := d.Legacy.DeleteCollection(ctx, deleteValidation, options, listOptions)\n    d.recordStorageDuration(err != nil, mode3Str, options.Kind, method, startLegacy)  // BUG: should be recordLegacyDuration\n  }()",
+      "files_explored": [
+        "pkg/apiserver/rest/dualwriter_mode3.go",
+        "pkg/apiserver/rest/metrics.go"
+      ]
+    }
+  ]
+}

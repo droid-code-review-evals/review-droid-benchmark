@@ -1,0 +1,25 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 2,
+  "pr_title": "FEATURE: per-topic unsubscribe option in emails",
+  "validations": [
+    {
+      "comment_id": 2743680124,
+      "file": "app/controllers/topics_controller.rb",
+      "line": 107,
+      "droid_claim": "[P0] Unsubscribe crashes when TopicUser row is missing\n\n`TopicUser.find_by(user_id: current_user.id, topic_id: params[:topic_id])` can return `nil` for users who haven't visited/engaged with the topic yet. The code then calls `tu.notification_level` which will raise `NoMethodError` and break the unsubscribe flow. Use `find_or_create_by` / `find_or_initialize_by` (with a sensible default notification_level) or otherwise handle the nil case before reading/updating `notification_level`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "Any user clicking unsubscribe from an email notification for a topic they haven't visited will hit a NoMethodError (500 error), completely breaking the unsubscribe flow.",
+      "reasoning": "Line 105 uses TopicUser.find_by which returns nil when no row exists. Line 107 immediately calls tu.notification_level without a nil check. TopicView.new (line 99) does not create a TopicUser row — confirmed by reading lib/topic_view.rb which has no reference to TopicUser. There is no before_action or other guard ensuring a TopicUser record exists before the unsubscribe action runs. A user can receive email notifications about a topic (e.g., via watching a category) without having a TopicUser row, making this scenario reachable.",
+      "code_evidence": "Lines 105-113 of topics_controller.rb:\n    tu = TopicUser.find_by(user_id: current_user.id, topic_id: params[:topic_id])\n\n    if tu.notification_level > TopicUser.notification_levels[:regular]\n      tu.notification_level = TopicUser.notification_levels[:regular]\n    else\n      tu.notification_level = TopicUser.notification_levels[:muted]\n    end\n\n    tu.save!",
+      "files_explored": [
+        "app/controllers/topics_controller.rb",
+        "lib/topic_view.rb",
+        "app/models/topic_user.rb"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 8,
+  "pr_title": "Implement access token context encoding framework",
+  "validations": [
+    {
+      "comment_id": 2743691471,
+      "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+      "line": 487,
+      "droid_claim": "[P0] isAccessTokenId matcher rejects valid IDs (inverted check + wrong substring)\n\n`matchesSafely` currently returns false when the parsed grant shortcut equals the expected shortcut, and it extracts the shortcut with `substring(3, 5)`. Per the token ID format encoded in this PR (`[2-char session][2-char token][2-char grant]:<uuid>`), the grant shortcut is at indices 4-6 and the matcher should fail only when it does *not* match. Use `if (!items[0].substring(4, 6).equals(expectedGrantShortcut)) return false;` (and consider guarding `items[0].length() >= 6` to avoid `StringIndexOutOfBoundsException`).",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "The isAccessTokenId matcher will reject all valid token IDs (returns false when grant shortcut matches) and also extracts the wrong 2-character substring (indices 3-5 instead of 4-6), making all test assertions using this matcher produce incorrect results.",
+      "reasoning": "The encoded token ID format is confirmed in DefaultTokenContextEncoderProvider.encodeTokenId(): it concatenates sessionType shortcut (2 chars, index 0-1) + tokenType shortcut (2 chars, index 2-3) + grant shortcut (2 chars, index 4-5) + ':' + UUID. The decoder in getTokenContextFromTokenId() also confirms: stShortcut=substring(0,2), ttShortcut=substring(2,4), gtShortcut=substring(4,6). The matcher at line 482 uses substring(3,5) which overlaps tokenType and grantType chars — wrong indices. Additionally, the condition on line 482 returns false when the shortcut EQUALS the expected value, which is the exact opposite of correct behavior (should return false when it does NOT equal).",
+      "code_evidence": "AssertEvents.java:482: `if (items[0].substring(3, 5).equals(expectedGrantShortcut)) return false;` — should be `if (!items[0].substring(4, 6).equals(expectedGrantShortcut)) return false;`. DefaultTokenContextEncoderProvider.encodeTokenId() produces format: sessionType(0-1) + tokenType(2-3) + grantShort(4-5) + ':' + rawTokenId. getTokenContextFromTokenId() confirms gtShortcut = encodedContext.substring(4, 6).",
+      "files_explored": [
+        "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/AssertEvents.java",
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/DefaultTokenContextEncoderProvider.java",
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java"
+      ]
+    },
+    {
+      "comment_id": 2743691736,
+      "file": "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java",
+      "line": 72,
+      "droid_claim": "[P0] rawTokenId null check uses wrong variable\n\nIn the AccessTokenContext constructor, `Objects.requireNonNull(grantType, \"Null rawTokenId not allowed\")` mistakenly validates `grantType` a second time instead of `rawTokenId`. This allows a null raw token ID to slip through and will fail later when encoding/using the token ID; change it to `Objects.requireNonNull(rawTokenId, ...)` so invalid contexts are rejected at construction time.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "A null rawTokenId can be passed to AccessTokenContext without being rejected at construction time. This would cause failures later when the token ID is encoded or used, making the error harder to diagnose.",
+      "reasoning": "Line 71 has `Objects.requireNonNull(grantType, \"Null grantType not allowed\")` and line 72 has `Objects.requireNonNull(grantType, \"Null rawTokenId not allowed\")`. The second call checks grantType again instead of rawTokenId. This is a clear copy-paste bug — the error message says 'rawTokenId' but the variable being checked is grantType.",
+      "code_evidence": "AccessTokenContext.java lines 69-72:\n  Objects.requireNonNull(sessionType, \"Null sessionType not allowed\");\n  Objects.requireNonNull(tokenType, \"Null tokenType not allowed\");\n  Objects.requireNonNull(grantType, \"Null grantType not allowed\");\n  Objects.requireNonNull(grantType, \"Null rawTokenId not allowed\");  // BUG: should be rawTokenId",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/protocol/oidc/encode/AccessTokenContext.java"
+      ]
+    }
+  ]
+}

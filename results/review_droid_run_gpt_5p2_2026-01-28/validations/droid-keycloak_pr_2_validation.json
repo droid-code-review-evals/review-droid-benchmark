@@ -1,0 +1,39 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 2,
+  "pr_title": "Add caching support for IdentityProviderStorageProvider.getForLogin operations",
+  "validations": [
+    {
+      "comment_id": 2743669933,
+      "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+      "line": 381,
+      "droid_claim": "[P1] Test cleanup uses hardcoded \"alias\" instead of created IDP alias\n\n`getCleanup().addCleanup(testRealm().identityProviders().get(\"alias\")::remove);` references an IDP literally named \"alias\" rather than the alias you just created in the loop. This leaves test data behind and can pollute subsequent runs. Use the actual alias variable/value (e.g., capture `final String idpAlias = \"idp-alias-\" + i;` and register cleanup with `get(idpAlias)::remove`).",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Test cleanup fails silently (tries to remove non-existent IDP named \"alias\"), leaving 20 created IDPs behind that can pollute subsequent test runs.",
+      "reasoning": "Line 381 inside the loop creating IDPs with aliases \"idp-alias-0\" through \"idp-alias-19\" registers cleanup with the literal string \"alias\". No IDP with alias \"alias\" is ever created in this test (confirmed by searching for setAlias(\"alias\") - no matches). The cleanup will attempt to remove a non-existent provider, leaving all 20 created IDPs as leaked test state.",
+      "code_evidence": "Lines 373-381:\n  for (int i = 0; i < 20; i++) {\n      IdentityProviderRepresentation idpRep = new IdentityProviderRepresentation();\n      idpRep.setAlias(\"idp-alias-\" + i);\n      ...\n      testRealm().identityProviders().create(idpRep).close();\n      getCleanup().addCleanup(testRealm().identityProviders().get(\"alias\")::remove);\n  }",
+      "files_explored": [
+        "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java"
+      ]
+    },
+    {
+      "comment_id": 2743670272,
+      "file": "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java",
+      "line": 425,
+      "droid_claim": "[P1] Test cleanup uses hardcoded \"alias\" for newly created IDP\n\nAfter creating `idp-alias-20`, cleanup is registered with `get(\"alias\")::remove`, which won't remove the created provider and can leak state between tests. Register cleanup with the actual alias string (\"idp-alias-20\") or a variable holding it.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Test cleanup fails silently for the IDP created with alias \"idp-alias-20\", leaving it behind and potentially affecting subsequent test runs.",
+      "reasoning": "Line 425 registers cleanup with get(\"alias\")::remove after creating an IDP with alias \"idp-alias-20\" (set at line 420). Same bug as the first comment - no IDP named \"alias\" exists, so cleanup is a no-op and the created IDP leaks.",
+      "code_evidence": "Lines 418-425:\n  IdentityProviderRepresentation idpRep = new IdentityProviderRepresentation();\n  idpRep.setAlias(\"idp-alias-\" + 20);\n  ...\n  testRealm().identityProviders().create(idpRep).close();\n  getCleanup().addCleanup(testRealm().identityProviders().get(\"alias\")::remove);",
+      "files_explored": [
+        "testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/organization/cache/OrganizationCacheTest.java"
+      ]
+    }
+  ]
+}

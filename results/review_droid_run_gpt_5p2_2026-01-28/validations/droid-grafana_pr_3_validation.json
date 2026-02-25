@@ -1,0 +1,6 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 3,
+  "pr_title": "Plugins: Chore: Renamed instrumentation middleware to metrics middleware",
+  "validations": []
+}

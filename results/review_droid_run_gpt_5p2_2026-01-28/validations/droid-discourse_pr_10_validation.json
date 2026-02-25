@@ -1,0 +1,88 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 10,
+  "pr_title": "FEATURE: Can edit category/host relationships for embedding",
+  "validations": [
+    {
+      "comment_id": 2743768048,
+      "file": "app/controllers/admin/embeddable_hosts_controller.rb",
+      "line": 18,
+      "droid_claim": "[P0] update/destroy can 500 on missing record\n\nBoth `update` and `destroy` do `EmbeddableHost.where(id: params[:id]).first` and then call methods on the result without a nil check. If the id is invalid, this raises `NoMethodError` and returns a 500 to any staff user. Return a 404/JSON error when the record is not found.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "Staff users hitting update or destroy with an invalid or already-deleted host ID will get a 500 error instead of a proper 404 response.",
+      "reasoning": "In embeddable_hosts_controller.rb, both `update` (line 10) and `destroy` (line 15) call `EmbeddableHost.where(id: params[:id]).first` which returns nil when the record doesn't exist. `update` then passes nil to `save_host` which calls `host.host = params[...]` on nil, raising NoMethodError. `destroy` calls `host.destroy` on nil, also raising NoMethodError. There is no nil guard or find_by! usage. The `before_filter :ensure_staff` only restricts access to staff, it doesn't prevent invalid IDs.",
+      "code_evidence": "Lines 10-11: host = EmbeddableHost.where(id: params[:id]).first\\n    save_host(host)\\nLines 15-16: host = EmbeddableHost.where(id: params[:id]).first\\n    host.destroy",
+      "files_explored": [
+        "app/controllers/admin/embeddable_hosts_controller.rb"
+      ]
+    },
+    {
+      "comment_id": 2743768053,
+      "file": "app/models/embeddable_host.rb",
+      "line": 6,
+      "droid_claim": "[P1] before_validation can crash when host is nil\n\nThe `before_validation` block calls `self.host.sub!` unconditionally. If `host` is nil (e.g., bad params, console usage), this raises `NoMethodError`. Guard with `return if host.blank?` (or `if self.host`) before calling `sub!`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "runtime_error",
+      "impact": "Creating or updating an EmbeddableHost with a nil host value (e.g., missing params, console usage) will raise NoMethodError in before_validation instead of a clean validation error.",
+      "reasoning": "In embeddable_host.rb lines 5-8, the before_validation block calls `self.host.sub!(/^https?:\\/\\//, '')` and `self.host.sub!(/\\/.*$/, '')` unconditionally. If host is nil, NilClass#sub! raises NoMethodError. The validates_format_of on line 2 would catch a nil host, but before_validation runs first. The controller's save_host method does set host from params, but if the param is missing or nil, this crash occurs before validation can provide a user-friendly error.",
+      "code_evidence": "Lines 5-8:\\n  before_validation do\\n    self.host.sub!(/^https?:\\/\\//, '')\\n    self.host.sub!(/\\/.*$/, '')\\n  end",
+      "files_explored": [
+        "app/models/embeddable_host.rb",
+        "app/controllers/admin/embeddable_hosts_controller.rb"
+      ]
+    },
+    {
+      "comment_id": 2743768054,
+      "file": "app/assets/javascripts/admin/components/embeddable-host.js.es6",
+      "line": 47,
+      "droid_claim": "[P1] Delete action drops errors silently\n\n`destroyRecord().then(...)` in the `delete()` action has no `.catch(...)`, so failures (403/500/network) won't surface to the user and the row may remain in a confusing state. Since `popupAjaxError` is already imported, add `.catch(popupAjaxError)`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "If the delete request fails (network error, 500, etc.), the user sees no error message and the row remains in the UI in a confusing state, since there's no error handling.",
+      "reasoning": "In embeddable-host.js.es6, the `save` action (line 38) chains `.catch(popupAjaxError)` for error handling, but the `delete` action (line 47) only has `.then()` with no `.catch()`. The `popupAjaxError` function is already imported on line 4. This is a clear oversight where delete failures are silently swallowed.",
+      "code_evidence": "Lines 45-50 (delete action):\\n  this.get('host').destroyRecord().then(() => {\\n    this.sendAction('deleteHost', this.get('host'));\\n  });\\n\\nCompare with save action line 38-41:\\n  host.save(props).then(() => {...}).catch(popupAjaxError);",
+      "files_explored": [
+        "app/assets/javascripts/admin/components/embeddable-host.js.es6"
+      ]
+    },
+    {
+      "comment_id": 2743768056,
+      "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+      "line": 23,
+      "droid_claim": "[P0] Migration SQL injection via unescaped host values\n\nThe migration interpolates `h` directly into an `execute` string: `VALUES ('#{h}', ...)`. If the existing `embeddable_hosts` site setting contains a quote or malicious SQL, this can execute arbitrary SQL during migration. Use `connection.quote(h)` or parameterized inserts instead of string interpolation.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "security",
+      "impact": "If the embeddable_hosts site setting contains a value with a single quote or crafted SQL, the migration will either fail or execute arbitrary SQL. The setting value is admin-controlled, reducing but not eliminating risk.",
+      "reasoning": "Line 23 of the migration: `execute \"INSERT INTO embeddable_hosts (host, category_id, created_at, updated_at) VALUES ('#{h}', ...)\"` directly interpolates the host string `h` into raw SQL without escaping. The value comes from splitting the `embeddable_hosts` site setting (line 20-21). While this is an admin-set value, any host containing a single quote (e.g., from a typo or intentional injection) would break the SQL or allow injection. The fix is trivial: use `connection.quote(h)` instead of `'#{h}'`.",
+      "code_evidence": "Line 23: execute \"INSERT INTO embeddable_hosts (host, category_id, created_at, updated_at) VALUES ('#{h}', #{category_id}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)\"",
+      "files_explored": [
+        "db/migrate/20150818190757_create_embeddable_hosts.rb"
+      ]
+    },
+    {
+      "comment_id": 2743768059,
+      "file": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+      "line": 7,
+      "droid_claim": "[P1] Migration can raise when embed_category lookup returns no rows\n\n`execute(...)[0]['id']` assumes the query always returns at least one row. If `embed_category` is unset or doesn't match any category name, `execute(...)[0]` is nil and the migration will crash with a NoMethodError. Guard for empty results before indexing.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "If the embed_category site setting doesn't match any category name, the migration crashes with NoMethodError, blocking all subsequent migrations and requiring manual intervention.",
+      "reasoning": "Lines 7-8: `category_id = execute(\"SELECT c.id FROM categories AS c INNER JOIN site_settings AS s ON s.value = c.name WHERE s.name = 'embed_category'\")[0]['id'].to_i`. If `embed_category` is unset or its value doesn't match any category name, the query returns zero rows. `[0]` on an empty PG::Result returns nil, and `nil['id']` raises NoMethodError. The fallback on lines 11-12 has the same issue: if `uncategorized_category_id` setting doesn't exist, `[0]` is nil.",
+      "code_evidence": "Lines 7-8:\\n  category_id = execute(\"SELECT c.id FROM categories AS c\\n                      INNER JOIN site_settings AS s ON s.value = c.name\\n                      WHERE s.name = 'embed_category'\")[0]['id'].to_i\\n\\nLines 11-12 (fallback has same issue):\\n  category_id = execute(\"SELECT value FROM site_settings WHERE name = 'uncategorized_category_id'\")[0]['value'].to_i",
+      "files_explored": [
+        "db/migrate/20150818190757_create_embeddable_hosts.rb"
+      ]
+    }
+  ]
+}

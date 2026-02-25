@@ -1,0 +1,23 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 1,
+  "pr_title": "Anonymous: Add configurable device limit",
+  "validations": [
+    {
+      "comment_id": 2743652887,
+      "file": "pkg/services/anonymous/anonimpl/anonstore/database.go",
+      "line": 118,
+      "droid_claim": "[P1] Race condition in device limit enforcement\n\n`CreateOrUpdateDevice` checks `CountDevices` and then inserts/updates in a separate operation, which is a TOCTOU race. Under concurrency, multiple requests can all observe `count < deviceLimit` and then each insert, exceeding the configured limit. This should be enforced atomically (e.g., in a transaction with appropriate locking/unique constraint-based logic) so the limit cannot be bypassed under load.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "race_condition",
+      "impact": "Under concurrent anonymous device registrations, multiple goroutines can pass the count check simultaneously and each insert a new device, causing the device count to exceed the configured limit.",
+      "reasoning": "CreateOrUpdateDevice (line 111-155) first calls CountDevices in one DB session, then performs an INSERT/UPSERT in a separate DB session. These are not in the same transaction and there is no locking. When multiple requests with different device IDs arrive concurrently, they can all read count < deviceLimit and proceed to insert, bypassing the limit. The upsert's ON CONFLICT clause only prevents duplicates for the same device_id, not new distinct devices exceeding the cap.",
+      "code_evidence": "Lines 114-122:\n  if s.deviceLimit > 0 {\n    count, err := s.CountDevices(ctx, ...)\n    if err != nil { return err }\n    if count >= s.deviceLimit {\n      return s.updateDevice(ctx, device)\n    }\n  }\n  // ... separate INSERT/UPSERT follows in a new WithDbSession call",
+      "files_explored": [
+        "pkg/services/anonymous/anonimpl/anonstore/database.go"
+      ]
+    }
+  ]
+}

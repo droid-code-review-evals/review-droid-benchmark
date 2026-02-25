@@ -1,0 +1,24 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 8,
+  "pr_title": "SMS workflow reminder retry count tracking",
+  "validations": [
+    {
+      "comment_id": 2743698972,
+      "file": "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+      "line": 38,
+      "droid_claim": "[P1] retryCount cleanup can delete non-SMS reminders\n\nThe `deleteMany` adds an `OR` branch for `retryCount > 1` without also scoping it to `method: WorkflowMethods.SMS`. Because `WorkflowReminder.method` can be EMAIL/SMS/WHATSAPP, this SMS scheduler endpoint would delete any reminder type that happens to have `retryCount > 1`, which is unintended data loss. Add `method: WorkflowMethods.SMS` to that OR branch (or wrap the OR under a top-level `method: SMS` constraint) so only SMS reminders are affected.",
+      "verdict": "true_positive",
+      "confidence": "medium",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "The SMS scheduler's cleanup query could delete non-SMS workflow reminders (EMAIL/WHATSAPP) that have retryCount > 1, causing unintended data loss of reminders from other channels.",
+      "reasoning": "Verified in scheduleSMSReminders.ts lines 31-45. The deleteMany query has an OR with two branches: (1) method: SMS AND scheduledDate <= now, and (2) retryCount > 1 with NO method filter. The WorkflowReminder model (schema.prisma line 1000) has retryCount with default 0 on all reminders regardless of method. Currently only SMS reminders increment retryCount (lines 184, 195), so in practice only SMS reminders would be affected today. However, the query is structurally unsound -- it lacks the method constraint on the second OR branch, and any future use of retryCount by email/whatsapp schedulers would cause cross-channel deletion. The core bug (missing method scope on the OR branch) exists as described.",
+      "code_evidence": "Lines 31-45:\nawait prisma.workflowReminder.deleteMany({\n  where: {\n    OR: [\n      {\n        method: WorkflowMethods.SMS,\n        scheduledDate: {\n          lte: dayjs().toISOString(),\n        },\n      },\n      {\n        retryCount: {\n          gt: 1,\n        },\n      },  // <-- no method: WorkflowMethods.SMS here\n    ],\n  },\n});",
+      "files_explored": [
+        "packages/features/ee/workflows/api/scheduleSMSReminders.ts",
+        "packages/prisma/schema.prisma"
+      ]
+    }
+  ]
+}

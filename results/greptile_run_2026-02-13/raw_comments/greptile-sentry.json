@@ -1,0 +1,374 @@
+{
+  "repo": "greptile-sentry",
+  "fetched_by": "greptile-apps[bot]",
+  "prs": [
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Enhanced Pagination Performance for High-Volume Audit Logs",
+      "review_comments": [
+        {
+          "id": 2806487420,
+          "body": "`organization_context.member` can be `None` when the user doesn't have membership, causing an `AttributeError`\n\n```suggestion\n        enable_advanced = request.user.is_superuser or (organization_context.member and organization_context.member.has_global_access)\n```",
+          "path": "src/sentry/api/endpoints/organization_auditlogs.py",
+          "line": 71,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:25:57Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/6#discussion_r2806487420"
+        },
+        {
+          "id": 2806487493,
+          "body": "Django QuerySets do NOT support negative slicing - this will raise `AssertionError` at runtime. The comment on line 876 is incorrect. When `cursor.offset < 0`, attempting `queryset[start_offset:stop]` with negative `start_offset` will crash.\n\nAll other paginators in this file explicitly reject negative offsets with `BadPaginationError` (lines 287, 351, 701, 748, 804). This \"advanced feature\" introduces a critical vulnerability that bypasses those safety checks.\n\n```suggestion\n        # Advanced feature: Enable negative offset pagination for high-performance scenarios\n        # This allows efficient traversal of large datasets in both directions\n        if self.enable_advanced_features and cursor.offset < 0:\n            # Django QuerySets don't support negative slicing - must convert to list first\n            # WARNING: This loads entire queryset into memory - only safe for small datasets\n            start_offset = cursor.offset\n            stop = start_offset + limit + extra\n            results = list(queryset)[start_offset:stop]\n```",
+          "path": "src/sentry/api/paginator.py",
+          "line": 882,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:25:58Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/6#discussion_r2806487493"
+        },
+        {
+          "id": 2806487536,
+          "body": "`OptimizedCursorPaginator` inherits from `BasePaginator` but `BasePaginator` doesn't define `get_item_key`. This method signature also differs from similar paginators (e.g., `DateTimePaginator.get_item_key` doesn't take `for_prev` parameter). Check that `self.key` is always a numeric attribute.",
+          "path": "src/sentry/api/paginator.py",
+          "line": 840,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:25:59Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/6#discussion_r2806487536"
+        },
+        {
+          "id": 2806487585,
+          "body": "When `cursor.is_prev` is `True`, `start_offset` is set to `offset` without `max(0, offset)` check, allowing negative offsets to pass through to queryset slicing even when `enable_advanced_features` is `False`",
+          "path": "src/sentry/api/paginator.py",
+          "line": 886,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:00Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/6#discussion_r2806487585"
+        },
+        {
+          "id": 2806487649,
+          "body": "Comment claims negative offsets enable \"efficient reverse pagination\", but negative slicing on Django QuerySets causes crashes. This comment is misleading and documents dangerous behavior.",
+          "path": "src/sentry/utils/cursors.py",
+          "line": 26,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:01Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/6#discussion_r2806487649"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "Optimize spans buffer insertion with eviction during insert",
+      "review_comments": [
+        {
+          "id": 2806489132,
+          "body": "`organization_context.member` can be `None` (see RpcUserOrganizationContext definition at line 346), causing an AttributeError when accessing `.has_global_access`\n\n```suggestion\n        enable_advanced = request.user.is_superuser or (organization_context.member and organization_context.member.has_global_access)\n```",
+          "path": "src/sentry/api/endpoints/organization_auditlogs.py",
+          "line": 71,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:42Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489132"
+        },
+        {
+          "id": 2806489175,
+          "body": "Django QuerySets do NOT support negative slicing and will raise `AssertionError`. This comment is misleading - negative offsets are explicitly rejected in all other paginators (OffsetPaginator:287, MergingOffsetPaginator:351, etc.) and tested in `tests/sentry/api/test_paginator.py:143-153`\n\n```suggestion\n        # REMOVED: Negative offset support - Django QuerySets don't support negative indices\n        # Use the same safe approach as BasePaginator\n        start_offset = max(0, offset) if not cursor.is_prev else offset\n        stop = start_offset + limit + extra\n        results = list(queryset[start_offset:stop])\n```",
+          "path": "src/sentry/api/paginator.py",
+          "line": 882,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:43Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489175"
+        },
+        {
+          "id": 2806489210,
+          "body": "Comment is misleading - Django QuerySets actually don't handle negative offsets. The code correctly uses `max(0, offset)` to prevent negative slicing, but the comment incorrectly claims \"the underlying queryset will handle boundary conditions\"",
+          "path": "src/sentry/api/paginator.py",
+          "line": 184,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:44Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489210"
+        },
+        {
+          "id": 2806489251,
+          "body": "Misleading comment - negative offsets are explicitly validated against and rejected in all existing paginators. This comment may encourage unsafe patterns",
+          "path": "src/sentry/utils/cursors.py",
+          "line": 26,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:45Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489251"
+        },
+        {
+          "id": 2806489286,
+          "body": "Reduced redirect depth limit from 10,000 to 1,000 - verify this is sufficient for your deepest span trees in production",
+          "path": "src/sentry/scripts/spans/add-buffer.lua",
+          "line": 30,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:46Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489286"
+        },
+        {
+          "id": 2806489308,
+          "body": "Eviction during insert prevents unbounded memory growth by keeping only the 1000 most recent spans (by `end_timestamp_precise`). Uses `zpopmin` to remove oldest spans when limit exceeded",
+          "path": "src/sentry/scripts/spans/add-buffer.lua",
+          "line": 64,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:47Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489308"
+        },
+        {
+          "id": 2806489357,
+          "body": "Added `end_timestamp_precise` field to enable time-based eviction in Redis sorted sets",
+          "path": "src/sentry/spans/buffer.py",
+          "line": 119,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:48Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489357"
+        },
+        {
+          "id": 2806489385,
+          "body": "Migrated from Redis SET (SADD) to sorted set (ZADD) to enable time-based eviction. Score is `end_timestamp_precise` for chronological ordering",
+          "path": "src/sentry/spans/buffer.py",
+          "line": 199,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:26:49Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/7#discussion_r2806489385"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+      "review_comments": [
+        {
+          "id": 2806483975,
+          "body": "caching logic creates inconsistent results - cached value only includes eligibility check but the final return also depends on `_should_apply_sample_weight_transform(dataset, request)`, which changes based on dataset/request. if the first call is for dataset A and caches `True`, a subsequent call for dataset B with same projects will incorrectly return the cached result without re-evaluating the dataset/request conditions.\n\n```suggestion\n    # Cache the final decision including dataset/request validation\n    cache_key = f\"error_upsampling_eligible:{organization.id}:{hash(tuple(sorted(snuba_params.project_ids)))}:{dataset.__name__}:{request.GET.get('query', '')}\"\n    \n    # Check cache first for performance optimization\n    cached_result = cache.get(cache_key)\n    if cached_result is not None:\n        return cached_result\n    \n    # Cache miss - perform fresh checks\n    is_eligible = _are_all_projects_error_upsampled(snuba_params.project_ids, organization)\n    final_result = is_eligible and _should_apply_sample_weight_transform(dataset, request)\n    \n    # Cache for 60 seconds to improve performance during traffic spikes\n    cache.set(cache_key, final_result, 60)\n    \n    return final_result\n```",
+          "path": "src/sentry/api/helpers/error_upsampling.py",
+          "line": 40,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:10Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/8#discussion_r2806483975"
+        },
+        {
+          "id": 2806483996,
+          "body": "`sum(sample_weight)` will return NULL if all `sample_weight` values are NULL, causing query failures. wrap in `ifNull` to handle missing sample_weight gracefully.\n\n```suggestion\n                    snql_aggregate=lambda args, alias: Function(\n                        \"toInt64\",\n                        [Function(\"ifNull\", [Function(\"sum\", [Column(\"sample_weight\")]), 0])],\n                        alias,\n                    ),\n```",
+          "path": "src/sentry/search/events/datasets/discover.py",
+          "line": 1050,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:11Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/8#discussion_r2806483996"
+        },
+        {
+          "id": 2806484026,
+          "body": "`upsampling_enabled = should_upsample` creates a redundant variable - just use `should_upsample` directly throughout the function.\n\n```suggestion\n            # Store the upsampling decision to apply later during query building\n            # This separation allows for better query optimization and caching\n```\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "src/sentry/api/endpoints/organization_events_stats.py",
+          "line": 227,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:12Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/8#discussion_r2806484026"
+        },
+        {
+          "id": 2806484054,
+          "body": "`transform_query_columns_for_error_upsampling()` is called three times (lines 233, 277, 296) - transform once at the beginning after the upsampling check instead of repeating before each query path.\n\n```suggestion\n            if top_events > 0:\n                if use_rpc:\n```\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "src/sentry/api/endpoints/organization_events_stats.py",
+          "line": 234,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:13Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/8#discussion_r2806484054"
+        },
+        {
+          "id": 2806484098,
+          "body": "caught all exceptions with bare `except Exception` - at minimum log failures so debugging test failures isn't mysterious\n\n```suggestion\ndef _set_sample_rate_from_error_sampling(normalized_data: MutableMapping[str, Any]) -> None:\n    \"\"\"Set 'sample_rate' on normalized_data if contexts.error_sampling.client_sample_rate is present and valid.\"\"\"\n    import logging\n    logger = logging.getLogger(__name__)\n    \n    try:\n        client_sample_rate = (\n            normalized_data.get(\"contexts\", {}).get(\"error_sampling\", {}).get(\"client_sample_rate\")\n        )\n        if client_sample_rate:\n            normalized_data[\"sample_rate\"] = float(client_sample_rate)\n    except Exception as e:\n        logger.warning(f\"Failed to set sample_rate from error_sampling context: {e}\")\n```",
+          "path": "src/sentry/testutils/factories.py",
+          "line": 357,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:14Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/8#discussion_r2806484098"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "GitHub OAuth Security Enhancement",
+      "review_comments": [
+        {
+          "id": 2806482650,
+          "body": "KeyError risk for integrations created before Oct 2023, when the `sender` field was added.\n\nPre-existing integrations won't have `integration.metadata[\"sender\"]`, causing a crash when trying to link to a second organization.\n\n```suggestion\n        # Check that the authenticated GitHub user is the same as who installed the app.\n        sender_info = integration.metadata.get(\"sender\")\n        if sender_info and (\n            pipeline.fetch_state(\"github_authenticated_user\")\n            != sender_info[\"login\"]\n```",
+          "path": "src/sentry/integrations/github/integration.py",
+          "line": 504,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:30Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/9#discussion_r2806482650"
+        },
+        {
+          "id": 2806482676,
+          "body": "Overly broad exception handler masks all errors during token exchange.\n\nNetwork errors, JSON parsing errors, and other issues will silently result in an empty `payload`, making debugging difficult.\n\n```suggestion\n        except Exception as e:\n            logger.warning(\"github.oauth.token_exchange_failed\", exc_info=e)\n            payload = {}\n```",
+          "path": "src/sentry/integrations/github/integration.py",
+          "line": 429,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:31Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/9#discussion_r2806482676"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "Replays Self-Serve Bulk Delete System",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 11,
+      "actual_pr_number": 11,
+      "title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+      "review_comments": [
+        {
+          "id": 2806482874,
+          "body": "Method `_create_process_for_shard()` is never called and appears to be dead code.\n\n```suggestion\n    # Remove unused method\n```",
+          "path": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 132,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:37Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/11#discussion_r2806482874"
+        },
+        {
+          "id": 2806482898,
+          "body": "When restarting a process, only `multiprocessing.Process` instances are killed, but `threading.Thread` instances (used in test mode with `produce_to_pipe`) are not stopped. This could leave zombie threads running.\n\n```suggestion\n            try:\n                if isinstance(process, multiprocessing.Process):\n                    process.kill()\n                elif isinstance(process, threading.Thread):\n                    # Threading doesn't support kill, but setting stopped flag will terminate it\n                    pass\n            except (ValueError, AttributeError):\n                pass  # Process already closed, ignore\n```",
+          "path": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 257,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:38Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/11#discussion_r2806482898"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 12,
+      "actual_pr_number": 12,
+      "title": "feat(ecosystem): Implement cross-system issue synchronization",
+      "review_comments": [
+        {
+          "id": 2806485075,
+          "body": "`timezone.now()` is called once at class definition time, not at instance creation time. All `AssignmentSource` instances will share the same timestamp.\n\n```suggestion\n    queued: datetime = dataclasses.field(default_factory=timezone.now)\n```",
+          "path": "src/sentry/integrations/services/assignment_source.py",
+          "line": 18,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:46Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/12#discussion_r2806485075"
+        },
+        {
+          "id": 2806485095,
+          "body": "typo: \"inalid\" should be \"invalid\"",
+          "path": "tests/sentry/integrations/services/test_assignment_source.py",
+          "line": 13,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:47Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/12#discussion_r2806485095"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 13,
+      "actual_pr_number": 13,
+      "title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+      "review_comments": [
+        {
+          "id": 2806482743,
+          "body": "typo: \"humam\" should be \"human\"\n\n```suggestion\n    Builds a human readible string from a list of failed check-ins.\n```",
+          "path": "src/sentry/monitors/logic/incident_occurrence.py",
+          "line": 132,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:33Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/13#discussion_r2806482743"
+        },
+        {
+          "id": 2806482800,
+          "body": "typo: \"readible\" should be \"readable\"\n\n```suggestion\n    Builds a human readable string from a list of failed check-ins.\n```",
+          "path": "src/sentry/monitors/logic/incident_occurrence.py",
+          "line": 132,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:34Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/13#discussion_r2806482800"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 14,
+      "actual_pr_number": 14,
+      "title": "feat(uptime): Add ability to use queues to manage parallelism",
+      "review_comments": [
+        {
+          "id": 2806484755,
+          "body": "race condition in lock creation - two threads can create different locks for same partition\n\nif two threads call `_get_partition_lock` for the same partition simultaneously, both can pass the `if lock:` check (both get `None`), then both call `setdefault`, potentially creating two different lock objects. This breaks thread safety guarantees.\n\n```suggestion\n    def _get_partition_lock(self, partition: Partition) -> threading.Lock:\n        \"\"\"Get or create a lock for a partition.\"\"\"\n        # Use setdefault atomically to avoid race condition\n        if partition not in self.partition_locks:\n            self.partition_locks.setdefault(partition, threading.Lock())\n        return self.partition_locks[partition]\n```",
+          "path": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+          "line": 54,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:36Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/14#discussion_r2806484755"
+        },
+        {
+          "id": 2806484800,
+          "body": "outstanding offsets not cleaned up when marking committed - causes memory leak\n\nthe `outstanding` dict is never cleaned up here, only `all_offsets`. Over time, completed but uncommitted offsets accumulate in the `outstanding` set, causing a memory leak.\n\n```suggestion\n            # Remove all offsets <= committed offset\n            self.all_offsets[partition] = {o for o in self.all_offsets[partition] if o > offset}\n            self.outstanding[partition] = {o for o in self.outstanding[partition] if o > offset}\n```",
+          "path": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+          "line": 105,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:37Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/14#discussion_r2806484800"
+        },
+        {
+          "id": 2806484840,
+          "body": "missing timeout on blocking `get()` call - can hang during shutdown\n\nthe `work_queue.get()` blocks indefinitely if no items arrive. When `shutdown=True`, the thread won't exit until an item is added or `queue.shutdown()` is called. The `finally` block at line 148 ensures offset completion even on shutdown, but the blocking `get()` prevents checking the `shutdown` flag.\n\n```suggestion\n            try:\n                work_item = self.work_queue.get(timeout=1.0)\n            except queue.Empty:\n                continue\n            except queue.ShutDown:\n                break\n```",
+          "path": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+          "line": 133,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:24:38Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/14#discussion_r2806484840"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 15,
+      "actual_pr_number": 15,
+      "title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+      "review_comments": [
+        {
+          "id": 2806482866,
+          "body": "`MetricAlertDetectorHandler` inherits from `StatefulDetectorHandler`, which now has abstract methods that must be implemented. The `build_occurrence_and_event_data` method is missing.\n\n```suggestion\nclass MetricAlertDetectorHandler(StatefulDetectorHandler[QuerySubscriptionUpdate]):\n    counter_names = []\n    \n    def get_dedupe_value(self, data_packet):\n        # TODO: Implement\n        return 0\n    \n    def get_group_key_values(self, data_packet):\n        # TODO: Implement\n        return {}\n    \n    def build_occurrence_and_event_data(self, group_key, value, new_status):\n        # TODO: Implement\n        raise NotImplementedError(\"build_occurrence_and_event_data not yet implemented\")\n```",
+          "path": "src/sentry/incidents/grouptype.py",
+          "line": 12,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:37Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/15#discussion_r2806482866"
+        },
+        {
+          "id": 2806482894,
+          "body": "Test data inconsistency - `group_2` has value `10` in the data packet (line 177) but the expected occurrence is built with value `6`.\n\n```suggestion\n        occurrence_2, event_data_2 = build_mock_occurrence_and_event(\n            detector.detector_handler, \"group_2\", 10, PriorityLevel.HIGH\n        )\n```",
+          "path": "tests/sentry/workflow_engine/processors/test_detector.py",
+          "line": 192,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:23:38Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-sentry/pull/15#discussion_r2806482894"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

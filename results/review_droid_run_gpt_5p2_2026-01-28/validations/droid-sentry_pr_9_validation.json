@@ -1,0 +1,60 @@
+{
+  "repo": "droid-sentry",
+  "pr_number": 9,
+  "pr_title": "GitHub OAuth Security Enhancement",
+  "validations": [
+    {
+      "comment_id": 2743652644,
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 397,
+      "droid_claim": "[P0] OAuth state parameter is predictable/deterministic\n\nThe `state` parameter for the OAuth flow is set to `pipeline.signature`, which is derived from pipeline view class names and is constant across users/sessions (it's even asserted in tests as `9cae5e88803f35ed7970fc131e6e65d3`). A predictable `state` defeats CSRF protection for OAuth; it should be a per-flow cryptographically random value stored in the pipeline/session and validated on callback.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "security",
+      "impact": "OAuth CSRF protection is defeated because the state parameter is a deterministic MD5 of pipeline view class names, identical for all users and sessions. An attacker can predict the state value and perform CSRF attacks on the OAuth flow.",
+      "reasoning": "Verified in pipeline/base.py line 133: `self.signature = md5_text(*pipe_ids).hexdigest()` where `pipe_ids` is derived from `type(v).__module__` and `type(v).__name__` of the pipeline views. These are constant class names, making the signature deterministic. In integration.py line 397, `state = pipeline.signature` is used as the OAuth state parameter. The test even hardcodes the expected value `9cae5e88803f35ed7970fc131e6e65d3`, confirming it's static. This completely defeats the CSRF protection that the OAuth state parameter is supposed to provide.",
+      "code_evidence": "pipeline/base.py:132-133:\n  pipe_ids = [f\"{type(v).__module__}.{type(v).__name__}\" for v in self.pipeline_views]\n  self.signature = md5_text(*pipe_ids).hexdigest()\n\nintegration.py:397:\n  state = pipeline.signature",
+      "files_explored": [
+        "src/sentry/integrations/github/integration.py",
+        "src/sentry/pipeline/base.py",
+        "src/sentry/web/frontend/pipeline_advancer.py"
+      ]
+    },
+    {
+      "comment_id": 2743652646,
+      "file": "src/sentry/integrations/github/integration.py",
+      "line": 506,
+      "droid_claim": "[P1] Potential KeyError when reading integration.metadata['sender']['login']\n\nThe comparison against `integration.metadata[\"sender\"][\"login\"]` assumes those keys always exist. Older/edge integrations may not have `sender` (or `login`) in metadata, which would raise `KeyError` and crash the installation flow; use `.get()`/guards and treat missing data as an invalid request (or fall back to a safer check).",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "If an Integration exists without a 'sender' key in its metadata (which is possible since sender is conditionally set via `if state.get('sender')`), accessing `integration.metadata['sender']['login']` at line 503 will raise a KeyError, crashing the GitHub installation flow with a 500 error.",
+      "reasoning": "In integration.py line 376, the `sender` key is only added to metadata conditionally: `if state.get('sender'): integration['metadata']['sender'] = state['sender']`. This means integrations created without sender state won't have this key. Additionally, installation.py line 44 explicitly checks `if 'sender' not in integration.metadata:`, confirming the codebase already knows sender is optional. Yet line 503 accesses `integration.metadata['sender']['login']` without any guard, which will raise KeyError for integrations missing the sender key.",
+      "code_evidence": "integration.py:503:\n  if (pipeline.fetch_state('github_authenticated_user') != integration.metadata['sender']['login']):\n\nintegration.py:376-377:\n  if state.get('sender'):\n      integration['metadata']['sender'] = state['sender']\n\ninstallation.py:44:\n  if 'sender' not in integration.metadata:",
+      "files_explored": [
+        "src/sentry/integrations/github/integration.py",
+        "src/sentry/integrations/github/installation.py"
+      ]
+    },
+    {
+      "comment_id": 2743652648,
+      "file": "tests/sentry/integrations/github/test_integration.py",
+      "line": 410,
+      "droid_claim": "[P1] test_github_user_mismatch likely fails due to missing webhook secret setup\n\nThe test posts to `/extensions/github/webhook/` with `HTTP_X_HUB_SIGNATURE=...` and asserts a 204, but it doesn't configure `github-app.webhook-secret`. If the option defaults to an empty string, signature verification will fail and the endpoint will return 401. Set `options.set('github-app.webhook-secret', <secret>)` and compute the signature for the mutated payload (or mock signature verification) to make this test deterministic.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "The test_github_user_mismatch test will fail because the webhook POST will return 401 instead of 204, since the HMAC signature verification will fail. The hardcoded signature won't match the mutated payload signed with the default empty-string secret.",
+      "reasoning": "The webhook endpoint (webhook.py:601-603) gets the secret from `options.get('github-app.webhook-secret')` which defaults to `''` (options/defaults.py:478). The test modifies the payload (`webhook_event['sender']['login'] = 'attacker'`) but uses a hardcoded signature `sha1=d184e6717f8bfbcc291ebc8c0756ee446c6c9486`. The HMAC computed with `''` as the secret against the mutated JSON payload will not match this hardcoded signature, so `is_valid_signature` will return False and the endpoint returns 401, not 204. The test doesn't set `github-app.webhook-secret` and doesn't mock signature verification.",
+      "code_evidence": "test_integration.py:418-426:\n  webhook_event['sender']['login'] = 'attacker'\n  resp = self.client.post(\n      path='/extensions/github/webhook/',\n      ...\n      HTTP_X_HUB_SIGNATURE='sha1=d184e6717f8bfbcc291ebc8c0756ee446c6c9486',\n  )\n  assert resp.status_code == 204\n\noptions/defaults.py:478:\n  register('github-app.webhook-secret', default='', flags=FLAG_CREDENTIAL)\n\nwebhook.py:610-611:\n  if secret is None:  # empty string passes this check\n      return HttpResponse(status=401)",
+      "files_explored": [
+        "tests/sentry/integrations/github/test_integration.py",
+        "src/sentry/integrations/github/webhook.py",
+        "src/sentry/options/defaults.py"
+      ]
+    }
+  ]
+}

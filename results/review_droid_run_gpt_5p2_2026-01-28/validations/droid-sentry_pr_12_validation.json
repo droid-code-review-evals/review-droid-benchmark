@@ -1,0 +1,24 @@
+{
+  "repo": "droid-sentry",
+  "pr_number": 12,
+  "pr_title": "feat(ecosystem): Implement cross-system issue synchronization",
+  "validations": [
+    {
+      "comment_id": 2743656882,
+      "file": "src/sentry/integrations/services/assignment_source.py",
+      "line": 18,
+      "droid_claim": "[P0] `queued` default timestamp is evaluated at import time\n\n`queued: datetime = timezone.now()` is evaluated once when the module is imported, so every `AssignmentSource` created without an explicit `queued` will share the same stale timestamp. Use `dataclasses.field(default_factory=timezone.now)` so `timezone.now()` runs per instance.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "All AssignmentSource instances created via from_integration() share the same stale queued timestamp from module import time, causing incorrect temporal ordering of assignment events.",
+      "reasoning": "Line 18 defines `queued: datetime = timezone.now()` as a dataclass field default. In Python dataclasses, default values are evaluated once at class definition time (module import), not per-instance. The from_integration() classmethod on line 21-25 calls AssignmentSource(source_name=..., integration_id=...) without passing queued, so it relies on this stale default. This is confirmed by checking callers in sync.py lines 98 and 115 which both use from_integration(). The fix is exactly as the Droid suggests: use `field(default_factory=timezone.now)`.",
+      "code_evidence": "Line 18: queued: datetime = timezone.now()\n\nfrom_integration() on lines 21-25 does not pass queued:\n  return AssignmentSource(\n      source_name=integration.name,\n      integration_id=integration.id,\n  )\n\nCallers in sync.py:98,115: assignment_source=AssignmentSource.from_integration(integration)",
+      "files_explored": [
+        "src/sentry/integrations/services/assignment_source.py",
+        "src/sentry/integrations/utils/sync.py"
+      ]
+    }
+  ]
+}

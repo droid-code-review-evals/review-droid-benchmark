@@ -1,0 +1,25 @@
+{
+  "repo": "droid-discourse",
+  "pr_number": 5,
+  "pr_title": "Optimize header layout performance with flexbox mixins",
+  "validations": [
+    {
+      "comment_id": 2743685814,
+      "file": "app/assets/stylesheets/common/foundation/mixins.scss",
+      "line": 126,
+      "droid_claim": "[P2] Legacy `*-box-ordinal-group` is 1-based; `order` is 0-based\n\nIn the legacy `-webkit-box` / `-moz-box` flexbox syntax, `*-box-ordinal-group` is 1-based (default `1`), while modern `order` defaults to `0`. As written, `@include order(0)` would emit `-webkit-box-ordinal-group: 0` which can misorder (or be invalid/ignored) on those legacy implementations. Consider emitting `-webkit-box-ordinal-group: $val + 1` (and same for `-moz-box-ordinal-group`) so the mixin preserves modern `order` semantics.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "On legacy WebKit/Gecko browsers using -webkit-box/-moz-box layout, elements using @include order() will have incorrect ordering because box-ordinal-group is 1-based while the mixin passes the 0-based order value directly.",
+      "reasoning": "Verified in mixins.scss lines 123-128. The @mixin order($val) passes $val directly to both -webkit-box-ordinal-group and -moz-box-ordinal-group. The legacy box-ordinal-group property is indeed 1-based (default 1, minimum valid value 1), while CSS order is 0-based (default 0). The PR uses @include order(2) in topic.scss:30 and @include order(3) in header.scss:39. While these won't crash, they produce semantically incorrect values for legacy browsers — order(0) would emit box-ordinal-group:0 which is invalid, and all values are off by one from their intended legacy equivalents.",
+      "code_evidence": "mixins.scss lines 123-128:\n@mixin order($val) {\n  -webkit-box-ordinal-group: $val;\n  -moz-box-ordinal-group: $val;\n  -ms-flex-order: $val;\n  -webkit-order: $val;\n  order: $val;\n}\n\nUsage in header.scss:39: @include order(3);\nUsage in topic.scss:30: @include order(2);",
+      "files_explored": [
+        "app/assets/stylesheets/common/foundation/mixins.scss",
+        "app/assets/stylesheets/common/base/header.scss",
+        "app/assets/stylesheets/common/base/topic.scss"
+      ]
+    }
+  ]
+}

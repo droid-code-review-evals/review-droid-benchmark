@@ -1,0 +1,194 @@
+{
+  "repo": "codex-sentry",
+  "fetched_by": "chatgpt-codex-connector[bot]",
+  "prs": [
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "Enhanced Pagination Performance for High-Volume Audit Logs",
+      "review_comments": [
+        {
+          "id": 2785246824,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Handle datetime keys in optimized paginator**\n\nWhen `OrganizationAuditLogsEndpoint` enables `OptimizedCursorPaginator` it still passes `order_by=\"-datetime\"` (a `datetime` field). `get_item_key` here calls `math.floor`/`math.ceil` on the raw attribute, which raises `TypeError` for `datetime` objects, and `value_from_cursor` returns the raw numeric cursor value instead of converting it back to a `datetime` for `build_queryset`. That means any request using `optimized_pagination=true` will 500 as soon as cursor processing runs (first page or subsequent) because the paginator expects numeric keys but the model uses datetimes. This needs the same datetime conversion logic as `DateTimePaginator` (or a shared base) before the optimized path can be safely used for audit logs.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/api/paginator.py",
+          "line": 843,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:49:31Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/6#discussion_r2785246824"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "Optimize spans buffer insertion with eviction during insert",
+      "review_comments": [
+        {
+          "id": 2785251520,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Avoid math.floor on datetime cursor keys**\n\nWhen `optimized_pagination=true`, `OrganizationAuditLogsEndpoint` switches to `OptimizedCursorPaginator` while still ordering by `-datetime`. `OptimizedCursorPaginator.get_item_key` uses `math.floor/ceil` directly on the field value, which is a `datetime`, so cursor building will raise `TypeError` and the endpoint will 500 for any optimized request. This is specific to datetime-ordered querysets (like audit logs) and is introduced by the new paginator.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/api/paginator.py",
+          "line": 840,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:51:37Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/7#discussion_r2785251520"
+        },
+        {
+          "id": 2785251523,
+          "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Guard zset ops against existing set-typed buffer keys**\n\nThe span buffer keys (`span-buf:s:{...}:*`) used to be Redis sets (written via `SADD`/`SUNIONSTORE`). This change switches `add-buffer.lua` to `ZCARD`/`ZUNIONSTORE` with no migration or type check. During rollout, any existing set-typed keys will cause `WRONGTYPE` errors in the Lua script, breaking span buffering for active traces until the TTL expires. Consider a compatibility path (type check + conversion or fallback) to avoid runtime failures.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/scripts/spans/add-buffer.lua",
+          "line": 48,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:51:37Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/7#discussion_r2785251523"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+      "review_comments": [
+        {
+          "id": 2785248615,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Restrict upsampling to pure error-only queries**\n\nThe discover-dataset guard treats any query containing the substring `event.type:error` as error\u2011focused, so mixed queries like `event.type:error OR event.type:transaction` will still enable upsampling. That switches `count()` to `upsampled_count()` and sums `sample_weight`, which is only populated for error rows; transaction rows will be ignored (or null\u2011summed), undercounting results for mixed queries. This regression appears because `_is_error_focused_query` is a simple substring check and doesn\u2019t verify that *only* error events are included.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/api/helpers/error_upsampling.py",
+          "line": 138,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:50:17Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/8#discussion_r2785248615"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "GitHub OAuth Security Enhancement",
+      "review_comments": [
+        {
+          "id": 2785249019,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Guard missing sender metadata in install validation**\n\nThis check assumes every existing GitHub integration has `metadata[\"sender\"][\"login\"]`, but `build_integration` only sets `sender` when it was present in the webhook state. For installs created before sender metadata was stored (or created via a flow that didn\u2019t include sender), this will raise a `KeyError` and return a 500, blocking users from completing the install. Consider using `.get`/fallback handling and returning the error page instead of throwing.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/integrations/github/integration.py",
+          "line": 504,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:50:28Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/9#discussion_r2785249019"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "Replays Self-Serve Bulk Delete System",
+      "review_comments": [
+        {
+          "id": 2785251274,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Align error_ids with nodestore results before building events**\n\nThe new error context builder zips `error_ids` with `events.values()`, but `nodestore.backend.get_multi` returns a mapping keyed by node id with no ordering guarantee. If the backend reorders results or omits missing nodes, this zip can pair the wrong `event_id` with another event\u2019s data, producing incorrect error titles/messages in replay summaries. Consider indexing by node id (e.g., a `node_id -> error_id` map) so each event\u2019s data is matched to its original id even when the dict order changes or some entries are missing.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+          "line": 118,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:51:30Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/10#discussion_r2785251274"
+        },
+        {
+          "id": 2785251276,
+          "body": "**<sub><sub>![P3 Badge](https://img.shields.io/badge/P3-lightgrey?style=flat)</sub></sub>  Treat age/timestamp presence checks as None checks**\n\nThe mutual\u2011exclusion validation relies on truthiness (`self.initial_data.get(\"age\")` / `get(\"timestamp\")`). This allows invalid payloads to pass when `age` or `timestamp` is `0` (both fields can be present without triggering validation), even though the intent is to reject any report that includes both. Use an `is not None` check so zero\u2011valued fields are still considered \u201cpresent.\u201d\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/issues/endpoints/browser_reporting_collector.py",
+          "line": 53,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:51:30Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/10#discussion_r2785251276"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 11,
+      "actual_pr_number": 11,
+      "title": "Span Buffer Multiprocess Enhancement with Health Monitoring",
+      "review_comments": [
+        {
+          "id": 2785246889,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Avoid double-counting Redis memory across buffers**\n\nEach `SpansBuffer` uses `get_redis_client()` and `get_memory_info()` returns cluster-wide memory stats (see `SpansBuffer.get_memory_info` in `src/sentry/spans/buffer.py`). Summing `used`/`available` across every buffer here will multiply the same cluster totals by `num_processes`, so `used/available` can exceed the threshold even when Redis is healthy. That can trigger `MessageRejected` and hard backpressure purely because you increased flusher processes. Consider sampling memory info once per cluster (or de-duplicating by client) instead of aggregating across buffers.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/spans/consumers/process/flusher.py",
+          "line": 303,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:49:33Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/11#discussion_r2785246889"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 12,
+      "actual_pr_number": 12,
+      "title": "feat(ecosystem): Implement cross-system issue synchronization",
+      "review_comments": [
+        {
+          "id": 2785247534,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use per-instance default for queued timestamp**\n\n`queued` is evaluated at import time (`queued: datetime = timezone.now()`), so every `AssignmentSource` created without an explicit `queued` (e.g., via `from_integration`) will share the exact same timestamp for the lifetime of the process. If `queued` is used for ordering, deduping, or diagnostics, all assignments in that process will appear to have been queued at the same time, which is incorrect. Use a `default_factory` (e.g., `field(default_factory=timezone.now)`) to capture the actual creation time per instance.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/integrations/services/assignment_source.py",
+          "line": 18,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:49:48Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/12#discussion_r2785247534"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 13,
+      "actual_pr_number": 13,
+      "title": "ref(crons): Reorganize incident creation / issue occurrence logic",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 14,
+      "actual_pr_number": 14,
+      "title": "feat(uptime): Add ability to use queues to manage parallelism",
+      "review_comments": [
+        {
+          "id": 2785248659,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Flush committable offsets before stopping commit loop**\n\nIf `close()` is called while there are completed offsets that haven\u2019t been picked up by the 1s commit loop yet, setting `shutdown_event` and joining the thread causes the loop to exit without a final commit. This can leave the latest processed offsets uncommitted, so a restart will reprocess already-handled messages. Consider doing one last `get_committable_offsets()`/`commit_function()` pass (or waiting for the queues to drain + committing) before shutting down.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/remote_subscriptions/consumers/queue_consumer.py",
+          "line": 338,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:50:18Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/14#discussion_r2785248659"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 15,
+      "actual_pr_number": 15,
+      "title": "feat(workflow_engine): Add in hook for producing occurrences from the stateful detector",
+      "review_comments": [
+        {
+          "id": 2785247662,
+          "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Implement required abstract methods in MetricAlertDetectorHandler**\n\nMetricAlertDetectorHandler now subclasses `StatefulDetectorHandler` but provides no implementations of its abstract methods (`counter_names`, `get_dedupe_value`, `get_group_key_values`, `build_occurrence_and_event_data`). When a detector of type `metric_alert_fire` is evaluated, `Detector.detector_handler` instantiates this class and will raise `TypeError: Can't instantiate abstract class ...` at runtime. This is a regression from the previous concrete `DetectorHandler` implementation and will block any metric-alert detector evaluation until these methods are defined.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
+          "path": "src/sentry/incidents/grouptype.py",
+          "line": 12,
+          "side": "RIGHT",
+          "created_at": "2026-02-10T00:49:52Z",
+          "html_url": "https://github.com/droid-code-review-evals/codex-sentry/pull/15#discussion_r2785247662"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

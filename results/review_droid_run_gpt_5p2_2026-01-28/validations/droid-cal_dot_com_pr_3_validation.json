@@ -1,0 +1,87 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 3,
+  "pr_title": "fix: handle collective multiple host on destinationCalendar",
+  "validations": [
+    {
+      "comment_id": 2743676050,
+      "file": "packages/core/EventManager.ts",
+      "line": 119,
+      "droid_claim": "[P0] Potential crash when destinationCalendar is empty\n\n`mainHostDestinationCalendar` is derived from `evt.destinationCalendar ?? []`, so when destination calendars are missing/empty it becomes `undefined`. The subsequent access `mainHostDestinationCalendar.integration` will throw at runtime, which would break the booking flow for Meet location events without a destination calendar configured. Guard with optional chaining (e.g. `mainHostDestinationCalendar?.integration`) or an explicit null/length check before reading `integration`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "Any booking with Google Meet as location and no destination calendar configured will crash with TypeError when accessing .integration on undefined, breaking the booking flow.",
+      "reasoning": "Line 119: `const [mainHostDestinationCalendar] = evt.destinationCalendar ?? [];` — when destinationCalendar is null/undefined, this destructures from an empty array, yielding undefined. Line 120: `mainHostDestinationCalendar.integration !== \"google_calendar\"` then throws TypeError: Cannot read properties of undefined (reading 'integration'). There is no guard before this access.",
+      "code_evidence": "Line 119: const [mainHostDestinationCalendar] = evt.destinationCalendar ?? [];\nLine 120: if (evt.location === MeetLocationType && mainHostDestinationCalendar.integration !== \"google_calendar\") {",
+      "files_explored": [
+        "packages/core/EventManager.ts"
+      ]
+    },
+    {
+      "comment_id": 2743676054,
+      "file": "packages/features/bookings/lib/handleNewBooking.ts",
+      "line": 1078,
+      "droid_claim": "[P1] Collective team member destination calendars can be dropped when primary destinationCalendar is null\n\nFor COLLECTIVE team events, `teamDestinationCalendars` are gathered from other hosts, but `evt.destinationCalendar` is set to `null` when neither `eventType.destinationCalendar` nor `organizerUser.destinationCalendar` exists. The later `evt.destinationCalendar?.push(...teamDestinationCalendars)` then silently no-ops, so team members' destination calendars never get included in that case. Initialize `destinationCalendar` to `[]` (instead of `null`) when you intend to append team calendars, or ensure it is an array before pushing.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "For COLLECTIVE team events where neither the event type nor organizer has a destination calendar configured, team members' destination calendars are silently dropped, causing calendar events to not be created on team members' calendars.",
+      "reasoning": "Around line 1063-1068, destinationCalendar is set: if eventType.destinationCalendar exists, use it wrapped in array; else if organizerUser.destinationCalendar exists, use it; else null. Around line 1078: `evt.destinationCalendar?.push(...teamDestinationCalendars)` — when destinationCalendar is null, optional chaining causes push to be skipped entirely, so teamDestinationCalendars are never added.",
+      "code_evidence": "Line ~1063: destinationCalendar: eventType.destinationCalendar\n  ? [eventType.destinationCalendar]\n  : organizerUser.destinationCalendar\n  ? [organizerUser.destinationCalendar]\n  : null,\nLine ~1078: evt.destinationCalendar?.push(...teamDestinationCalendars);",
+      "files_explored": [
+        "packages/features/bookings/lib/handleNewBooking.ts"
+      ]
+    },
+    {
+      "comment_id": 2743676055,
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 316,
+      "droid_claim": "[P1] deleteEvent fallback calendarId selection can delete from the wrong calendar\n\nThe `calendarId` selection mirrors the same flawed logic as updateEvent: when `externalCalendarId` is falsy, `event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)` compares to `undefined/null` and will never match. This makes `calendarId` fall back to `primary`, which risks deleting the event from the organizer's primary calendar instead of the intended destination calendar. Use the first destination calendar externalId as the fallback when `externalCalendarId` isn't provided.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When externalCalendarId is not provided, deleteEvent falls back to 'primary' calendar instead of using the destination calendar, potentially deleting events from the wrong calendar or failing to delete them from the correct one.",
+      "reasoning": "Line ~316: `const calendarId = externalCalendarId ? externalCalendarId : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;` — when externalCalendarId is falsy (undefined/null), the find callback compares `cal.externalId === undefined/null` which will never match any real calendar entry. So calendarId becomes undefined, and the fallback `calendarId ? calendarId : defaultCalendarId` resolves to 'primary'.",
+      "code_evidence": "const calendarId = externalCalendarId\n  ? externalCalendarId\n  : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;\n// calendarId is undefined when externalCalendarId is falsy, falls back to 'primary'",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts"
+      ]
+    },
+    {
+      "comment_id": 2743676057,
+      "file": "packages/app-store/googlecalendar/lib/CalendarService.ts",
+      "line": 255,
+      "droid_claim": "[P1] updateEvent selects calendarId using a fallback that can never match\n\nThe expression `externalCalendarId ? externalCalendarId : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId` is logically flawed: when `externalCalendarId` is falsy, the fallback branch searches for `cal.externalId === externalCalendarId` (i.e. `=== undefined/null`), which won't match any real destination calendar. This can leave `selectedCalendar` undefined and cause the update to target the wrong calendar (or fail). The likely intended fallback is the first destination calendar's `externalId` (e.g. `mainHostDestinationCalendar?.externalId`).",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When externalCalendarId is not provided, updateEvent passes undefined as calendarId to Google Calendar API, which may cause the update to fail or target the wrong calendar.",
+      "reasoning": "Line ~255: `const selectedCalendar = externalCalendarId ? externalCalendarId : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;` — identical flawed pattern to deleteEvent. When externalCalendarId is falsy, the find compares against undefined/null and never matches, leaving selectedCalendar as undefined. This undefined value is then passed directly to `calendar.events.update({ calendarId: selectedCalendar })` without any fallback.",
+      "code_evidence": "const selectedCalendar = externalCalendarId\n  ? externalCalendarId\n  : event.destinationCalendar?.find((cal) => cal.externalId === externalCalendarId)?.externalId;\n// selectedCalendar is undefined when externalCalendarId is falsy",
+      "files_explored": [
+        "packages/app-store/googlecalendar/lib/CalendarService.ts"
+      ]
+    },
+    {
+      "comment_id": 2743676059,
+      "file": "packages/core/EventManager.ts",
+      "line": 542,
+      "droid_claim": "[P1] updateAllCalendarEvents can call updateEvent with an undefined credential\n\nIn the `reference.credentialId` branch, you attempt to resolve `credential` from `this.calendarCredentials` and fall back to a DB lookup, but if the credential isn't found (or the record lacks `app.slug`) `credential` can remain undefined. The code then unconditionally does `result.push(updateEvent(credential, ...))`, which can crash when `updateEvent` reads fields off the credential. Add an `if (!credential) { ... }` guard (similar to `createAllCalendarEvents`) before calling `updateEvent`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "If a credential is deleted or its app record lacks a slug, updateAllCalendarEvents will pass undefined to updateEvent, causing a runtime crash during booking updates.",
+      "reasoning": "Lines 511-542: `credential` is initialized by filtering calendarCredentials. If not found, a DB lookup is done with `if (credentialFromDB && credentialFromDB.app?.slug)` guard — but if this condition fails, credential remains undefined. Line 542: `result.push(updateEvent(credential, event, bookingRefUid, calenderExternalId))` is called unconditionally outside the if block, passing potentially undefined credential. The createAllCalendarEvents method has a proper `if (!credential) { ... }` guard but this method does not.",
+      "code_evidence": "Line ~511: credential = this.calendarCredentials.filter(...).[0];\nLine ~517-531: if (!credential) { DB lookup with guard }\nLine ~542: result.push(updateEvent(credential, event, bookingRefUid, calenderExternalId)); // no undefined guard",
+      "files_explored": [
+        "packages/core/EventManager.ts"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,364 @@
+{
+  "repo": "greptile-discourse",
+  "fetched_by": "greptile-apps[bot]",
+  "prs": [
+    {
+      "number": 1,
+      "actual_pr_number": 1,
+      "title": "FEATURE: automatically downsize large images",
+      "review_comments": [
+        {
+          "id": 2806457187,
+          "body": "duplicate method definition - `downsize` is defined twice with different signatures (lines 145-147 and 149-151). The second definition will override the first, making the `max_width, max_height` signature inaccessible.\n\n```suggestion\n  def self.downsize(from, to, dimensions_or_width, height_or_opts=nil, opts={})\n    if height_or_opts.is_a?(Hash)\n      # Called with dimensions string: downsize(from, to, \"80%\", opts)\n      optimize(\"downsize\", from, to, dimensions_or_width, height_or_opts)\n    else\n      # Called with width/height: downsize(from, to, max_width, max_height, opts)\n      optimize(\"downsize\", from, to, \"#{dimensions_or_width}x#{height_or_opts}\", opts)\n    end\n  end\n```",
+          "path": "app/models/optimized_image.rb",
+          "line": 151,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:25Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/1#discussion_r2806457187"
+        },
+        {
+          "id": 2806457218,
+          "body": "this loop may not terminate if `OptimizedImage.downsize` fails to reduce file size (e.g., already heavily compressed images, certain formats). After 5 attempts with no size reduction, you'll still have an oversized file. Add a check to break if file size doesn't decrease between iterations.\n\n```suggestion\n      # allow users to upload large images that will be automatically reduced to allowed size\n      if tempfile && tempfile.size > 0 && SiteSetting.max_image_size_kb > 0 && FileHelper.is_image?(filename)\n        attempt = 5\n        previous_size = tempfile.size\n        while attempt > 0 && tempfile.size > SiteSetting.max_image_size_kb.kilobytes\n          OptimizedImage.downsize(tempfile.path, tempfile.path, \"80%\", allow_animation: SiteSetting.allow_animated_thumbnails)\n          attempt -= 1\n          # Break if file size didn't change (can't compress further)\n          break if tempfile.size >= previous_size\n          previous_size = tempfile.size\n        end\n      end\n```",
+          "path": "app/controllers/uploads_controller.rb",
+          "line": 70,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:26Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/1#discussion_r2806457218"
+        },
+        {
+          "id": 2806457251,
+          "body": "hardcoded 10MB limit replaces dynamic `SiteSettings` lookup, creating inconsistency between client validation and server-side processing. Users may upload files that pass client validation but fail server validation if `SiteSetting.max_image_size_kb` differs from 10MB.",
+          "path": "app/assets/javascripts/discourse/lib/utilities.js",
+          "line": 182,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:27Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/1#discussion_r2806457251"
+        },
+        {
+          "id": 2806457333,
+          "body": "hardcoded 10MB limit in error message creates inconsistency with actual validation - error message will always show 10MB even if the setting is different.",
+          "path": "app/assets/javascripts/discourse/lib/utilities.js",
+          "line": 246,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:27Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/1#discussion_r2806457333"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 2,
+      "actual_pr_number": 2,
+      "title": "FEATURE: per-topic unsubscribe option in emails",
+      "review_comments": [
+        {
+          "id": 2806454527,
+          "body": "`tu` can be `nil` if no `TopicUser` record exists, causing `NoMethodError` on line 107 when trying to access `.notification_level`.\n\n```suggestion\n    tu = TopicUser.find_by(user_id: current_user.id, topic_id: params[:topic_id])\n\n    if tu.nil?\n      tu = TopicUser.create!(user_id: current_user.id, topic_id: params[:topic_id], notification_level: TopicUser.notification_levels[:muted])\n    elsif tu.notification_level > TopicUser.notification_levels[:regular]\n      tu.notification_level = TopicUser.notification_levels[:regular]\n      tu.save!\n    else\n      tu.notification_level = TopicUser.notification_levels[:muted]\n      tu.save!\n    end\n```",
+          "path": "app/controllers/topics_controller.rb",
+          "line": 113,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:21Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/2#discussion_r2806454527"
+        },
+        {
+          "id": 2806454564,
+          "body": "triple braces `{{{` disable HTML escaping, creating XSS vulnerability if `fancyTitle` contains malicious HTML from topic title\n\n```suggestion\n    {{stopNotificiationsText}}\n```",
+          "path": "app/assets/javascripts/discourse/templates/topic/unsubscribe.hbs",
+          "line": 3,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:22Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/2#discussion_r2806454564"
+        },
+        {
+          "id": 2806454594,
+          "body": "typo in method name\n\n```suggestion\n  stopNotificationsText: function() {\n```",
+          "path": "app/assets/javascripts/discourse/controllers/topic-unsubscribe.js.es6",
+          "line": 5,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:23Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/2#discussion_r2806454594"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 3,
+      "actual_pr_number": 3,
+      "title": "Add comprehensive email validation for blocked users",
+      "review_comments": [
+        {
+          "id": 2806453671,
+          "body": "This method has a race condition - if two requests check the same email simultaneously, both will increment `match_count` independently, potentially causing incorrect counts. Additionally, the method modifies database state during what appears to be a read operation (validation), which violates separation of concerns and could cause unexpected side effects. Consider separating the \"check if blocked\" logic from the \"track statistics\" logic.",
+          "path": "app/models/blocked_email.rb",
+          "line": 18,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:00Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/3#discussion_r2806453671"
+        },
+        {
+          "id": 2806453712,
+          "body": "`and` keyword has lower precedence than `&&`. This line will be evaluated as `(record.errors[attribute].blank? and BlockedEmail.should_block?(value))` but if any developer adds additional conditions later, it could cause precedence bugs.\n\n```suggestion\n    if record.errors[attribute].blank? && BlockedEmail.should_block?(value)\n```\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "lib/validators/email_validator.rb",
+          "line": 13,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:01Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/3#discussion_r2806453712"
+        },
+        {
+          "id": 2806453748,
+          "body": "Missing newline at end of file\n\n```suggestion\nend\n```\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "lib/validators/email_validator.rb",
+          "line": 24,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:02Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/3#discussion_r2806453748"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 4,
+      "actual_pr_number": 4,
+      "title": "Enhance embed URL handling and validation system",
+      "review_comments": [
+        {
+          "id": 2806456181,
+          "body": "SSRF vulnerability - `open(url)` can fetch arbitrary URLs including internal network resources. Attacker could make server request internal IPs (e.g., `http://127.0.0.1:6379`) or cloud metadata endpoints (e.g., `http://169.254.169.254/latest/meta-data/`).\n\n```suggestion\n    doc = Readability::Document.new(URI.open(url, redirect: false, open_timeout: 5, read_timeout: 10).read,\n```",
+          "path": "app/models/topic_embed.rb",
+          "line": 48,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:01Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/4#discussion_r2806456181"
+        },
+        {
+          "id": 2806456229,
+          "body": "XSS vulnerability - `url` is interpolated into HTML without escaping. Malicious URLs with `javascript:` or `data:` schemes, or containing `<script>` tags will be rendered directly.\n\n```suggestion\n    contents << \"\\n<hr>\\n<small>#{I18n.t('embed.imported_from', link: \"<a href='#{ERB::Util.html_escape(url)}'>#{ERB::Util.html_escape(url)}</a>\")}</small>\\n\"\n```",
+          "path": "app/models/topic_embed.rb",
+          "line": 13,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:02Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/4#discussion_r2806456229"
+        },
+        {
+          "id": 2806456292,
+          "body": "SSRF vulnerability - `open()` on admin-controlled URL still allows internal network access if compromised. Add URL validation to prevent internal IPs and metadata endpoints.\n\n```suggestion\n      uri = URI.parse(SiteSetting.feed_polling_url)\n      raise \"Invalid feed URL\" if uri.host =~ /^(127\\.|10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.|169\\.254\\.)/\n      rss = SimpleRSS.parse URI.open(SiteSetting.feed_polling_url, redirect: false, open_timeout: 5, read_timeout: 10)\n```",
+          "path": "app/jobs/scheduled/poll_feed.rb",
+          "line": 29,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:03Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/4#discussion_r2806456292"
+        },
+        {
+          "id": 2806456333,
+          "body": "Origin validation is backwards - `indexOf` returns position or -1. This checks if `discourseUrl` contains the origin, not if origin starts with `discourseUrl`. Attacker at `evil.comdiscourseUrl.com` would pass.\n\n```suggestion\n    if (e.origin.indexOf(discourseUrl) !== 0) { return; }\n```",
+          "path": "app/assets/javascripts/embed.js",
+          "line": 17,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:04Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/4#discussion_r2806456333"
+        },
+        {
+          "id": 2806456373,
+          "body": "Referer validation can be bypassed - only checks host, not scheme or port. `http://eviltrout.com:8080` passes if embeddable_host is `eviltrout.com`, and attacker can control referer in some contexts.",
+          "path": "app/controllers/embed_controller.rb",
+          "line": 26,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:05Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/4#discussion_r2806456373"
+        },
+        {
+          "id": 2806456421,
+          "body": "No validation on `embed_url` parameter - accepts any string. Should validate URL format and ensure it matches `embeddable_host` to prevent unauthorized embedding of arbitrary URLs.",
+          "path": "app/controllers/embed_controller.rb",
+          "line": 9,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:06Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/4#discussion_r2806456421"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 5,
+      "actual_pr_number": 5,
+      "title": "Optimize header layout performance with flexbox mixins",
+      "review_comments": [
+        {
+          "id": 2806454802,
+          "body": "missing space after colon in `align-items` property\n\n```suggestion\n    align-items: $alignment;\n```",
+          "path": "app/assets/stylesheets/common/foundation/mixins.scss",
+          "line": 122,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:30Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/5#discussion_r2806454802"
+        },
+        {
+          "id": 2806454851,
+          "body": "`-webkit-box-ordinal-group` requires values starting from 1, but this mixin passes `$val` directly. If someone calls `@include order(0)`, it won't work correctly in webkit browsers. The webkit property expects ordinal groups to start at 1.",
+          "path": "app/assets/stylesheets/common/foundation/mixins.scss",
+          "line": 130,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:31Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/5#discussion_r2806454851"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 6,
+      "actual_pr_number": 6,
+      "title": "UX: show complete URL path if website domain is same as instance domain",
+      "review_comments": [
+        {
+          "id": 2806454425,
+          "body": "use `+` instead of `<<` for string concatenation in conditional to avoid confusion\n\n```suggestion\n      discourse_host.ends_with?(\".\" + website_host) ? website_host + URI(website.to_s).path : website_host\n```\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "app/serializers/user_serializer.rb",
+          "line": 149,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:12:18Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/6#discussion_r2806454425"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 7,
+      "actual_pr_number": 7,
+      "title": "scale-color $lightness must use $secondary for dark themes",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 8,
+      "actual_pr_number": 8,
+      "title": "FIX: proper handling of group memberships",
+      "review_comments": [
+        {
+          "id": 2806459046,
+          "body": "routes define members endpoints as member routes (will provide `params[:id]`), but the controller methods expect `params[:group_id]`\n\n```suggestion\n      member do\n        delete \"members\" => \"groups#remove_member\"\n        put \"members\" => \"groups#add_members\"\n      end\n```",
+          "path": "config/routes.rb",
+          "line": 50,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:52Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/8#discussion_r2806459046"
+        },
+        {
+          "id": 2806459084,
+          "body": "expects `params[:group_id]` but the route at `config/routes.rb:50` provides `params[:id]` (member route)\n\n```suggestion\n    group = Group.find(params[:id].to_i)\n```",
+          "path": "app/controllers/admin/groups_controller.rb",
+          "line": 66,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:53Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/8#discussion_r2806459084"
+        },
+        {
+          "id": 2806459109,
+          "body": "expects `params[:group_id]` but the route at `config/routes.rb:49` provides `params[:id]` (member route)\n\n```suggestion\n    group = Group.find(params[:id].to_i)\n```",
+          "path": "app/controllers/admin/groups_controller.rb",
+          "line": 85,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:54Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/8#discussion_r2806459109"
+        },
+        {
+          "id": 2806459148,
+          "body": "calculates one extra page when `user_count` is exactly divisible by `limit` (e.g., 50 users with limit 50 shows 2 pages instead of 1)\n\n```suggestion\n    return Math.ceil(this.get(\"user_count\") / this.get(\"limit\"));\n```",
+          "path": "app/assets/javascripts/admin/controllers/admin-group.js.es6",
+          "line": 13,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:55Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/8#discussion_r2806459148"
+        },
+        {
+          "id": 2806459196,
+          "body": "changed `ilike` to uppercase `ILIKE` for consistency (both are valid PostgreSQL syntax)\n\n<sub>Note: If this suggestion doesn't match your team's coding style, reply to this and let me know. I'll remember it for next time!</sub>",
+          "path": "app/controllers/admin/groups_controller.rb",
+          "line": 8,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:13:56Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/8#discussion_r2806459196"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 9,
+      "actual_pr_number": 9,
+      "title": "FEATURE: Localization fallbacks (server-side)",
+      "review_comments": [],
+      "issue_comments": [],
+      "reviews": []
+    },
+    {
+      "number": 10,
+      "actual_pr_number": 10,
+      "title": "FEATURE: Can edit category/host relationships for embedding",
+      "review_comments": [
+        {
+          "id": 2806462632,
+          "body": "SQL injection vulnerability - `h` is directly interpolated into the SQL query without escaping. If site_settings contains malicious content, this could execute arbitrary SQL.\n\n```suggestion\n            execute \"INSERT INTO embeddable_hosts (host, category_id, created_at, updated_at) VALUES (#{connection.quote(h)}, #{category_id}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)\"\n```",
+          "path": "db/migrate/20150818190757_create_embeddable_hosts.rb",
+          "line": 25,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:47Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/10#discussion_r2806462632"
+        },
+        {
+          "id": 2806462704,
+          "body": "Nil crash if `self.host` is nil - `sub!` will raise NoMethodError on nil.\n\n```suggestion\n    self.host.sub!(/^https?:\\/\\//, '') if self.host.present?\n```",
+          "path": "app/models/embeddable_host.rb",
+          "line": 6,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:48Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/10#discussion_r2806462704"
+        },
+        {
+          "id": 2806462755,
+          "body": "Nil crash if `self.host` is nil after previous line - `sub!` will raise NoMethodError on nil.\n\n```suggestion\n    self.host.sub!(/\\/.*$/, '') if self.host.present?\n```",
+          "path": "app/models/embeddable_host.rb",
+          "line": 7,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:49Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/10#discussion_r2806462755"
+        },
+        {
+          "id": 2806462817,
+          "body": "Missing nil check - if host with this ID doesn't exist, `host.destroy` on line 15 will crash.",
+          "path": "app/controllers/admin/embeddable_hosts_controller.rb",
+          "line": 10,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:50Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/10#discussion_r2806462817"
+        },
+        {
+          "id": 2806462871,
+          "body": "Missing nil check - if host with this ID doesn't exist, `save_host(host)` will crash when trying to set properties on nil.",
+          "path": "app/controllers/admin/embeddable_hosts_controller.rb",
+          "line": 11,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:51Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/10#discussion_r2806462871"
+        },
+        {
+          "id": 2806462912,
+          "body": "Missing null check - `obj[k]` might not be an array. This will crash if the value is null/undefined.",
+          "path": "app/assets/javascripts/discourse/models/store.js.es6",
+          "line": 197,
+          "side": "RIGHT",
+          "created_at": "2026-02-13T23:14:52Z",
+          "html_url": "https://github.com/droid-code-review-evals/greptile-discourse/pull/10#discussion_r2806462912"
+        }
+      ],
+      "issue_comments": [],
+      "reviews": []
+    }
+  ]
+}

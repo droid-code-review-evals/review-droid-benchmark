@@ -1,0 +1,41 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 10,
+  "pr_title": "feat: add calendar cache status and actions (#22532)",
+  "validations": [
+    {
+      "comment_id": 2743703007,
+      "file": "packages/features/apps/components/CredentialActionsDropdown.tsx",
+      "line": 48,
+      "droid_claim": "[P1] UI may show stale cache timestamp after delete\n\nAfter `viewer.calendars.deleteCache` succeeds, the component only shows a toast and calls `onSuccess`, but it does not invalidate `viewer.calendars.connectedCalendars`. If the parent `onSuccess` doesn't refetch, `cacheUpdatedAt` can remain displayed even though the cache rows were deleted; invalidate/refetch the connectedCalendars query on success/settled to keep the UI consistent.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "After deleting calendar cache, the UI continues to display the old cacheUpdatedAt timestamp because the connectedCalendars query is never invalidated, misleading users into thinking the cache still exists.",
+      "reasoning": "The deleteCacheMutation (lines 44-51) only calls showToast and onSuccess?.() on success. It does NOT call utils.viewer.calendars.connectedCalendars.invalidate(). Compare with disconnectMutation (lines 53-63) which properly invalidates in onSettled. The parent passes onChanged as onSuccess, but onChanged is typed as optional (onChanged?: () => unknown | Promise<unknown>) and there is no guarantee it invalidates the connectedCalendars query. The cacheUpdatedAt prop will retain its stale value until a manual page refresh.",
+      "code_evidence": "deleteCacheMutation (lines 44-51):\n  const deleteCacheMutation = trpc.viewer.calendars.deleteCache.useMutation({\n    onSuccess: () => {\n      showToast(t(\"cache_deleted_successfully\"), \"success\");\n      onSuccess?.();\n    },\n    ...\n  });\n\nCompare with disconnectMutation which properly invalidates:\n  async onSettled() {\n    await utils.viewer.calendars.connectedCalendars.invalidate();\n    await utils.viewer.apps.integrations.invalidate();\n  }",
+      "files_explored": [
+        "packages/features/apps/components/CredentialActionsDropdown.tsx",
+        "packages/trpc/server/routers/viewer/calendars/deleteCache.handler.ts",
+        "packages/platform/atoms/selected-calendars/wrappers/SelectedCalendarsSettingsWebWrapper.tsx"
+      ]
+    },
+    {
+      "comment_id": 2743703009,
+      "file": "scripts/test-gcal-webhooks.sh",
+      "line": 67,
+      "droid_claim": "[P1] macOS-specific sed -i syntax will fail on Linux\n\nThe script uses `sed -i '' -E ...`, which is BSD/macOS syntax. On Linux (GNU sed), this will error and the env var won't be updated; use a portable approach (e.g. `sed -i.bak ... && rm -f ...` or branch on OS) so the script works in CI/dev environments that run Linux.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "runtime_error",
+      "impact": "The script will fail to update GOOGLE_WEBHOOK_URL in .env on Linux systems, causing the webhook test setup to silently break in CI or on Linux dev machines.",
+      "reasoning": "Line 67 uses `sed -i '' -E \"s|...|...|\" \"$ENV_FILE\"` which is BSD/macOS sed syntax. On GNU/Linux sed, the empty string '' after -i is treated as the next argument (the regex), not a backup suffix. GNU sed interprets -i'' (no space) differently from -i '' (with space). This would cause an error or incorrect behavior on Linux. The script has no OS detection or portable fallback.",
+      "code_evidence": "Line 67:\n  sed -i '' -E \"s|^GOOGLE_WEBHOOK_URL=.*|GOOGLE_WEBHOOK_URL=$TUNNEL_URL|\" \"$ENV_FILE\"",
+      "files_explored": [
+        "scripts/test-gcal-webhooks.sh"
+      ]
+    }
+  ]
+}

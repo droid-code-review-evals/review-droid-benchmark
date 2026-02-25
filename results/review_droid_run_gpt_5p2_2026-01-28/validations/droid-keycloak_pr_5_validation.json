@@ -1,0 +1,26 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 5,
+  "pr_title": "Add Client resource type and scopes to authorization schema",
+  "validations": [
+    {
+      "comment_id": 2743687129,
+      "file": "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+      "line": 219,
+      "droid_claim": "[P0] Potential NullPointerException when checking fallback permission\n\n`AdminPermissionsSchema.SCHEMA.getResourceTypeResource(...)` can return `null`. If it does, the subsequent `findByResource(server, resource)` call will dereference `resource` (e.g., `resource.getId()`) and throw a NullPointerException. Add a null check after loading the fallback resource and return `false` when it is null.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "runtime_error",
+      "impact": "If the authorization schema is not supported, the resource type is unknown, or the resource type resource does not exist in the store, getResourceTypeResource returns null, and the subsequent findByResource call will throw a NullPointerException, crashing the permission check.",
+      "reasoning": "AdminPermissionsSchema.getResourceTypeResource (line 116-134 of AdminPermissionsSchema.java) can return null in multiple cases: if supportsAuthorizationSchema returns false (line 118), if resourceType is null (line 122), if the resource type is not found in the schema (line 128), or if resourceStore.findByName returns null (line 133). In ClientPermissionsV2.java line 217, the return value is assigned to 'resource' with no null check. Line 219 then calls authz.getStoreFactory().getPolicyStore().findByResource(server, resource) with the potentially null resource. The PolicyStore.findByResource Javadoc explicitly states the resource parameter 'Cannot be null'. The same pattern exists in UserPermissionsV2.java line 121-123, confirming this is a systematic issue.",
+      "code_evidence": "ClientPermissionsV2.java lines 217-219:\n  resource = AdminPermissionsSchema.SCHEMA.getResourceTypeResource(session, server, AdminPermissionsSchema.CLIENTS_RESOURCE_TYPE);\n\n  if (authz.getStoreFactory().getPolicyStore().findByResource(server, resource).isEmpty()) {\n\nAdminPermissionsSchema.java lines 116-134 shows getResourceTypeResource can return null in 4 different paths.\nPolicyStore.java line 97: '@param resource the resource. Cannot be {@code null}.'",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/services/resources/admin/permissions/ClientPermissionsV2.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/AdminPermissionsSchema.java",
+        "server-spi-private/src/main/java/org/keycloak/authorization/store/PolicyStore.java",
+        "services/src/main/java/org/keycloak/services/resources/admin/permissions/UserPermissionsV2.java"
+      ]
+    }
+  ]
+}

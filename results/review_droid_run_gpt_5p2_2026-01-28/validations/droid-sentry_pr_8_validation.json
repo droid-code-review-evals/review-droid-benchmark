@@ -1,0 +1,58 @@
+{
+  "repo": "droid-sentry",
+  "pr_number": 8,
+  "pr_title": "feat(upsampling) - Support upsampled error count with performance optimizations",
+  "validations": [
+    {
+      "comment_id": 2743702663,
+      "file": "tests/snuba/api/endpoints/test_organization_events_stats.py",
+      "line": 3565,
+      "droid_claim": "[P1] Test authenticates as a different user than `self.user` due to shadowing\n\nIn `setUp()`, `self.login_as(user=self.user)` runs before `self.user = self.create_user()`. `self.user` is a cached_property on the base test case, so the first access creates and authenticates one user, then the later assignment overwrites `self.user` with a different instance. This makes the test's authenticated user diverge from later references to `self.user`, which can hide permission issues or introduce flakiness when future assertions depend on the logged-in identity.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "The test authenticates as admin@localhost (superuser) via the cached_property, then overwrites self.user with a new non-superuser user. Later references to self.user get the wrong user, and the test runs with elevated superuser permissions that may mask permission bugs.",
+      "reasoning": "Verified in fixtures.py line 72-84: self.user is a @cached_property that creates admin@localhost (superuser). In setUp() at line 3560, self.login_as(user=self.user) triggers this cached_property, authenticating as the superuser. Then at line 3565, self.user = self.create_user() overwrites the attribute with a brand new non-superuser user. The authenticated session remains tied to the original superuser, while self.user now points to a different user instance.",
+      "code_evidence": "setUp() lines 3559-3566:\n  self.login_as(user=self.user)  # authenticates as cached_property superuser\n  self.authed_user = self.user   # saves reference to superuser\n  ...\n  self.user = self.create_user() # overwrites with new non-superuser user\n\nfixtures.py lines 72-74:\n  @cached_property\n  def user(self) -> User:\n      return self.create_user('admin@localhost', is_superuser=True, ...)",
+      "files_explored": [
+        "tests/snuba/api/endpoints/test_organization_events_stats.py",
+        "src/sentry/testutils/fixtures.py"
+      ]
+    },
+    {
+      "comment_id": 2743702666,
+      "file": "src/sentry/api/endpoints/organization_events_stats.py",
+      "line": 222,
+      "droid_claim": "[P1] Upsampling eligibility check uses the wrong dataset variable\n\n`is_errors_query_for_error_upsampled_projects(...)` is called with the outer-scope `dataset` variable, but `_get_event_stats` receives `scoped_dataset` (the dataset actually used for the query). When `get_event_stats_factory` calls `_get_event_stats` with a different dataset than the outer `dataset` (e.g. split datasets), the upsampling decision can be made against the wrong dataset, leading to incorrect application (or skipping) of the `count() -> upsampled_count()` transformation.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "When the outer dataset differs from scoped_dataset (e.g., during dataset splitting), the upsampling eligibility check uses the wrong dataset, potentially applying upsampled_count() to transaction queries or skipping it for error queries, producing incorrect count values.",
+      "reasoning": "Verified at line 222: _get_event_stats receives scoped_dataset as its first parameter, but the call to is_errors_query_for_error_upsampled_projects at line 222 passes the closure variable `dataset` (set at line 170 from self.get_dataset()). The _should_apply_sample_weight_transform function in error_upsampling.py makes dataset-specific decisions (e.g., errors=always apply, transactions=never apply, discover=check query). Using the wrong dataset means wrong upsampling decisions.",
+      "code_evidence": "Line 209-222:\n  def _get_event_stats(\n      scoped_dataset: Any,  # <-- actual dataset for this query\n      ...\n  ):\n      should_upsample = is_errors_query_for_error_upsampled_projects(\n          snuba_params, organization, dataset, request  # <-- uses outer closure 'dataset', not scoped_dataset\n      )",
+      "files_explored": [
+        "src/sentry/api/endpoints/organization_events_stats.py",
+        "src/sentry/api/helpers/error_upsampling.py"
+      ]
+    },
+    {
+      "comment_id": 2743702668,
+      "file": "src/sentry/search/events/datasets/discover.py",
+      "line": 1050,
+      "droid_claim": "[P1] `upsampled_count` should likely be marked private to avoid user-triggered Snuba failures\n\n`upsampled_count()` directly references `sample_weight`, which (per the helper's own assumptions) is only present for error events in allowlisted projects. Because this `SnQLFunction` is not marked `private=True`, callers could invoke `upsampled_count()` in arbitrary discover queries/projects, which can result in Snuba column-not-found errors when `sample_weight` is absent. If this function is intended only for internal substitution of `count()` when eligibility has been checked, it should be private like other internal-only functions in this registry.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "runtime_error",
+      "impact": "Users can invoke upsampled_count() in arbitrary discover queries via the API. When sample_weight column doesn't exist (non-allowlisted projects or transaction events), this will cause Snuba column-not-found errors resulting in 500 responses.",
+      "reasoning": "Verified at line 1042-1053: The upsampled_count SnQLFunction does not have private=True, unlike neighboring internal functions like column_hash (line 1040: private=True). The function references Column('sample_weight') which only exists for error events in allowlisted projects. Without private=True, users can specify upsampled_count() in their discover query fields via the API, bypassing the eligibility check in error_upsampling.py.",
+      "code_evidence": "Lines 1042-1053:\n  SnQLFunction(\n      \"upsampled_count\",\n      required_args=[],\n      snql_aggregate=lambda args, alias: Function(\n          \"toInt64\",\n          [Function(\"sum\", [Column(\"sample_weight\")])],\n          alias,\n      ),\n      default_result_type=\"number\",\n  ),  # <-- no private=True\n\nCompare with column_hash at line 1040: private=True",
+      "files_explored": [
+        "src/sentry/search/events/datasets/discover.py",
+        "src/sentry/api/helpers/error_upsampling.py"
+      ]
+    }
+  ]
+}

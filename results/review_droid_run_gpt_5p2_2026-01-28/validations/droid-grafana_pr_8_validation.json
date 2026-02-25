@@ -1,0 +1,23 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 8,
+  "pr_title": "Frontend Asset Optimization",
+  "validations": [
+    {
+      "comment_id": 2743647362,
+      "file": "pkg/api/webassets/webassets.go",
+      "line": 49,
+      "droid_claim": "[P2] Missing cache re-check after acquiring write lock\n\nThe read-lock fast path releases the lock before acquiring the write lock; another goroutine can populate `entryPointAssetsCache` in between. Without re-checking under the write lock, concurrent requests in non-dev mode can redundantly recompute web assets (extra disk/CDN work) instead of returning the cached value.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "performance",
+      "impact": "Under concurrent requests in non-dev mode, multiple goroutines can redundantly read and parse assets-manifest.json from disk or CDN when only one computation is needed, causing unnecessary I/O.",
+      "reasoning": "The code at lines 42-49 implements a read-lock fast path: RLock, read entryPointAssetsCache, RUnlock, then check if cached. If not cached, it acquires the write lock at line 49. Between RUnlock (line 44) and Lock (line 49), another goroutine that also saw a nil cache could have already acquired the write lock, computed the result, and stored it. When the current goroutine finally acquires the write lock, it does not re-check entryPointAssetsCache before proceeding to recompute. This is a textbook missing double-checked locking pattern. The bug is real — it causes redundant disk/CDN reads under concurrent access.",
+      "code_evidence": "Lines 42-49:\n  entryPointAssetsCacheMu.RLock()\n  ret := entryPointAssetsCache\n  entryPointAssetsCacheMu.RUnlock()\n\n  if cfg.Env != setting.Dev && ret != nil {\n    return ret, nil\n  }\n  entryPointAssetsCacheMu.Lock()\n  defer entryPointAssetsCacheMu.Unlock()\n  // No re-check of entryPointAssetsCache here",
+      "files_explored": [
+        "pkg/api/webassets/webassets.go"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "repo": "droid-grafana",
+  "pr_number": 2,
+  "pr_title": "AuthZService: improve authz caching",
+  "validations": [
+    {
+      "comment_id": 2743654034,
+      "file": "pkg/services/authz/rbac/service.go",
+      "line": 117,
+      "droid_claim": "[P1] Denial cache key can mismatch user identifier formats\n\n`permDenialKey` is built from `checkReq.UserUID`, which can be either a numeric user ID string or a UID depending on how `Subject` was formatted, while the permissions cache key uses the resolved `userIdentifiers.UID`. This means a cached deny for the same user may not be found across requests that use different identifier formats, reducing cache effectiveness and making behavior inconsistent; consider resolving to `userIdentifiers.UID` before constructing the denial cache key (similar to the permission-cache path).",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "logic_bug",
+      "impact": "Denial cache entries are keyed by the raw subject identifier (which may be a numeric ID like '123' or a UID like 'abc-def'), while permission cache entries always use the resolved UID. If the same user is referenced by different identifier formats across requests, denial cache lookups will miss, reducing cache effectiveness and causing inconsistent short-circuit behavior.",
+      "reasoning": "The new permDenialKey on line 117 is constructed via userPermDenialCacheKey(checkReq.Namespace.Value, checkReq.UserUID, ...) where checkReq.UserUID comes directly from types.ParseTypeID(subject) and can be either a numeric ID string or an actual UID. In contrast, getCachedIdentityPermissions (line ~345) and getUserPermissions (line ~310) both call GetUserIdentifiers to resolve to userIdentifiers.UID before constructing the permission cache key via userPermCacheKey. GetUserIdentifiers (line ~370) shows that if the input is numeric, it queries by user ID, otherwise by UID, and returns a UserIdentifiers struct with the canonical UID. So a request with subject 'user:123' would produce permDenialKey with '123', but a subsequent request with subject 'user:abc-uid' for the same user would produce a different permDenialKey with 'abc-uid', missing the cached denial. The inconsistency is real and introduced by this PR.",
+      "code_evidence": "Line 117: permDenialKey := userPermDenialCacheKey(checkReq.Namespace.Value, checkReq.UserUID, ...)\n\ncache.go line 29: func userPermDenialCacheKey(namespace, userUID, action, name, parent string) -> uses userUID directly\n\ngetCachedIdentityPermissions resolves first: userIdentifiers, err := s.GetUserIdentifiers(ctx, ns, userID) then uses userPermCacheKey(ns.Value, userIdentifiers.UID, action)\n\nGetUserIdentifiers (line ~370): if numeric, queries by ID; returns struct with canonical .UID field",
+      "files_explored": [
+        "pkg/services/authz/rbac/service.go",
+        "pkg/services/authz/rbac/cache.go"
+      ]
+    }
+  ]
+}

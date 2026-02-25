@@ -1,0 +1,56 @@
+{
+  "repo": "droid-sentry",
+  "pr_number": 10,
+  "pr_title": "Replays Self-Serve Bulk Delete System",
+  "validations": [
+    {
+      "comment_id": 2743665039,
+      "file": "src/sentry/issues/endpoints/browser_reporting_collector.py",
+      "line": 47,
+      "droid_claim": "[P2] `age` validation allows negative values\n\n`BrowserReportSerializer.age` lacks `min_value=0` while `timestamp` enforces non-negative values. `age` represents elapsed milliseconds per the Reporting API and should also be non-negative; allowing negative ages through validation can lead to accepting invalid reports.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "Negative age values are accepted through validation, allowing semantically invalid browser reports to be processed. The timestamp field correctly enforces min_value=0 but age does not.",
+      "reasoning": "Line 47 defines `age = serializers.IntegerField(required=False)` with no `min_value` constraint. Line 48 defines `timestamp = serializers.IntegerField(required=False, min_value=0)`. The age field represents elapsed milliseconds per the W3C Reporting API spec and should be non-negative. The inconsistency between the two fields confirms the Droid's claim. While the practical impact is low (reports are only used for metrics recording currently), the validation gap is real.",
+      "code_evidence": "Line 47: age = serializers.IntegerField(required=False)\nLine 48: timestamp = serializers.IntegerField(required=False, min_value=0)\n\nage lacks min_value=0 while timestamp has it.",
+      "files_explored": [
+        "src/sentry/issues/endpoints/browser_reporting_collector.py"
+      ]
+    },
+    {
+      "comment_id": 2743665043,
+      "file": "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+      "line": 101,
+      "droid_claim": "[P0] Incorrect error event to ID mapping due to dict key mismatch\n\n`fetch_error_details` uses `zip(error_ids, events.values())` after `nodestore.backend.get_multi(node_ids)`, but `get_multi` returns a dict keyed by `node_id` (hashed), not by the original `error_id`. Iterating `events.values()` and zipping with `error_ids` can misassociate IDs with payloads (and drop/misorder items). Instead, iterate `for error_id, node_id in zip(error_ids, node_ids): data = events.get(node_id)` (or build a mapping) so each `error_id` pulls the correct event payload.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "medium",
+      "bug_type": "data_corruption",
+      "impact": "When some nodestore entries are cached and others are not, get_multi returns a dict whose value order does not match the original node_ids order, causing error IDs to be associated with wrong event payloads in replay breadcrumb summaries.",
+      "reasoning": "In nodestore/base.py get_multi(), when there's a partial cache hit, the code first fetches uncached items into `items` dict, then does `items.update(cache_items)` (line 207). This means cached entries are appended/merged into the dict after uncached entries, breaking the original id_list ordering. Since fetch_error_details uses `zip(error_ids, events.values())`, the values may not correspond to the correct error_ids when cache hits and misses are interleaved. The correct approach would be to look up each node_id explicitly: `events.get(node_id)` for each error_id/node_id pair.",
+      "code_evidence": "fetch_error_details lines 99-101:\n  node_ids = [Event.generate_node_id(project_id, event_id=id) for id in error_ids]\n  events = nodestore.backend.get_multi(node_ids)\n  ... zip(error_ids, events.values())\n\nnodestore/base.py get_multi lines 205-207:\n  items = {id: self._decode(value, subkey=subkey) for id, value in self._get_bytes_multi(uncached_ids).items()}\n  if subkey is None:\n      self._set_cache_items(items)\n      items.update(cache_items)  # <-- breaks ordering",
+      "files_explored": [
+        "src/sentry/replays/endpoints/project_replay_summarize_breadcrumbs.py",
+        "src/sentry/nodestore/base.py"
+      ]
+    },
+    {
+      "comment_id": 2743669170,
+      "file": "src/sentry/preprod/api/endpoints/organization_preprod_artifact_assemble.py",
+      "line": 81,
+      "droid_claim": "[P2] Analytics event recorded before feature gate check\n\n`analytics.record()` runs before the `features.has('organizations:preprod-artifact-assemble', ...)` check, so requests from orgs/users without the feature enabled will still emit `preprod_artifact.api.assemble`. This can skew analytics and adds work on the disabled path; record only after the feature check passes (or include an explicit flag indicating gated/denied).",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "low",
+      "bug_type": "logic_bug",
+      "impact": "Analytics events are emitted for all requests including those from organizations without the feature flag enabled, skewing usage metrics for the preprod artifact assembly feature.",
+      "reasoning": "Lines 81-86 call `analytics.record('preprod_artifact.api.assemble', ...)` unconditionally. Lines 88-90 then check `features.has('organizations:preprod-artifact-assemble', ...)` and return 404 if disabled. The analytics event is recorded even for requests that will be rejected by the feature gate, inflating the metrics.",
+      "code_evidence": "Lines 81-90:\n  analytics.record(\n      'preprod_artifact.api.assemble',\n      organization_id=project.organization_id,\n      project_id=project.id,\n      user_id=request.user.id,\n  )\n\n  if not features.has(\n      'organizations:preprod-artifact-assemble', project.organization, actor=request.user\n  ):\n      return Response({'error': 'Feature not enabled'}, status=404)",
+      "files_explored": [
+        "src/sentry/preprod/api/endpoints/organization_preprod_artifact_assemble.py"
+      ]
+    }
+  ]
+}

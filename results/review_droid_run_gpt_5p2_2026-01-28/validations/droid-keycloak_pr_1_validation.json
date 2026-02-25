@@ -1,0 +1,25 @@
+{
+  "repo": "droid-keycloak",
+  "pr_number": 1,
+  "pr_title": "Fixing Re-authentication with passkeys",
+  "validations": [
+    {
+      "comment_id": 2743710726,
+      "file": "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernameForm.java",
+      "line": 47,
+      "droid_claim": "[P0] Compilation error: wrong isConditionalPasskeysEnabled() overload\n\n`UsernameForm.authenticate()` calls `isConditionalPasskeysEnabled()` with no arguments, but `UsernamePasswordForm` defines `isConditionalPasskeysEnabled(UserModel user)` and requires a `UserModel` parameter. This will not compile; pass `context.getUser()` (or add a no-arg overload that delegates) so the call matches the available method signature.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "critical",
+      "bug_type": "runtime_error",
+      "impact": "The code will not compile. UsernameForm.authenticate() calls isConditionalPasskeysEnabled() with no arguments, but the only definition in the parent class UsernamePasswordForm requires a UserModel parameter. This blocks the entire build.",
+      "reasoning": "UsernameForm extends UsernamePasswordForm. At line 47 of UsernameForm.java, the call is `isConditionalPasskeysEnabled()` with zero arguments. The only definition of this method is at line 160 of UsernamePasswordForm.java: `protected boolean isConditionalPasskeysEnabled(UserModel user)`, which requires one parameter. There is no no-arg overload anywhere in the class hierarchy (confirmed via grep). All other call sites in UsernamePasswordForm correctly pass `context.getUser()`. This is a straightforward Java compilation error.",
+      "code_evidence": "UsernameForm.java:47: `if (context.getUser() != null && !isConditionalPasskeysEnabled()) {`\nUsernamePasswordForm.java:160: `protected boolean isConditionalPasskeysEnabled(UserModel user) {`\nNo no-arg overload exists anywhere in the codebase.",
+      "files_explored": [
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernameForm.java",
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/UsernamePasswordForm.java",
+        "services/src/main/java/org/keycloak/authentication/authenticators/browser/AbstractUsernameFormAuthenticator.java"
+      ]
+    }
+  ]
+}

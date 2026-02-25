@@ -1,0 +1,55 @@
+{
+  "repo": "droid-cal_dot_com",
+  "pr_number": 1,
+  "pr_title": "Async import of the appStore packages",
+  "validations": [
+    {
+      "comment_id": 2743665808,
+      "file": "packages/app-store/wipemycalother/lib/reschedule.ts",
+      "line": 125,
+      "droid_claim": "[P0] Async forEach means reschedule deletions aren't awaited\n\n`bookingRefsFiltered.forEach(async ...)` won't wait for `getCalendar()`/`deleteEvent()`/`deleteMeeting()` to finish, and errors from those promises won't be caught by the `try/catch`. This can send the reschedule email / return success while external calendar/video artifacts remain. Switch to `await Promise.all(bookingRefsFiltered.map(async ...))` or a `for...of` loop.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "Calendar events and video meetings may not be deleted before the reschedule email is sent, and any errors from those async operations are silently swallowed since the try/catch cannot catch rejected promises from forEach callbacks.",
+      "reasoning": "Lines 121-134 use `bookingRefsFiltered.forEach(async (bookingRef) => { ... })` inside a try/catch. Array.prototype.forEach ignores the return value of its callback, so the promises returned by the async callback are never awaited. The try/catch on line 121 only catches synchronous errors from starting the forEach iteration, not rejected promises from the async callbacks. The sendRequestRescheduleEmail call on line 138 executes immediately after forEach returns, before any deletions complete.",
+      "code_evidence": "Lines 121-134:\n  try {\n    bookingRefsFiltered.forEach(async (bookingRef) => {\n      if (bookingRef.uid) {\n        if (bookingRef.type.endsWith(\"_calendar\")) {\n          const calendar = await getCalendar(credentialsMap.get(bookingRef.type));\n          return calendar?.deleteEvent(bookingRef.uid, builder.calendarEvent);\n        } else if (bookingRef.type.endsWith(\"_video\")) {\n          return deleteMeeting(credentialsMap.get(bookingRef.type), bookingRef.uid);\n        }\n      }\n    });\n  } catch (error) { ... }",
+      "files_explored": [
+        "packages/app-store/wipemycalother/lib/reschedule.ts"
+      ]
+    },
+    {
+      "comment_id": 2743665815,
+      "file": "packages/app-store/vital/lib/reschedule.ts",
+      "line": 125,
+      "droid_claim": "[P0] Async forEach means reschedule deletions aren't awaited\n\n`bookingRefsFiltered.forEach(async ...)` won't wait for `getCalendar()`/`deleteEvent()`/`deleteMeeting()` to finish, and errors from those promises won't be caught by the `try/catch`. This can send the reschedule email / return success while external calendar/video artifacts remain. Switch to `await Promise.all(bookingRefsFiltered.map(async ...))` or a `for...of` loop.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "Same as wipemycalother: calendar/video deletions run fire-and-forget, errors are silently lost, and the reschedule email is sent before deletions complete.",
+      "reasoning": "The vital/lib/reschedule.ts file contains the identical pattern at lines 121-134: `bookingRefsFiltered.forEach(async (bookingRef) => { ... })` wrapped in try/catch. The async callbacks' promises are not awaited by forEach, so deletions are fire-and-forget and errors cannot be caught.",
+      "code_evidence": "Lines 121-134:\n  try {\n    bookingRefsFiltered.forEach(async (bookingRef) => {\n      if (bookingRef.uid) {\n        if (bookingRef.type.endsWith(\"_calendar\")) {\n          const calendar = await getCalendar(credentialsMap.get(bookingRef.type));\n          return calendar?.deleteEvent(bookingRef.uid, builder.calendarEvent);\n        } else if (bookingRef.type.endsWith(\"_video\")) {\n          return deleteMeeting(credentialsMap.get(bookingRef.type), bookingRef.uid);\n        }\n      }\n    });\n  } catch (error) { ... }",
+      "files_explored": [
+        "packages/app-store/vital/lib/reschedule.ts"
+      ]
+    },
+    {
+      "comment_id": 2743665817,
+      "file": "packages/trpc/server/routers/viewer/bookings.tsx",
+      "line": 552,
+      "droid_claim": "[P0] forEach + async drops awaits and errors\n\nThe new `bookingRefsFiltered.forEach(async ...)` does not await the async callback, so the calendar/video deletions run fire-and-forget and any failures won't be caught by surrounding control flow. This can let the mutation return/succeed before external events are actually deleted. Collect promises with `Promise.all(bookingRefsFiltered.map(async ...))` or use a `for...of` loop with `await`.",
+      "verdict": "true_positive",
+      "confidence": "high",
+      "severity": "high",
+      "bug_type": "logic_bug",
+      "impact": "The tRPC mutation proceeds to send the reschedule email and returns success before calendar/video deletions finish. Failed deletions are silently lost, potentially leaving orphaned external calendar events and video meetings.",
+      "reasoning": "Line 552 uses `bookingRefsFiltered.forEach(async (bookingRef) => { ... })` without any try/catch or await. The sendRequestRescheduleEmail call at line 570 runs immediately after forEach returns synchronously, before any of the async deletion callbacks complete. There is no error handling for rejected promises from the async callbacks.",
+      "code_evidence": "Lines 552-568:\n  bookingRefsFiltered.forEach(async (bookingRef) => {\n    if (bookingRef.uid) {\n      if (bookingRef.type.endsWith(\"_calendar\")) {\n        const calendar = await getCalendar(credentialsMap.get(bookingRef.type));\n        return calendar?.deleteEvent(bookingRef.uid, builder.calendarEvent, bookingRef.externalCalendarId);\n      } else if (bookingRef.type.endsWith(\"_video\")) {\n        return deleteMeeting(credentialsMap.get(bookingRef.type), bookingRef.uid);\n      }\n    }\n  });",
+      "files_explored": [
+        "packages/trpc/server/routers/viewer/bookings.tsx"
+      ]
+    }
+  ]
+}
