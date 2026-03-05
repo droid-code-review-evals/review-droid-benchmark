@@ -58,13 +58,13 @@ RUN_NAME="run_$(date +%Y-%m-%d)"
 # 2. Reset PRs (clear old comments)
 export GH_PAGER=""
 for pr in 6 7 8 9 10 11 12 13 14 15; do
-  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     gh api -X DELETE repos/droid-code-review-evals/droid-sentry/pulls/comments/$cid 2>/dev/null
   done
-  for rid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/reviews --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for rid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/reviews --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     gh api -X PUT repos/droid-code-review-evals/droid-sentry/pulls/$pr/reviews/$rid -f body="." >/dev/null 2>&1
   done
-  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/issues/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/issues/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
     gh api -X DELETE repos/droid-code-review-evals/droid-sentry/issues/comments/$cid 2>/dev/null
   done
 done
@@ -107,15 +107,15 @@ Clear all existing Droid comments for a fresh evaluation:
 export GH_PAGER=""
 for pr in 6 7 8 9 10 11 12 13 14 15; do
   echo "=== Processing PR #$pr ==="
-  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Deleting PR comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-sentry/pulls/comments/$cid 2>/dev/null
   done
-  for rid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/reviews --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for rid in $(gh api repos/droid-code-review-evals/droid-sentry/pulls/$pr/reviews --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Updating review $rid"
     gh api -X PUT repos/droid-code-review-evals/droid-sentry/pulls/$pr/reviews/$rid -f body="." >/dev/null 2>&1
   done
-  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/issues/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-sentry/issues/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
     echo "Deleting issue comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-sentry/issues/comments/$cid 2>/dev/null
   done
@@ -275,21 +275,23 @@ python3 scripts/evaluate_all.py ${RUN_NAME}
 
 ## Reset Scripts by Repository
 
+> **Important:** All `gh api` calls in reset scripts must use `--paginate` to avoid missing results beyond the default 30-per-page limit.
+
 ### droid-grafana (PRs #1-10)
 
 ```bash
 export GH_PAGER=""
 for pr in 1 2 3 4 5 6 7 8 9 10; do
   echo "=== Processing PR #$pr ==="
-  for cid in $(gh api repos/droid-code-review-evals/droid-grafana/pulls/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-grafana/pulls/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Deleting PR comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-grafana/pulls/comments/$cid 2>/dev/null
   done
-  for rid in $(gh api repos/droid-code-review-evals/droid-grafana/pulls/$pr/reviews --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for rid in $(gh api repos/droid-code-review-evals/droid-grafana/pulls/$pr/reviews --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Updating review $rid"
     gh api -X PUT repos/droid-code-review-evals/droid-grafana/pulls/$pr/reviews/$rid -f body="." >/dev/null 2>&1
   done
-  for cid in $(gh api repos/droid-code-review-evals/droid-grafana/issues/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-grafana/issues/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
     echo "Deleting issue comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-grafana/issues/comments/$cid 2>/dev/null
   done
@@ -303,15 +305,15 @@ done
 export GH_PAGER=""
 for pr in 1 2 3 4 5 6 7 8 9 10; do
   echo "=== Processing PR #$pr ==="
-  for cid in $(gh api repos/droid-code-review-evals/droid-keycloak/pulls/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-keycloak/pulls/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Deleting PR comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-keycloak/pulls/comments/$cid 2>/dev/null
   done
-  for rid in $(gh api repos/droid-code-review-evals/droid-keycloak/pulls/$pr/reviews --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for rid in $(gh api repos/droid-code-review-evals/droid-keycloak/pulls/$pr/reviews --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Updating review $rid"
     gh api -X PUT repos/droid-code-review-evals/droid-keycloak/pulls/$pr/reviews/$rid -f body="." >/dev/null 2>&1
   done
-  for cid in $(gh api repos/droid-code-review-evals/droid-keycloak/issues/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-keycloak/issues/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
     echo "Deleting issue comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-keycloak/issues/comments/$cid 2>/dev/null
   done
@@ -325,15 +327,15 @@ done
 export GH_PAGER=""
 for pr in 1 2 3 4 5 6 7 8 9 10; do
   echo "=== Processing PR #$pr ==="
-  for cid in $(gh api repos/droid-code-review-evals/droid-discourse/pulls/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-discourse/pulls/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Deleting PR comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-discourse/pulls/comments/$cid 2>/dev/null
   done
-  for rid in $(gh api repos/droid-code-review-evals/droid-discourse/pulls/$pr/reviews --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for rid in $(gh api repos/droid-code-review-evals/droid-discourse/pulls/$pr/reviews --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Updating review $rid"
     gh api -X PUT repos/droid-code-review-evals/droid-discourse/pulls/$pr/reviews/$rid -f body="." >/dev/null 2>&1
   done
-  for cid in $(gh api repos/droid-code-review-evals/droid-discourse/issues/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-discourse/issues/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
     echo "Deleting issue comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-discourse/issues/comments/$cid 2>/dev/null
   done
@@ -347,15 +349,15 @@ done
 export GH_PAGER=""
 for pr in 1 2 3 4 5 6 7 8 9 10; do
   echo "=== Processing PR #$pr ==="
-  for cid in $(gh api repos/droid-code-review-evals/droid-cal_dot_com/pulls/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-cal_dot_com/pulls/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Deleting PR comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-cal_dot_com/pulls/comments/$cid 2>/dev/null
   done
-  for rid in $(gh api repos/droid-code-review-evals/droid-cal_dot_com/pulls/$pr/reviews --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
+  for rid in $(gh api repos/droid-code-review-evals/droid-cal_dot_com/pulls/$pr/reviews --paginate --jq '.[] | select(.user.login == "factory-droid[bot]") | .id'); do
     echo "Updating review $rid"
     gh api -X PUT repos/droid-code-review-evals/droid-cal_dot_com/pulls/$pr/reviews/$rid -f body="." >/dev/null 2>&1
   done
-  for cid in $(gh api repos/droid-code-review-evals/droid-cal_dot_com/issues/$pr/comments --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
+  for cid in $(gh api repos/droid-code-review-evals/droid-cal_dot_com/issues/$pr/comments --paginate --jq '.[] | select(.user.login == "factory-droid[bot]" or .user.login == "varin-nair-factory") | .id'); do
     echo "Deleting issue comment $cid"
     gh api -X DELETE repos/droid-code-review-evals/droid-cal_dot_com/issues/comments/$cid 2>/dev/null
   done
