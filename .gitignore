@@ -6,3 +6,4 @@ droid.yml
 scripts/__pycache__/
 .env
 venv/
+diffs/

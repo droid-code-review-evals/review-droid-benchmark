@@ -317,6 +317,118 @@ def evaluate_pr(pr_data: dict, golden_comments: list[dict], use_issue_comments: 
     return results
 
 
+def run_local_evaluation(tool_name: str, run_name: str):
+    """Run evaluation for local findings (from run_local_review.py) against golden comments."""
+    run_dir = BASE_DIR / "results" / run_name
+    findings_dir = run_dir / "local_findings"
+
+    if not findings_dir.exists():
+        print(f"ERROR: {findings_dir} not found. Run run_local_review.py first.")
+        return
+
+    all_results = {
+        "run_name": run_name,
+        "tool": tool_name,
+        "mode": "local",
+        "repos": [],
+        "overall_summary": {"total_tp": 0, "total_fp": 0, "total_fn": 0},
+    }
+
+    for golden_name in REPO_GOLDEN_NAMES:
+        golden_file = GOLDEN_DIR / f"{golden_name}.json"
+        if not golden_file.exists():
+            print(f"WARNING: {golden_file} not found, skipping")
+            continue
+
+        with open(golden_file) as f:
+            golden_data = json.load(f)
+
+        golden_by_number = {}
+        for g in golden_data:
+            golden_by_number[g["pr_number"]] = [
+                {"comment": bug["description"], "severity": bug.get("severity", "medium").title()}
+                for bug in g["bugs"]
+            ]
+
+        repo_results = {
+            "repo": golden_name,
+            "prs": [],
+            "summary": {"total_tp": 0, "total_fp": 0, "total_fn": 0},
+        }
+
+        print(f"\nEvaluating {golden_name}...")
+
+        for pr_number, golden_comments in sorted(golden_by_number.items()):
+            findings_file = findings_dir / f"{golden_name}_pr{pr_number}.json"
+            if not findings_file.exists():
+                print(f"  PR #{pr_number}: no local findings file, skipping")
+                continue
+
+            with open(findings_file) as f:
+                local_data = json.load(f)
+
+            findings = local_data.get("findings", [])
+            pr_data = {
+                "number": pr_number,
+                "title": local_data.get("pr_title", f"PR #{pr_number}"),
+                "review_comments": [
+                    {
+                        "body": finding["comment"],
+                        "path": finding.get("file", "unknown"),
+                        "line": finding.get("line"),
+                    }
+                    for finding in findings
+                ],
+            }
+
+            print(f"  PR #{pr_number}: {len(golden_comments)} golden, {len(findings)} findings")
+            result = evaluate_pr(pr_data, golden_comments)
+            repo_results["prs"].append(result)
+
+            repo_results["summary"]["total_tp"] += len(result["true_positives"])
+            repo_results["summary"]["total_fp"] += len(result["false_positives"])
+            repo_results["summary"]["total_fn"] += len(result["false_negatives"])
+
+        tp = repo_results["summary"]["total_tp"]
+        fp = repo_results["summary"]["total_fp"]
+        fn = repo_results["summary"]["total_fn"]
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+        repo_results["summary"]["precision"] = round(precision * 100, 1)
+        repo_results["summary"]["recall"] = round(recall * 100, 1)
+        repo_results["summary"]["f_score"] = round(f_score * 100, 1)
+
+        all_results["repos"].append(repo_results)
+        all_results["overall_summary"]["total_tp"] += repo_results["summary"]["total_tp"]
+        all_results["overall_summary"]["total_fp"] += repo_results["summary"]["total_fp"]
+        all_results["overall_summary"]["total_fn"] += repo_results["summary"]["total_fn"]
+
+    tp = all_results["overall_summary"]["total_tp"]
+    fp = all_results["overall_summary"]["total_fp"]
+    fn = all_results["overall_summary"]["total_fn"]
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    all_results["overall_summary"]["precision"] = round(precision * 100, 1)
+    all_results["overall_summary"]["recall"] = round(recall * 100, 1)
+    all_results["overall_summary"]["f_score"] = round(f_score * 100, 1)
+
+    out_file = run_dir / f"{tool_name}_local_eval.json"
+    with open(out_file, "w") as f:
+        json.dump(all_results, f, indent=2)
+
+    print(f"\n{'='*70}")
+    print(f"{tool_name.upper()} LOCAL EVAL RESULTS")
+    print(f"{'='*70}")
+    for repo_result in all_results["repos"]:
+        s = repo_result["summary"]
+        print(f"{repo_result['repo']:30} | TP={s['total_tp']:2} FP={s['total_fp']:2} FN={s['total_fn']:2} | P={s['precision']:5.1f}% R={s['recall']:5.1f}% F={s['f_score']:5.1f}%")
+    print(f"{'='*70}")
+    print(f"{'OVERALL':30} | TP={tp:2} FP={fp:2} FN={fn:2} | P={all_results['overall_summary']['precision']:5.1f}% R={all_results['overall_summary']['recall']:5.1f}% F={all_results['overall_summary']['f_score']:5.1f}%")
+    print(f"\nResults saved to {out_file}")
+
+
 def run_evaluation(tool_name: str, repo_prefix: str, run_name: str, use_issue_comments: bool = False):
     """Run evaluation for a tool against golden comments."""
     run_dir = BASE_DIR / "results" / run_name
